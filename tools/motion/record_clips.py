@@ -34,6 +34,17 @@ LOCOMOTION = {
     # not MotionIds: the runtime blends them in for fast sideways scuttling (A/D held while running)
     "strafe_left_fast": (0.0, 0.62, 0.0),
     "strafe_right_fast": (0.0, -0.62, 0.0),
+    # diagonals and arcs, so 8-way movement and steering while running are real rollouts too
+    "walk_fl": (0.2, 0.2, 0.0),
+    "walk_fr": (0.2, -0.2, 0.0),
+    "walk_bl": (-0.18, 0.18, 0.0),
+    "walk_br": (-0.18, -0.18, 0.0),
+    "walk_fast_fl": (0.44, 0.44, 0.0),
+    "walk_fast_fr": (0.44, -0.44, 0.0),
+    "walk_arc_left": (0.28, 0.0, 0.9),
+    "walk_arc_right": (0.28, 0.0, -0.9),
+    "walk_fast_arc_left": (0.6, 0.0, 1.3),
+    "walk_fast_arc_right": (0.6, 0.0, -1.3),
     "turn_left": (0.0, 0.0, 1.6),
     "turn_right": (0.0, 0.0, -1.6),
 }

@@ -363,6 +363,21 @@ if (params.get('fk') === '1') {
   window.__fk = await runFkCheck(rig, lib);
 }
 
+if (params.get('bench') === '1') {
+  const { runBench } = await import('./checks');
+  await runBench(lib);
+}
+if (params.has('slide')) {
+  const { runSlide } = await import('./checks');
+  for (const spec of params.get('slide')!.split(';')) {
+    const cmd = spec.split(',').map(Number) as [number, number, number];
+    rig.root.position.set(0, 0, 0);
+    rig.root.rotation.set(0, 0, 0);
+    runSlide(rig, motion, cmd);
+  }
+  forced = null;
+}
+
 engine.start();
 let frames = 0;
 engine.onAfterFrame(() => {

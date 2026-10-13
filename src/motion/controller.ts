@@ -6,13 +6,26 @@ import { getMotionLibrary, type ClipId, type LoadedClip, type MotionLibrary } fr
 import { CLAW_JOINTS, Pose, PoseSum, crossedEvents, sampleClip } from './pose';
 import type { MotionController, MotionId, MotionPlayOptions } from './types';
 
-// Directional gait sets: slow and fast variants per direction, both optional except slow.
-const DIRECTIONS: { angle: number; slow: ClipId; fast?: ClipId }[] = [
-  { angle: 0, slow: 'walk_fwd', fast: 'walk_fast' },
-  { angle: Math.PI / 2, slow: 'strafe_left', fast: 'strafe_left_fast' },
-  { angle: Math.PI, slow: 'walk_back' },
-  { angle: -Math.PI / 2, slow: 'strafe_right', fast: 'strafe_right_fast' },
+// Directional gait sets, every 45 degrees counter-clockwise from forward (+Z) toward the crab's
+// left (+X): a slow and an optional fast real rollout each. Forward also has arcs (walking while
+// turning) for steering at speed.
+interface Direction {
+  slow: ClipId;
+  fast?: ClipId;
+  arcs?: { slow: [ClipId, ClipId]; fast: [ClipId, ClipId] };
+}
+const DIRECTIONS: Direction[] = [
+  { slow: 'walk_fwd', fast: 'walk_fast',
+    arcs: { slow: ['walk_arc_left', 'walk_arc_right'], fast: ['walk_fast_arc_left', 'walk_fast_arc_right'] } },
+  { slow: 'walk_fl', fast: 'walk_fast_fl' },
+  { slow: 'strafe_left', fast: 'strafe_left_fast' },
+  { slow: 'walk_bl' },
+  { slow: 'walk_back' },
+  { slow: 'walk_br' },
+  { slow: 'strafe_right', fast: 'strafe_right_fast' },
+  { slow: 'walk_fr', fast: 'walk_fast_fr' },
 ];
+const SECTOR = (Math.PI * 2) / DIRECTIONS.length;
 
 const DEFAULT_FADE = 0.2;
 const MIN_RATE = 0.55;
@@ -234,24 +247,22 @@ class Controller implements MotionControllerImpl {
     const gaits: { clip: LoadedClip; w: number }[] = [];
     if (speed > 1e-3) {
       const sector = (ang + 2 * Math.PI) % (2 * Math.PI);
-      const i0 = Math.floor(sector / (Math.PI / 2)) % 4;
-      const i1 = (i0 + 1) % 4;
-      const u = (sector - i0 * (Math.PI / 2)) / (Math.PI / 2);
-      // DIRECTIONS is ordered fwd, left, back, right = 0, 90, 180, 270 degrees CCW
+      const i0 = Math.floor(sector / SECTOR) % DIRECTIONS.length;
+      const i1 = (i0 + 1) % DIRECTIONS.length;
+      const u = (sector - i0 * SECTOR) / SECTOR;
       for (const [d, w] of [[DIRECTIONS[i0], 1 - u], [DIRECTIONS[i1], u]] as const) {
         if (w <= 1e-4) continue;
         const slow = lib.get(d.slow);
         const fast = d.fast ? lib.get(d.fast) : null;
         if (!slow) continue;
-        if (!fast) {
-          gaits.push({ clip: slow, w });
-          continue;
+        let f = 0;
+        if (fast) {
+          const s0 = Math.hypot(slow.velocity[0], slow.velocity[1]);
+          const s1 = Math.hypot(fast.velocity[0], fast.velocity[1]);
+          f = Math.min(1, Math.max(0, (speed - s0) / Math.max(1e-3, s1 - s0)));
         }
-        const s0 = Math.hypot(...slow.velocity);
-        const s1 = Math.hypot(...fast.velocity);
-        const f = Math.min(1, Math.max(0, (speed - s0) / Math.max(1e-3, s1 - s0)));
-        if (1 - f > 1e-4) gaits.push({ clip: slow, w: w * (1 - f) });
-        if (f > 1e-4) gaits.push({ clip: fast, w: w * f });
+        this.addGait(gaits, slow, w * (1 - f), d.arcs?.slow);
+        if (fast) this.addGait(gaits, fast, w * f, d.arcs?.fast);
       }
     }
     let gw = 0;
@@ -329,6 +340,20 @@ class Controller implements MotionControllerImpl {
     }
     this.gaitPrev.clear();
     if (lead) this.gaitPrev.set(lead.id, this.gaitTime(lead));
+  }
+
+  /** Add a straight gait, or a share of its arc (walking while turning) when steering. */
+  private addGait(gaits: { clip: LoadedClip; w: number }[], clip: LoadedClip, w: number, arcs?: [ClipId, ClipId]) {
+    if (w <= 1e-4) return;
+    const yaw = this.vel.yaw;
+    const arc = arcs && Math.abs(yaw) > 0.03 ? this.lib.get(arcs[yaw > 0 ? 0 : 1]) : null;
+    if (!arc) {
+      gaits.push({ clip, w });
+      return;
+    }
+    const a = Math.min(1, Math.abs(yaw) / Math.max(0.1, Math.abs(arc.yawRate)));
+    if (1 - a > 1e-4) gaits.push({ clip, w: w * (1 - a) });
+    gaits.push({ clip: arc, w: w * a });
   }
 
   /** A gait clip's time for the shared phase: whole cycles map onto the clip's own cycles. */

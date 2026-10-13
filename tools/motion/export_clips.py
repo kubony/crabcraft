@@ -205,14 +205,17 @@ def export_loop(raw: Raw, out: Path) -> dict:
     a_t, b_t = T[0], T[0] + loop_s
 
     # mean velocity in the local frame, game axes (x = crab left, z = forward)
-    vx_r = (pavg[b] - pavg[a])
-    yv = yavg[a]
-    cs, ss = np.cos(-yv), np.sin(-yv)
-    v_local = np.array([cs * vx_r[0] - ss * vx_r[1], ss * vx_r[0] + cs * vx_r[1]]) / loop_s
+    # mean of the root path's velocity expressed in its own heading (right for arcs too)
+    dp = np.diff(pavg[a:b + 1], axis=0) / DT
+    cy, sy = np.cos(-yavg[a:b]), np.sin(-yavg[a:b])
+    v_local = np.array([np.mean(cy * dp[:, 0] - sy * dp[:, 1]), np.mean(sy * dp[:, 0] + cy * dp[:, 1])])
     yaw_rate = float(yavg[b] - yavg[a]) / loop_s
     speed = float(np.hypot(*v_local))
     events = footfall_events(raw, a_t, b_t, period=loop_s)
-    cycles = max(1, int(round(len(events["footstep"]) / 6)))
+    # gait cycles in the loop, from the middle-left foot's step period over the steady window
+    lm_all = [x for x in onsets(raw.contacts[:, 2], raw.t) if x >= tc + 3.0]
+    step_period = float(np.median(np.diff(lm_all))) if len(lm_all) > 2 else loop_s
+    cycles = max(1, int(round(loop_s / step_period)))
     cmd = raw.meta["command"]
     print(f"    speed {speed:.3f} m/s (cmd {cmd}), yawRate {yaw_rate:+.3f}, v_local {np.round(v_local, 3)}, "
           f"{frames} frames @ {fps:.2f} fps, footfalls {len(events['footstep'])}")

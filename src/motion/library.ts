@@ -4,7 +4,10 @@ import { JOINT_NAMES, type JointName } from '../crab/types';
 import type { MotionClip, MotionId } from './types';
 
 /** Clips the runtime blends in beyond the MotionIds gameplay asks for. */
-export type ExtraClipId = 'strafe_left_fast' | 'strafe_right_fast';
+export type ExtraClipId =
+  | 'strafe_left_fast' | 'strafe_right_fast'
+  | 'walk_fl' | 'walk_fr' | 'walk_bl' | 'walk_br' | 'walk_fast_fl' | 'walk_fast_fr'
+  | 'walk_arc_left' | 'walk_arc_right' | 'walk_fast_arc_left' | 'walk_fast_arc_right';
 export type ClipId = MotionId | ExtraClipId;
 
 export interface ClipIndexEntry {
@@ -221,6 +224,8 @@ export class MotionLibrary {
 export const LOCOMOTION_CLIPS: ClipId[] = [
   'idle', 'walk_fwd', 'walk_fast', 'walk_back', 'strafe_left', 'strafe_right',
   'strafe_left_fast', 'strafe_right_fast', 'turn_left', 'turn_right',
+  'walk_fl', 'walk_fr', 'walk_bl', 'walk_br', 'walk_fast_fl', 'walk_fast_fr',
+  'walk_arc_left', 'walk_arc_right', 'walk_fast_arc_left', 'walk_fast_arc_right',
 ];
 
 let shared: MotionLibrary | null = null;

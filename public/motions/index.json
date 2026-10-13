@@ -213,11 +213,11 @@
    "frameCount": 48,
    "duration": 0.96,
    "loop": true,
-   "speed": 0.24387,
+   "speed": 0.24391,
    "bytes": 5509,
    "velocity": [
-    0.24355,
-    0.01253
+    0.24385,
+    0.00545
    ],
    "yawRate": -0.06097
   },
@@ -229,11 +229,11 @@
    "frameCount": 216,
    "duration": 2.09,
    "loop": true,
-   "speed": 0.56681,
-   "bytes": 18242,
+   "speed": 0.56682,
+   "bytes": 18243,
    "velocity": [
-    0.56666,
-    -0.0129
+    0.56679,
+    -0.00585
    ],
    "yawRate": 0.01187
   },
@@ -245,11 +245,11 @@
    "frameCount": 48,
    "duration": 0.96,
    "loop": true,
-   "speed": 0.24821,
+   "speed": 0.24827,
    "bytes": 5521,
    "velocity": [
-    -0.24756,
-    0.01798
+    -0.24811,
+    0.00904
    ],
    "yawRate": 0.0757
   },
@@ -262,10 +262,10 @@
    "duration": 2.09,
    "loop": true,
    "speed": 0.56785,
-   "bytes": 18249,
+   "bytes": 18251,
    "velocity": [
-    -0.56784,
-    0.0027
+    -0.56785,
+    -0.00082
    ],
    "yawRate": 0.00611
   },
@@ -277,11 +277,11 @@
    "frameCount": 48,
    "duration": 0.9,
    "loop": true,
-   "speed": 0.01416,
-   "bytes": 5517,
+   "speed": 0.015,
+   "bytes": 5514,
    "velocity": [
-    -0.01288,
-    -0.00589
+    -0.0072,
+    -0.01315
    ],
    "yawRate": 1.4113
   },
@@ -293,13 +293,45 @@
    "frameCount": 48,
    "duration": 0.9,
    "loop": true,
-   "speed": 0.01419,
+   "speed": 0.01503,
    "bytes": 5522,
    "velocity": [
-    0.01071,
-    -0.00931
+    0.00325,
+    -0.01468
    ],
    "yawRate": -1.41412
+  },
+  {
+   "id": "walk_arc_left",
+   "source": "locomotion",
+   "kind": "locomotion",
+   "fps": 76.677316,
+   "frameCount": 120,
+   "duration": 1.565,
+   "loop": true,
+   "speed": 0.22957,
+   "bytes": 10992,
+   "velocity": [
+    -0.00068,
+    0.22956
+   ],
+   "yawRate": 0.84184
+  },
+  {
+   "id": "walk_arc_right",
+   "source": "locomotion",
+   "kind": "locomotion",
+   "fps": 76.677316,
+   "frameCount": 120,
+   "duration": 1.565,
+   "loop": true,
+   "speed": 0.23033,
+   "bytes": 10924,
+   "velocity": [
+    -0.00225,
+    0.23031
+   ],
+   "yawRate": -0.83398
   },
   {
    "id": "walk_back",
@@ -312,10 +344,42 @@
    "speed": 0.2076,
    "bytes": 5658,
    "velocity": [
-    -0.00146,
+    -0.00173,
     -0.2076
    ],
    "yawRate": -0.00261
+  },
+  {
+   "id": "walk_bl",
+   "source": "locomotion",
+   "kind": "locomotion",
+   "fps": 50.0,
+   "frameCount": 50,
+   "duration": 1.0,
+   "loop": true,
+   "speed": 0.21866,
+   "bytes": 5673,
+   "velocity": [
+    0.14224,
+    -0.16608
+   ],
+   "yawRate": -0.03403
+  },
+  {
+   "id": "walk_br",
+   "source": "locomotion",
+   "kind": "locomotion",
+   "fps": 72.0,
+   "frameCount": 72,
+   "duration": 1.0,
+   "loop": true,
+   "speed": 0.21887,
+   "bytes": 7302,
+   "velocity": [
+    -0.14504,
+    -0.16392
+   ],
+   "yawRate": 0.02815
   },
   {
    "id": "walk_fast",
@@ -325,13 +389,109 @@
    "frameCount": 216,
    "duration": 2.09,
    "loop": true,
-   "speed": 0.57235,
+   "speed": 0.57237,
    "bytes": 18237,
    "velocity": [
-    0.00829,
-    0.57229
+    0.00028,
+    0.57237
    ],
    "yawRate": 0.01336
+  },
+  {
+   "id": "walk_fast_arc_left",
+   "source": "locomotion",
+   "kind": "locomotion",
+   "fps": 133.333333,
+   "frameCount": 168,
+   "duration": 1.26,
+   "loop": true,
+   "speed": 0.50184,
+   "bytes": 14615,
+   "velocity": [
+    -0.0028,
+    0.50183
+   ],
+   "yawRate": 1.25324
+  },
+  {
+   "id": "walk_fast_arc_right",
+   "source": "locomotion",
+   "kind": "locomotion",
+   "fps": 133.333333,
+   "frameCount": 168,
+   "duration": 1.26,
+   "loop": true,
+   "speed": 0.50432,
+   "bytes": 14636,
+   "velocity": [
+    0.00281,
+    0.50431
+   ],
+   "yawRate": -1.22423
+  },
+  {
+   "id": "walk_fast_fl",
+   "source": "locomotion",
+   "kind": "locomotion",
+   "fps": 103.703704,
+   "frameCount": 168,
+   "duration": 1.62,
+   "loop": true,
+   "speed": 0.56012,
+   "bytes": 14617,
+   "velocity": [
+    0.39089,
+    0.40118
+   ],
+   "yawRate": 0.03716
+  },
+  {
+   "id": "walk_fast_fr",
+   "source": "locomotion",
+   "kind": "locomotion",
+   "fps": 103.703704,
+   "frameCount": 168,
+   "duration": 1.62,
+   "loop": true,
+   "speed": 0.56745,
+   "bytes": 14625,
+   "velocity": [
+    -0.39646,
+    0.40598
+   ],
+   "yawRate": -0.01371
+  },
+  {
+   "id": "walk_fl",
+   "source": "locomotion",
+   "kind": "locomotion",
+   "fps": 50.0,
+   "frameCount": 50,
+   "duration": 1.0,
+   "loop": true,
+   "speed": 0.24085,
+   "bytes": 5662,
+   "velocity": [
+    0.16652,
+    0.17402
+   ],
+   "yawRate": 0.01427
+  },
+  {
+   "id": "walk_fr",
+   "source": "locomotion",
+   "kind": "locomotion",
+   "fps": 50.0,
+   "frameCount": 50,
+   "duration": 1.0,
+   "loop": true,
+   "speed": 0.24514,
+   "bytes": 5654,
+   "velocity": [
+    -0.17065,
+    0.17599
+   ],
+   "yawRate": -0.0084
   },
   {
    "id": "walk_fwd",
@@ -344,7 +504,7 @@
    "speed": 0.24712,
    "bytes": 5655,
    "velocity": [
-    -0.00234,
+    -0.00218,
     0.24711
    ],
    "yawRate": -0.00134
