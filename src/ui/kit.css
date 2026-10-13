@@ -1,0 +1,276 @@
+/* World of Crabcraft UI kit: dark slate, gold filigree, parchment, red lacquer.
+   Texture files from public/art/ui/ are layered over CSS fallbacks, so every element still looks
+   finished if a texture is missing. */
+
+:root {
+  --font-display: 'Cinzel', 'Trajan Pro', 'Cormorant SC', Georgia, serif;
+  --font-deco: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
+  --font-body: 'Alegreya', 'EB Garamond', Georgia, 'Times New Roman', serif;
+  --gold-grad: linear-gradient(180deg, #fff1b8 0%, #e8c46a 38%, #b88a2e 62%, #f3d58a 100%);
+  --frame-shadow: 0 10px 40px rgba(0, 0, 0, 0.65), inset 0 0 0 1px rgba(255, 220, 140, 0.08);
+  --hp: #2fbf4a;
+  --hp-dark: #13561f;
+  --rage: #c5221f;
+  --mana: #2b6de0;
+  --cast: #f0b429;
+  --text-shadow: 0 1px 0 #000, 0 0 6px rgba(0, 0, 0, 0.9);
+}
+
+.cc-canvas { position: absolute; inset: 0; display: block; }
+.cc-layer { position: absolute; inset: 0; pointer-events: none; }
+.cc-layer > * { pointer-events: auto; }
+.cc-layer .cc-passive, .cc-passive { pointer-events: none; }
+
+body { font-family: var(--font-body); -webkit-font-smoothing: antialiased; user-select: none; }
+
+/* ---------- Typography ---------- */
+.cc-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: var(--gold-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 0 #2a1a05) drop-shadow(0 0 10px rgba(0, 0, 0, 0.8));
+  text-transform: uppercase;
+}
+.cc-gold { color: var(--cc-gold-bright); text-shadow: var(--text-shadow); font-family: var(--font-display); }
+.cc-ink { color: var(--cc-ink); font-family: var(--font-body); }
+.cc-small { font-size: 13px; opacity: 0.85; }
+
+/* ---------- Stone frame panel ---------- */
+.cc-panel {
+  position: relative;
+  padding: 22px;
+  color: var(--cc-parchment);
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(80, 86, 98, 0.35), transparent 60%),
+    url('/art/ui/frame-stone.webp') center / cover,
+    linear-gradient(180deg, #2b2e35 0%, #17191d 100%);
+  border: 3px solid transparent;
+  border-image: linear-gradient(180deg, #f6dc8e, #a77a28 40%, #6b4a14 60%, #e2bd63) 1;
+  box-shadow: var(--frame-shadow);
+}
+.cc-panel::before, .cc-panel::after {
+  /* Gold claw corner ornaments; the image is optional. */
+  content: '';
+  position: absolute;
+  width: 46px; height: 46px;
+  background: url('/art/ui/corner-claw.webp') center / contain no-repeat;
+  pointer-events: none;
+}
+.cc-panel::before { left: -14px; top: -14px; }
+.cc-panel::after { right: -14px; bottom: -14px; transform: rotate(180deg); }
+
+/* ---------- Parchment ---------- */
+.cc-parchment {
+  position: relative;
+  padding: 28px 30px;
+  color: var(--cc-ink);
+  font-family: var(--font-body);
+  background:
+    url('/art/ui/parchment.webp') center / cover,
+    radial-gradient(120% 120% at 50% 40%, #f3e6c4 0%, #e3cc98 55%, #c6a564 100%);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), inset 0 0 60px rgba(120, 80, 20, 0.35);
+  border-radius: 4px;
+}
+.cc-parchment h2, .cc-parchment h3 {
+  font-family: var(--font-display);
+  color: #3b220b;
+  margin: 0 0 6px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.cc-parchment .cc-tagline { font-style: italic; color: #6b4a22; margin-bottom: 10px; }
+.cc-divider {
+  height: 14px;
+  margin: 12px 0;
+  background:
+    url('/art/ui/divider-gold.webp') center / contain no-repeat,
+    linear-gradient(90deg, transparent, #a77a28 20%, #f3d58a 50%, #a77a28 80%, transparent) center / 100% 2px no-repeat;
+}
+
+/* ---------- Buttons ---------- */
+.cc-btn {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffe9a8;
+  text-shadow: 0 1px 0 #3a0505, 0 0 8px rgba(0, 0, 0, 0.7);
+  padding: 10px 34px;
+  min-width: 200px;
+  border: 2px solid #e2bd63;
+  border-radius: 6px;
+  background:
+    url('/art/ui/button-red.webp') center / 100% 100%,
+    linear-gradient(180deg, #d02a2a 0%, #8f1111 55%, #5c0909 100%);
+  box-shadow: 0 4px 0 #2a0505, 0 8px 18px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 200, 160, 0.45);
+  cursor: pointer;
+  transition: transform 0.08s ease, filter 0.15s ease, box-shadow 0.15s ease;
+}
+.cc-btn:hover { filter: brightness(1.18) saturate(1.1); box-shadow: 0 4px 0 #2a0505, 0 0 22px rgba(255, 190, 90, 0.45), inset 0 1px 0 rgba(255, 220, 180, 0.6); }
+.cc-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #2a0505, 0 4px 10px rgba(0, 0, 0, 0.5); }
+.cc-btn:disabled { filter: grayscale(0.8) brightness(0.6); cursor: default; }
+.cc-btn.small { font-size: 14px; padding: 6px 18px; min-width: 120px; }
+.cc-btn.ghost {
+  background: linear-gradient(180deg, rgba(40, 42, 48, 0.9), rgba(18, 19, 22, 0.95));
+  color: #f2d28a;
+}
+
+/* Round gold arrow buttons used by the option pickers. */
+.cc-arrow {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  border: 2px solid #e2bd63;
+  background: radial-gradient(circle at 40% 35%, #d73a2b, #7c0f0c 70%);
+  box-shadow: 0 2px 0 #2a0505, 0 4px 10px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  position: relative;
+}
+.cc-arrow::after {
+  content: '';
+  position: absolute; inset: 0; margin: auto;
+  width: 0; height: 0;
+  border-top: 7px solid transparent; border-bottom: 7px solid transparent;
+  border-left: 11px solid #ffe08a;
+  transform: translateX(2px);
+}
+.cc-arrow.left::after { transform: translateX(-2px) rotate(180deg); }
+.cc-arrow:hover { filter: brightness(1.25); }
+
+/* ---------- Portrait ring ---------- */
+.cc-portrait {
+  width: 84px; height: 84px;
+  border-radius: 50%;
+  position: relative;
+  background: #111 center / cover;
+  box-shadow: 0 0 0 3px #6b4a14, 0 0 0 6px #e2bd63, 0 0 0 8px #3b2708, 0 8px 18px rgba(0, 0, 0, 0.7);
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.15s, filter 0.15s;
+  filter: saturate(0.75) brightness(0.85);
+}
+.cc-portrait:hover { filter: none; transform: scale(1.04); }
+.cc-portrait.selected {
+  filter: none;
+  box-shadow: 0 0 0 3px #6b4a14, 0 0 0 6px #ffe08a, 0 0 0 8px #3b2708, 0 0 26px 6px rgba(255, 210, 110, 0.7);
+}
+
+/* ---------- Bars ---------- */
+.cc-bar {
+  position: relative;
+  height: 16px;
+  background: linear-gradient(180deg, #0b0b0c, #1c1c1f);
+  border: 1px solid #000;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+.cc-bar > .fill {
+  position: absolute; inset: 0;
+  transform-origin: left center;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bar) 75%, white) 0%, var(--bar) 45%, color-mix(in srgb, var(--bar) 60%, black) 100%);
+  transition: transform 0.18s ease-out;
+}
+.cc-bar > .lag { position: absolute; inset: 0; transform-origin: left center; background: rgba(255, 240, 200, 0.55); transition: transform 0.6s ease-in 0.25s; }
+.cc-bar > .label {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font: 600 11px/1 var(--font-body);
+  color: #fff; text-shadow: var(--text-shadow);
+}
+.cc-bar.hp { --bar: var(--hp); }
+.cc-bar.rage { --bar: var(--rage); }
+.cc-bar.mana { --bar: var(--mana); }
+.cc-bar.cast { --bar: var(--cast); height: 20px; }
+
+/* ---------- Tooltip ---------- */
+.cc-tooltip {
+  position: fixed;
+  max-width: 300px;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, rgba(14, 18, 34, 0.96), rgba(6, 8, 16, 0.96));
+  border: 1px solid #8a7440;
+  border-radius: 4px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+  font: 14px/1.35 var(--font-body);
+  color: #e8e2d0;
+  pointer-events: none;
+  z-index: 1000;
+}
+.cc-tooltip .t-title { color: #fff; font-weight: 700; font-size: 15px; }
+.cc-tooltip .t-meta { color: #c9b98e; font-size: 12px; margin: 2px 0 6px; }
+.cc-tooltip .t-desc { color: #ffd100; }
+
+/* ---------- Screen-wide helpers ---------- */
+.cc-fullbg { position: absolute; inset: 0; background: #000 center / cover no-repeat; }
+.cc-fade { animation: cc-fade-in 0.6s ease both; }
+@keyframes cc-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.cc-blackout { position: absolute; inset: 0; background: #000; pointer-events: none; opacity: 0; transition: opacity 0.6s ease; z-index: 2000; }
+.cc-blackout.on { opacity: 1; pointer-events: auto; }
+
+/* Zone / quest banners (big gold text that fades in and out mid-screen). */
+.cc-banner {
+  position: absolute; left: 0; right: 0; top: 18%;
+  text-align: center;
+  pointer-events: none;
+  animation: cc-banner 4.2s ease both;
+}
+.cc-banner .big { font: 700 54px/1.05 var(--font-display); }
+.cc-banner .sub { font: italic 22px var(--font-body); color: #f3e2b5; text-shadow: var(--text-shadow); margin-top: 6px; }
+@keyframes cc-banner { 0% { opacity: 0; transform: translateY(8px); } 12% { opacity: 1; transform: none; } 78% { opacity: 1; } 100% { opacity: 0; } }
+
+/* Red error text centre-top ("Not enough rage"). */
+.cc-error {
+  position: absolute; left: 0; right: 0; top: 14%;
+  text-align: center;
+  font: 700 20px var(--font-display);
+  color: #ff2a1f;
+  text-shadow: var(--text-shadow);
+  pointer-events: none;
+  animation: cc-fade-out 1.6s ease both;
+}
+@keyframes cc-fade-out { 0%, 60% { opacity: 1; } 100% { opacity: 0; } }
+
+/* Floating combat text and nameplates are positioned by JS. */
+.cc-float {
+  position: absolute;
+  font: 800 26px var(--font-display);
+  text-shadow: 0 2px 0 #000, 0 0 6px #000;
+  pointer-events: none;
+  white-space: nowrap;
+  will-change: transform, opacity;
+}
+.cc-float.dmg { color: #fff; }
+.cc-float.crit { color: #ffd23a; font-size: 38px; }
+.cc-float.heal { color: #47ff6a; }
+.cc-float.taken { color: #ff3b30; }
+.cc-float.xp { color: #c97bff; font-size: 20px; }
+.cc-float.info { color: #ffd100; font-size: 18px; }
+
+.cc-nameplate {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  text-align: center;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.cc-nameplate .name { font: 700 14px var(--font-body); text-shadow: var(--text-shadow); }
+.cc-nameplate .name.friendly { color: #63e36b; }
+.cc-nameplate .name.hostile { color: #ff4a3d; }
+.cc-nameplate .name.neutral { color: #ffd84a; }
+.cc-nameplate .name.player { color: #7fd2ff; }
+.cc-nameplate .title { font: italic 12px var(--font-body); color: #d7cfb7; text-shadow: var(--text-shadow); }
+.cc-nameplate .cc-bar { width: 92px; height: 8px; margin: 2px auto 0; }
+.cc-nameplate .quest {
+  font: 900 30px/1 var(--font-display);
+  color: #ffd200;
+  text-shadow: 0 0 2px #000, 0 2px 0 #4a3300, 0 0 12px rgba(255, 200, 0, 0.7);
+  animation: cc-bob 1.4s ease-in-out infinite;
+}
+.cc-nameplate.targeted .name { text-decoration: underline; text-underline-offset: 3px; }
+@keyframes cc-bob { 50% { transform: translateY(-4px); } }
+
+/* Scrollbars inside parchment */
+.cc-scroll { overflow-y: auto; scrollbar-width: thin; scrollbar-color: #8a6a2e transparent; }

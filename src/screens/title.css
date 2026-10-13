@@ -1,0 +1,24 @@
+.title-screen { position: absolute; inset: 0; overflow: hidden; }
+.title-bg {
+  position: absolute; inset: -3%;
+  background: #0b1020 center / cover no-repeat;
+  animation: title-kenburns 40s ease-in-out infinite alternate;
+}
+@keyframes title-kenburns { from { transform: scale(1.0) translate(0, 0); } to { transform: scale(1.08) translate(-1.5%, -1%); } }
+.title-shade { position: absolute; inset: 0; background: radial-gradient(80% 70% at 50% 45%, transparent 40%, rgba(0, 0, 0, 0.55) 100%), linear-gradient(180deg, rgba(0,0,0,0.25), transparent 25%, transparent 60%, rgba(0,0,0,0.75)); }
+.title-rays {
+  position: absolute; inset: -20%;
+  background: repeating-conic-gradient(from 200deg at 70% 10%, rgba(255, 220, 150, 0.06) 0deg 4deg, transparent 4deg 11deg);
+  mix-blend-mode: screen;
+  animation: title-rays 30s linear infinite;
+  opacity: 0.8;
+}
+@keyframes title-rays { to { transform: rotate(8deg); } }
+.title-logo-wrap { position: absolute; top: 5vh; left: 0; right: 0; text-align: center; }
+.title-logo { width: min(62vw, 880px); filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.8)); animation: title-logo-in 1.6s ease both; }
+.title-logo:not([style*="none"]) + .title-fallback { display: none; }
+.title-fallback { font-size: 76px; margin: 0; }
+@keyframes title-logo-in { from { opacity: 0; transform: scale(0.94); filter: blur(6px) drop-shadow(0 10px 30px #000); } }
+.title-menu { position: absolute; left: 0; right: 0; bottom: 17vh; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.title-menu .cc-btn { min-width: 300px; }
+.title-footer { position: absolute; left: 0; right: 0; bottom: 3vh; text-align: center; color: #f3e2b5; text-shadow: var(--text-shadow); font-size: 15px; }

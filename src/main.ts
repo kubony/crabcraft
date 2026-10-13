@@ -1,3 +1,11 @@
-// Boot. The screen router lands here on the integration branch.
-const app = document.getElementById('app')!;
-app.textContent = 'World of Crabcraft';
+import './ui/kit.css';
+import { App } from './app';
+
+const root = document.getElementById('app')!;
+const app = new App(root);
+// Debug handle for the console and the screenshot tool.
+(window as unknown as { app: App }).app = app;
+
+const params = new URLSearchParams(location.search);
+const start = (params.get('screen') as Parameters<App['go']>[0]) || 'title';
+void app.go(start);
