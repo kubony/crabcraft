@@ -44,7 +44,7 @@ export async function createBackdrop(): Promise<Backdrop> {
       `#include <map_fragment>
       {
         float l = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-        diffuseColor.rgb = max(mix(vec3(l), diffuseColor.rgb, 1.35), vec3(0.0));
+        diffuseColor.rgb = max(mix(vec3(l), diffuseColor.rgb, ${painted ? '1.15' : '1.35'}), vec3(0.0));
       }`,
     );
   };

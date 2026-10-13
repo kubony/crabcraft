@@ -184,6 +184,26 @@ export function createDais(): Dais {
   halo.renderOrder = 2;
   group.add(halo);
 
+  // Energy arcs: two bright comets of light that run around the rune band.
+  const arcTex = arcTexture();
+  disposables.push(arcTex);
+  const arcMat = new THREE.MeshBasicMaterial({
+    map: arcTex,
+    color: new THREE.Color(2.4, 1.55, 0.6),
+    transparent: true,
+    opacity: 0.6,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  disposables.push(arcMat);
+  const arcGeo = new THREE.RingGeometry(TOP_RADIUS * (RUNE_IN - 0.02), TOP_RADIUS * (RUNE_OUT + 0.02), 160, 1);
+  arcGeo.rotateX(-Math.PI / 2);
+  disposables.push(arcGeo);
+  const arcs = new THREE.Mesh(arcGeo, arcMat);
+  arcs.position.y = DAIS_TOP + 0.008;
+  arcs.renderOrder = 3;
+  group.add(arcs);
+
   let flareLevel = 0;
   let glow = 0.5;
 
@@ -200,7 +220,9 @@ export function createDais(): Dais {
       const breathe = 0.5 + 0.5 * Math.sin(elapsed * 1.25);
       glow = 0.55 + 0.25 * breathe + flareLevel * 0.9;
       topMat.emissiveIntensity = 1.4 + 1.6 * glow;
-      haloMat.opacity = 0.18 + 0.22 * glow;
+      haloMat.opacity = 0.05 + 0.12 * glow;
+      arcs.rotation.y = -elapsed * 0.32;
+      arcMat.opacity = 0.45 + 0.4 * glow;
     },
     dispose() {
       for (const d of disposables) d.dispose();
@@ -562,5 +584,38 @@ function haloTexture(): THREE.DataTexture {
   const t = dataTexture(data, W, 4, false);
   t.generateMipmaps = false;
   t.minFilter = THREE.LinearFilter;
+  return t;
+}
+
+/** Polar texture for the energy ring: soft radial band, two comet-shaped bright arcs. */
+function arcTexture(): THREE.CanvasTexture {
+  const N = 512;
+  const c = makeCanvas(N, N);
+  const ctx = c.getContext('2d')!;
+  const cx = N / 2;
+  const g = ctx.createConicGradient(0, cx, cx);
+  // Comet heads with long fading tails, twice around the circle.
+  for (const base of [0, 0.5]) {
+    g.addColorStop(base + 0.0, 'rgba(255,255,255,0)');
+    g.addColorStop(base + 0.32, 'rgba(255,255,255,0)');
+    g.addColorStop(base + 0.42, 'rgba(255,255,255,0.18)');
+    g.addColorStop(base + 0.47, 'rgba(255,255,255,0.65)');
+    g.addColorStop(base + 0.485, 'rgba(255,255,255,1)');
+    g.addColorStop(base + 0.495, 'rgba(255,255,255,0)');
+  }
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, N, N);
+  // Keep only the band, soft at both edges (RingGeometry UVs map the ring to the square).
+  ctx.globalCompositeOperation = 'destination-in';
+  const rIn = (RUNE_IN - 0.02) / (RUNE_OUT + 0.02);
+  const r = ctx.createRadialGradient(cx, cx, 0, cx, cx, cx);
+  r.addColorStop(0, 'rgba(0,0,0,0)');
+  r.addColorStop(rIn, 'rgba(0,0,0,0)');
+  r.addColorStop(rIn + (1 - rIn) * 0.5, 'rgba(0,0,0,1)');
+  r.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = r;
+  ctx.fillRect(0, 0, N, N);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }

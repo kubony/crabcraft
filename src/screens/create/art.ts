@@ -358,10 +358,11 @@ export function waxSealSvg(id: ClassId): string {
 <circle cx="60" cy="56" r="27" fill="url(#press)" opacity=".85"/>
 <circle cx="60" cy="56" r="27" fill="none" stroke="${lo}" stroke-width="2" opacity=".7"/>
 <circle cx="60.8" cy="57" r="27" fill="none" stroke="${hi}" stroke-width="1" opacity=".5"/>
-<g transform="translate(60 66) scale(1.15)">
-  <path d="${CLAW}" fill="none" stroke="${lo}" stroke-width="2.6" transform="translate(-0.6 -0.6)" opacity=".8"/>
-  <path d="${CLAW}" fill="${mid}" stroke="${hi}" stroke-width="1.2" opacity=".95"/>
+<circle cx="60" cy="56" r="21" fill="none" stroke="${lo}" stroke-width="1" stroke-dasharray="1.5 3" opacity=".8"/>
+<g transform="translate(60 70) scale(0.62)">
+  <path d="${CLAW}" fill="none" stroke="${lo}" stroke-width="3" transform="translate(-0.8 -0.8)" opacity=".85"/>
+  <path d="${CLAW}" fill="${mid}" stroke="${hi}" stroke-width="1.6"/>
 </g>
-<path d="M30 40 C36 26 50 18 64 18" stroke="#fff" stroke-opacity=".35" stroke-width="3" fill="none" stroke-linecap="round"/>
+<path d="M34 42 C39 31 49 25 60 24" stroke="#fff" stroke-opacity=".35" stroke-width="3" fill="none" stroke-linecap="round"/>
 </svg>`;
 }

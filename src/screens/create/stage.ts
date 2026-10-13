@@ -80,6 +80,11 @@ export class CreateStage {
   private disposed = false;
   private viewOffset = { x: 0, y: 0 };
   private sway = new THREE.Vector3();
+  private pointer = new THREE.Vector2();
+  private pointerSmooth = new THREE.Vector2();
+  private look = 0;
+  private lookTarget = 0;
+  private lookNext = 4;
   private focusTarget = new THREE.Vector3();
 
   constructor(private readonly engine: Engine) {}
@@ -278,6 +283,11 @@ export class CreateStage {
     this.yawVel = THREE.MathUtils.clamp(this.dragVel, -6, 6);
   }
 
+  /** Pointer position in -1..1 (x right, y down) for a gentle parallax on the camera. */
+  setPointer(nx: number, ny: number): void {
+    this.pointer.set(THREE.MathUtils.clamp(nx, -1, 1), THREE.MathUtils.clamp(ny, -1, 1));
+  }
+
   // ---------------------------------------------------------------------------------------
   // Framing
   // ---------------------------------------------------------------------------------------
@@ -361,6 +371,14 @@ export class CreateStage {
       });
       this.nextBlink = now + 2.5 + Math.random() * 4;
     }
+    // Idle: now and then the crab glances a little to one side, then back to the camera.
+    if (this.motion.action || now < this.faceUntil) this.lookTarget = 0;
+    else if (now > this.lookNext) {
+      this.lookTarget = this.lookTarget === 0 ? (Math.random() < 0.5 ? -1 : 1) * (0.12 + Math.random() * 0.12) : 0;
+      this.lookNext = now + (this.lookTarget === 0 ? 4 + Math.random() * 4 : 1.6 + Math.random() * 1.4);
+    }
+    this.look += (this.lookTarget - this.look) * Math.min(1, dt * 2.2);
+    this.rig.root.rotation.y = this.look;
     this.motion.update(dt);
     this.rig.update(dt);
 
@@ -377,7 +395,12 @@ export class CreateStage {
     // Camera: slow push-in on entrance, breathing sway, a jolt on landing.
     this.pushT += dt;
     const push = 1 + 0.14 * Math.pow(1 - Math.min(1, this.pushT / 2.6), 3);
-    this.sway.set(Math.sin(elapsed * 0.23) * 0.07, Math.sin(elapsed * 0.31 + 1.3) * 0.035, Math.sin(elapsed * 0.17) * 0.05);
+    this.pointerSmooth.lerp(this.pointer, Math.min(1, dt * 2.5));
+    this.sway.set(
+      Math.sin(elapsed * 0.23) * 0.07 + this.pointerSmooth.x * 0.16,
+      Math.sin(elapsed * 0.31 + 1.3) * 0.035 - this.pointerSmooth.y * 0.07,
+      Math.sin(elapsed * 0.17) * 0.05,
+    );
     this.shakeT += dt;
     const shake = 0.035 * Math.exp(-this.shakeT * 9);
     const cam = this.camera;

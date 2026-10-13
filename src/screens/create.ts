@@ -111,7 +111,9 @@ export default class CreateScreen implements Screen {
     canvas.addEventListener('pointerdown', this.onCanvasDown);
     window.addEventListener('resize', this.onResize);
     window.addEventListener('keydown', this.onKey);
+    window.addEventListener('pointermove', this.onPointerMove);
     this.cleanups.push(
+      () => window.removeEventListener('pointermove', this.onPointerMove),
       app.engine.onFrame(({ dt, elapsed }) => this.frame(dt, elapsed)),
       () => canvas.removeEventListener('pointerdown', this.onCanvasDown),
       () => window.removeEventListener('resize', this.onResize),
@@ -680,6 +682,10 @@ export default class CreateScreen implements Screen {
     window.removeEventListener('pointerup', this.onDragEnd);
     window.removeEventListener('pointercancel', this.onDragEnd);
   }
+
+  private readonly onPointerMove = (e: PointerEvent): void => {
+    this.stage.setPointer((e.clientX / window.innerWidth) * 2 - 1, (e.clientY / window.innerHeight) * 2 - 1);
+  };
 
   private readonly onKey = (e: KeyboardEvent): void => {
     const t = e.target as HTMLElement | null;
