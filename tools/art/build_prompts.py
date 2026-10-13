@@ -72,8 +72,10 @@ jobs.append({'id': 'title-bg', 'refs': 'crab', 'aspect': '16:9', 'size': '1536x1
   "stacked up the cliffs; tall-masted ships rest in the calm bay reflecting the last orange sunset glow. In the lower foreground, a long wooden pier with lanterns where "
   "a small party of three crab robot heroes of different races stands together, three-quarter view, LED eyes glowing: a glossy red Human warrior crab in a blue tabard "
   "with a sword and round shield, a midnight-violet Night Elf mage crab with long swept antenna ears holding a staff topped by a glowing sea-glass orb, and a big earth-brown "
-  "Tauren priest crab with curved horns holding a glowing holy lantern. Composition: keep the TOP-CENTRE of the sky calm and open (a logo will be placed there), and keep the "
-  "BOTTOM-CENTRE slightly darker and uncluttered (menu buttons go there); the crab heroes stand on the pier at lower left-of-centre. Epic, inviting, magical. " + CRAB + " " + STYLE})
+  "Tauren priest crab with curved horns holding a glowing holy lantern. Composition rules, strictly: the three crab heroes stand together on the pier in the LEFT THIRD "
+  "of the image only (they occupy at most the left 38% of the width and the lower half of the height), seen three-quarter, facing right toward the sea; the TOP-CENTRE "
+  "is open twilight sky (a logo will be placed there); the BOTTOM-CENTRE is empty, slightly darker pier boards and calm water with no characters (menu buttons go there); "
+  "the lighthouse with its beam is on the right. Epic, inviting, magical. " + CRAB + " " + STYLE})
 jobs.append({'id': 'loading-1', 'refs': 'crab', 'aspect': '16:9', 'size': '1536x1024', 'prompt': WIDE +
   "Loading screen painting: the Brine Shore, a golden beach below sea cliffs and pine woods at late afternoon. Shallow tide pools mirror the sky; broken wreck timbers, "
   "rusted iron plates and coils of chain litter the sand. Three crab robot adventurers advance sideways along the shoreline in a heroic diagonal: a red Human warrior crab "
@@ -209,3 +211,8 @@ for j in jobs:
     j['prompt_file'] = fp
 json.dump(jobs, open(os.path.join(S, 'jobs.json'), 'w'), indent=1)
 print(len(jobs), 'jobs')
+
+# Gemini 3 Pro Image detail pass for the five 2560x1440 paintings (input: the chosen GPT image take, 16:9, 2K).
+# create-bg used the "empty" variant because the plain prompt let the model add figures to the square.
+UPSCALE = "Re-render this exact painting at higher resolution. Keep the composition, framing, every object, every character, the crab robots' exact shapes, faces, eyes and gear, the colours and the lighting exactly the same. Only add crisp fine painterly detail and sharpness, as a high-end fantasy key art painting. Do not add, move or remove anything. No text, no watermark."
+UPSCALE_EMPTY = 'Re-render this exact painting at higher resolution. It is an empty town square background with NO characters: keep it completely empty of people, crabs, creatures and figures; do not add anything to the paving. Keep the composition, framing, buildings, banners, ships, lighthouse, colours and lighting exactly the same. Only add crisp fine painterly detail and sharpness, as a high-end fantasy key art painting. Do not add, move or remove anything. No text, no watermark.'
