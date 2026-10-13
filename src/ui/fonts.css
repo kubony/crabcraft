@@ -1,0 +1,30 @@
+/* Self-hosted OFL fonts named by the UI kit (docs/design.md "Art direction").
+   Latin subsets of the Google Fonts releases; licences in public/fonts/OFL-*.txt. */
+@font-face {
+  font-family: 'Cinzel';
+  src: url('/fonts/Cinzel-Variable.woff2') format('woff2');
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Cinzel Decorative';
+  src: url('/fonts/CinzelDecorative-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Alegreya';
+  src: url('/fonts/Alegreya-Variable.woff2') format('woff2');
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Alegreya';
+  src: url('/fonts/Alegreya-Italic-Variable.woff2') format('woff2');
+  font-weight: 400 900;
+  font-style: italic;
+  font-display: swap;
+}
