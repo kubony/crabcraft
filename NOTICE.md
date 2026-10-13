@@ -10,5 +10,7 @@ World of Crabcraft is licensed under the Apache License 2.0 (see `LICENSE`).
 | Jumper policy bundle, web half (`public/robot/bundle/`: `bundle.json`, `controller.toml`, contracts, `models/*.onnx`, trajectories, `reference.json`, `manual.en.json`, `README.md`, `runtime/web/controller.{js,wasm}` built from commit ce71f79) and the physics model exported from `assets/jumper/jumper.xml` (`public/robot/jumper/`) | https://github.com/KingKongRobotics/jumper (`out/bundle_example/jumper`, `assets/jumper/`) | Apache-2.0, Copyright 2026 KingKong Robotics | Robot Mode: the controller, policies, contact model and visual meshes the robot runs |
 | MuJoCo JavaScript/WASM bindings `@mujoco/mujoco` 3.11.0 | https://github.com/google-deepmind/mujoco (npm `@mujoco/mujoco`) | Apache-2.0, Copyright Google DeepMind | Robot Mode physics |
 | ONNX Runtime Web `onnxruntime-web` 1.30.0 (and its `onnxruntime-common`) | https://github.com/microsoft/onnxruntime (npm `onnxruntime-web`) | MIT, Copyright Microsoft Corporation | Robot Mode policy inference |
+| "Oak Wood Planks" texture by Dimitrios Savva (`public/robot/arena/oak_wood_planks_*`, re-encoded JPEG) | https://polyhaven.com/a/oak_wood_planks | CC0 | Robot Mode desk |
+| "Cayley Interior" HDRI by Greg Zaal (`public/robot/arena/cayley_interior_1k.hdr`) | https://polyhaven.com/a/cayley_interior | CC0 | Robot Mode reflections |
 
 Every asset added to this repository must get a row here (source URL, author, license).

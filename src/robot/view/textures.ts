@@ -182,7 +182,7 @@ export function radialTexture(inner = 'rgba(0,0,0,1)', outer = 'rgba(0,0,0,0)', 
  * The room behind the desk, as a wrap-around panorama: warm walls, bookshelves with book spines
  * and lamps. Rendered far out of focus, it reads like the TVC's bokeh backgrounds.
  */
-export function roomPanorama(w = 4096, h = 1024): THREE.Texture {
+export function roomPanorama(w = 4096, h = 1024, floor = '#3d2716', floorAt = 0.867): THREE.Texture {
   const [c, ctx] = canvas(w, h);
   const r = rng(42);
   const wall = ctx.createLinearGradient(0, 0, 0, h);
@@ -233,6 +233,14 @@ export function roomPanorama(w = 4096, h = 1024): THREE.Texture {
     ctx.fillStyle = g;
     ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
   }
+  // Where the desk meets the wall, fade into the fog colour so the horizon has no seam.
+  const fade = ctx.createLinearGradient(0, h * (floorAt - 0.14), 0, h * floorAt);
+  fade.addColorStop(0, 'rgba(0,0,0,0)');
+  fade.addColorStop(1, floor);
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, h * (floorAt - 0.14), w, h * 0.14);
+  ctx.fillStyle = floor;
+  ctx.fillRect(0, h * floorAt, w, h * (1 - floorAt));
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = THREE.RepeatWrapping;

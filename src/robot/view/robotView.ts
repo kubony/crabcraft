@@ -33,7 +33,7 @@ export function makeRobotMaterials() {
     metalness: 0,
     clearcoat: 1,
     clearcoatRoughness: 0.06,
-    envMapIntensity: 1.3,
+    envMapIntensity: 0.85,
   });
   const black = new THREE.MeshPhysicalMaterial({
     name: 'jumper-black',
@@ -258,7 +258,7 @@ export class StlRobotView implements RobotViewLayer {
       const body = nodeName(src, rgba);
       let geo = src.geometry.clone();
       geo.applyMatrix4(MJ_TO_GAME);
-      geo = cleanNormals(toCreasedNormals(dropDegenerate(geo), THREE.MathUtils.degToRad(34)));
+      geo = cleanNormals(toCreasedNormals(dropDegenerate(geo), THREE.MathUtils.degToRad(55)));
       const mesh = new THREE.Mesh(geo, materialFor(body, rgba[body], this.mats));
       mesh.castShadow = true;
       mesh.receiveShadow = true;

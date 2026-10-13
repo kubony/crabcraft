@@ -4,6 +4,7 @@
 // robot's control rate (src/robot/sim/); this page renders the result on a sunny tabletop and
 // hands the person's keys, buttons and gamepad to the controller, which decides what they mean.
 import * as THREE from 'three';
+import { ToneMappingMode } from 'postprocessing';
 import { Engine, type ViewOptions } from '../core/engine';
 import { JOINT_NAMES } from '../crab/types';
 import { SimClient } from './client';
@@ -145,14 +146,16 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
   if (toContract.some((i) => i < 0)) throw new Error('bundle wire order does not cover JOINT_NAMES');
 
   const arena = new Arena(engine.renderer, pkg);
+  await arena.upgrade(base);
   const scene = arena.scene;
   scene.add(robot.object);
   const orbit = new OrbitFollow(engine.canvas, window.innerWidth / window.innerHeight);
   const camera = orbit.camera;
   const view: ViewOptions = {
     bloom: { intensity: 0.85, threshold: 0.92, radius: 0.7 },
-    dof: { focusDistance: 0.8, focusRange: 0.32, bokehScale: 3.2 },
-    exposure: 1.05,
+    dof: { focusDistance: 0.8, focusRange: 0.22, bokehScale: 5.5 },
+    exposure: 1.3,
+    toneMapping: ToneMappingMode.ACES_FILMIC,
     vignette: { offset: 0.28, darkness: 0.62 },
     // No saturation/contrast here: the engine applies them before AgX tone mapping, where they
     // push saturated reds below zero and AgX's log turns those pixels into NaN (black holes).
@@ -224,7 +227,7 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
     arena.update(allBodies, f.poses.subarray(0), basePos, camera);
     // Toys follow the robot bodies in the pose array.
     orbit.update(dt, basePos, yaw, speed);
-    engine.setFocus(orbit.focus, 0.32);
+    engine.setFocus(orbit.focus, 0.22);
     up.set(0, 1, 0).applyQuaternion(baseQuat);
     hud?.update(f, { speed, height: basePos.y, tilt: THREE.MathUtils.radToDeg(Math.acos(Math.min(1, up.y))) }, dt);
     for (const fn of stateListeners) fn(state);

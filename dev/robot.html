@@ -11,7 +11,8 @@
     <script type="module">
       import '../src/ui/kit.css';
       import { startRobotMode } from '../src/robot/index.ts';
-      const robot = await startRobotMode(document.getElementById('app'));
+      const params = new URLSearchParams(location.search);
+      const robot = await startRobotMode(document.getElementById('app'), { hud: params.get('hud') !== '0' });
       window.robot = robot;
       // Ready for a screenshot once the policy is running and a few frames are on screen.
       const off = robot.onState((s) => {

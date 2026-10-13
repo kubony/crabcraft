@@ -34,6 +34,8 @@ export interface ViewOptions {
   vignette?: { offset?: number; darkness?: number } | null;
   saturation?: number;
   contrast?: number;
+  /** Tone mapping operator (default AgX). ACES keeps saturated product reds deeper. */
+  toneMapping?: ToneMappingMode;
 }
 
 type Updater = (f: FrameInfo) => void;
@@ -116,7 +118,7 @@ export class Engine {
     );
     if (opts.saturation !== undefined) effects.push(new HueSaturationEffect({ saturation: opts.saturation }));
     if (opts.contrast !== undefined) effects.push(new BrightnessContrastEffect({ contrast: opts.contrast }));
-    const tone = new ToneMappingEffect({ mode: ToneMappingMode.AGX });
+    const tone = new ToneMappingEffect({ mode: opts.toneMapping ?? ToneMappingMode.AGX });
     effects.push(tone);
     if (opts.vignette !== null) {
       effects.push(

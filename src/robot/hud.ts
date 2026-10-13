@@ -81,7 +81,7 @@ export class Hud {
         h(
           'div',
           { class: 't2' },
-          'Loading the files a real Jumper loads: its controller, twelve trained policies and the physics model it learned in.',
+          'Loading the files a real Jumper loads: its controller, the trained policies for all twelve modes and the physics model they learned in.',
         ),
         h('div', { class: 'bar' }, this.loadBar),
         h('div', { class: 'meta' }, this.loadLabel, this.loadBytes),

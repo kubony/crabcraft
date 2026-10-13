@@ -2,6 +2,7 @@
 // MuJoCo bodies, desk props that are MuJoCo geoms, a warm out-of-focus room and TVC lighting.
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
 import type { RobotPackage } from '../sim/types';
 import { mjPosToGame, mjQuatToGame } from './frames';
 import { blockFace, radialTexture, roomPanorama, soccerTexture, woodTextures } from './textures';
@@ -23,6 +24,9 @@ export class Arena {
   private room: THREE.Mesh;
   private contact: THREE.Mesh;
   private disposables: { dispose(): void }[] = [];
+  private deskMat: THREE.MeshPhysicalMaterial;
+  private renderer: THREE.WebGLRenderer;
+  static readonly DESK = 60;
   private tmpV = new THREE.Vector3();
   private tmpQ = new THREE.Quaternion();
   /** Background colour the fog fades the desk into. */
@@ -30,9 +34,10 @@ export class Arena {
   static readonly SUN = new THREE.Vector3(1.35, 1.25, 0.55);
 
   constructor(renderer: THREE.WebGLRenderer, pkg: RobotPackage) {
+    this.renderer = renderer;
     const s = this.scene;
     s.background = Arena.FOG.clone();
-    s.fog = new THREE.Fog(Arena.FOG, 3.2, 11);
+    s.fog = new THREE.Fog(Arena.FOG, 2.6, 8.8);
 
     // Image-based reflections for the clearcoat: a neutral studio, dimmed and warmed by lights.
     const pmrem = new THREE.PMREMGenerator(renderer);
@@ -45,7 +50,7 @@ export class Arena {
     // Lights: warm low key from the front-left (the robot faces +Z), cool rim from behind.
     s.add(new THREE.HemisphereLight('#ffe1bd', '#4a2c18', 0.25));
     // Late-afternoon sun from the robot's left, low enough to throw long soft shadows.
-    const key = new THREE.DirectionalLight('#ffc98a', 3.6);
+    const key = new THREE.DirectionalLight('#ffc98a', 4.2);
     key.position.copy(Arena.SUN);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
@@ -59,14 +64,11 @@ export class Arena {
     const rim = new THREE.DirectionalLight('#ffe6cc', 1.0);
     rim.position.set(0.8, 1.0, -1.6);
     s.add(rim);
-    const bounce = new THREE.PointLight('#ff9a4a', 0.6, 3, 2);
-    bounce.position.set(-0.6, 0.25, 0.4);
-    s.add(bounce);
 
     // The desk.
     const wood = woodTextures();
     const tile = 1.2; // metres per texture repeat: 8 boards of 15 cm
-    const deskSize = 60;
+    const deskSize = Arena.DESK;
     wood.map.repeat.set(deskSize / tile, deskSize / tile);
     wood.roughness.repeat.copy(wood.map.repeat);
     const deskMat = new THREE.MeshPhysicalMaterial({
@@ -77,6 +79,7 @@ export class Arena {
       clearcoatRoughness: 0.4,
       color: '#ffffff',
     });
+    this.deskMat = deskMat;
     const desk = new THREE.Mesh(new THREE.PlaneGeometry(deskSize, deskSize), deskMat);
     desk.rotation.x = -Math.PI / 2;
     desk.receiveShadow = true;
@@ -95,9 +98,9 @@ export class Arena {
     this.disposables.push(blob, cmat, this.contact.geometry);
 
     // The room: a panorama cylinder that stays centred on the camera, far out of focus.
-    const pano = roomPanorama();
+    const pano = roomPanorama(4096, 1024, `#${Arena.FOG.getHexString()}`, 1 - 0.8 / 6);
     pano.repeat.set(2, 1);
-    const roomMat = new THREE.MeshBasicMaterial({ map: pano, side: THREE.BackSide, fog: false, color: '#a8957e' });
+    const roomMat = new THREE.MeshBasicMaterial({ map: pano, side: THREE.BackSide, fog: false, color: '#d8c8b4' });
     this.room = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 6, 64, 1, true), roomMat);
     this.room.position.y = 2.2;
     s.add(this.room);
@@ -131,9 +134,6 @@ export class Arena {
 
     // Desk props from the physics scene (static geoms).
     for (const p of pkg.scene.props) this.addProp(p);
-    const lampGlow = new THREE.PointLight('#ffb36b', 1.2, 3, 1.5);
-    lampGlow.position.set(-1.6, 0.6, -1.8);
-    s.add(lampGlow);
 
     // Toys (free bodies).
     const ballTex = soccerTexture();
@@ -216,6 +216,57 @@ export class Arena {
     mjQuatToGame(mesh.quaternion, Math.cos(half), 0, 0, Math.sin(half));
     mesh.name = p.name;
     this.scene.add(mesh);
+  }
+
+  /**
+   * Photographic upgrade (Poly Haven, CC0): a varnished table top and an interior HDRI for the
+   * reflections on the clearcoat. The procedural desk and studio stay if either fails to load.
+   */
+  async upgrade(base: string): Promise<void> {
+    const url = (f: string) => new URL(`arena/${f}`, base).href;
+    const tl = new THREE.TextureLoader();
+    try {
+      const [hdr, diff, rough, nor] = await Promise.all([
+        new HDRLoader().loadAsync(url('cayley_interior_1k.hdr')),
+        tl.loadAsync(url('oak_wood_planks_diff_2k.jpg')),
+        tl.loadAsync(url('oak_wood_planks_rough_1k.jpg')),
+        tl.loadAsync(url('oak_wood_planks_nor_gl_1k.jpg')),
+      ]);
+      hdr.mapping = THREE.EquirectangularReflectionMapping;
+      const pmrem = new THREE.PMREMGenerator(this.renderer);
+      const env = pmrem.fromEquirectangular(hdr).texture;
+      pmrem.dispose();
+      hdr.dispose();
+      this.scene.environment?.dispose();
+      this.scene.environment = env;
+      this.scene.environmentIntensity = 0.42;
+      // Put the HDRI's big window on the robot's left, where the sun comes from.
+      this.scene.environmentRotation.set(0, -1.1, 0);
+      this.disposables.push(env);
+      const tile = 1.2; // the scan is 1.2 m square
+      const rep = Arena.DESK / tile;
+      diff.colorSpace = THREE.SRGBColorSpace;
+      for (const t of [diff, rough, nor]) {
+        t.wrapS = t.wrapT = THREE.RepeatWrapping;
+        t.repeat.set(rep, rep);
+        t.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+        this.disposables.push(t);
+      }
+      const m = this.deskMat;
+      m.map?.dispose();
+      m.roughnessMap?.dispose();
+      m.map = diff;
+      m.roughnessMap = rough;
+      m.normalMap = nor;
+      m.normalScale.set(0.6, 0.6);
+      m.roughness = 0.9;
+      m.color.set('#e8e0d6');
+      m.clearcoat = 0.25;
+      m.clearcoatRoughness = 0.18;
+      m.needsUpdate = true;
+    } catch (err) {
+      console.warn('Robot Mode: photo textures unavailable, keeping the procedural desk', err);
+    }
   }
 
   /** Toy poses from the physics frame (7 floats per body, MuJoCo frame), and camera-centred room. */
