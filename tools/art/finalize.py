@@ -60,7 +60,7 @@ def sharpen(im, amount=60):
 
 # ---------- Wide paintings (2560x1440) ----------
 WIDE = {
-    'title-bg': ('up/title-bg-up1.png', 'codex/title-bg-c.png'),
+    'title-bg': ('up/title-bg-up-g.png', 'codex/title-bg-g.png'),
     'create-bg': ('up/create-bg-up2.png', 'codex/create-bg-c.png'),
     'loading-1': ('up/loading-1-up1.png', 'codex/loading-1-b.png'),
     'loading-2': ('up/loading-2-up1.png', 'codex/loading-2-b.png'),
@@ -123,6 +123,10 @@ for k in ['item-rusted-cog', 'quest-moonwater', 'quest-scroll', 'quest-beacon', 
 # ---------- UI ----------
 fs = Image.open(src('codex/ui__frame-stone-a.png')).convert('RGBA')
 save(fs.resize((512, 512), Image.LANCZOS), 'ui/frame-stone.webp', quality=84, alpha=True)
+
+# Plain slate from the inside of the frame, for panels that want a cover background without the border.
+inner = fs.crop((int(fs.width * 0.16), int(fs.height * 0.16), int(fs.width * 0.84), int(fs.height * 0.84))).convert('RGB')
+save(inner.resize((768, 768), Image.LANCZOS), 'ui/stone-fill.webp', quality=80)
 
 cc = trim_alpha(Image.open(src('codex/ui__corner-claw-a.png')).convert('RGBA'), pad=2)
 side = max(cc.size)

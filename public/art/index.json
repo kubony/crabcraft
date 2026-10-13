@@ -311,7 +311,7 @@
   "file": "title-bg.webp",
   "width": 2560,
   "height": 1440,
-  "bytes": 462108,
+  "bytes": 415096,
   "alpha": false
  },
  {
@@ -376,6 +376,13 @@
   "height": 512,
   "bytes": 62778,
   "alpha": true
+ },
+ {
+  "file": "ui/stone-fill.webp",
+  "width": 768,
+  "height": 768,
+  "bytes": 79426,
+  "alpha": false
  },
  {
   "file": "ui/tooltip-bg.webp",
