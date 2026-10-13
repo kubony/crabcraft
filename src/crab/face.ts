@@ -106,11 +106,10 @@ float eyeShape(vec2 p, int s, float R) {
     vec2 n = normalize(vec2(0.75, 1.0));
     return max(d, dot(p - vec2(0.0, -R * 0.05), n));
   }
-  if (s == 3) {                       // hurt: squeezed wavy line, shivering
+  if (s == 3) {                       // hurt: squeezed wavy line
     float x = clamp(p.x, -R * 0.55, R * 0.55);
-    float w = R * 0.16 * sin(x / R * 9.0 + uTime * 30.0 * 0.0) ;
-    float d = length(vec2(p.x - x, p.y - w)) * 0.8;
-    return d - th;
+    float w = R * 0.16 * sin(x / R * 9.0);
+    return length(vec2(p.x - x, p.y - w)) * 0.8 - th;
   }
   if (s == 4) {                       // dead: X
     float a = sdSeg(p, vec2(-R * 0.5, -R * 0.5), vec2(R * 0.5, R * 0.5));

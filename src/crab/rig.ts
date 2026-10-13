@@ -259,8 +259,9 @@ export class JumperRig implements CrabRig {
     this.updaters.length = 0;
   }
 
-  async applySpec(_spec: CrabSpec): Promise<void> {
-    throw new Error('applySpec is provided by the crab factory');
+  /** Overridden by the crab factory (src/crab/index.ts), which also re-dresses the gear. */
+  async applySpec(spec: CrabSpec): Promise<void> {
+    this.spec = { ...spec };
   }
 
   private twitchT = 1 + Math.random() * 3;
