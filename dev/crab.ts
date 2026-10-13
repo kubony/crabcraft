@@ -127,6 +127,8 @@ async function hero(): Promise<void> {
   const s = spec('human');
   const crab = (await createCrab(s)) as JumperRig;
   crab.root.rotation.y = 0.0;
+  // &bare: the plain Jumper robot (no race gear or weapons) for a straight TVC comparison.
+  if (params.has('bare')) for (const g of crab.gearMeshes) g.visible = false;
   scene.add(crab.root);
   crabs.push(crab);
   window.__crab = crab;
@@ -226,7 +228,8 @@ async function rear(): Promise<void> {
   scene.add(c.root);
   crabs.push(c);
   cam.fov = 28;
-  cam.position.set(2.6, 1.9, -3.6);
+  if (params.has('top')) cam.position.set(0.3, 4.6, -1.2);
+  else cam.position.set(2.6, 1.9, -3.6);
   cam.lookAt(0, 0.45, 0);
   engine.setView(scene, cam, { bloom: { intensity: 0.9, threshold: 0.9 } });
   ready();

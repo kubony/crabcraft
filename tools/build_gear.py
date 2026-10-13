@@ -74,22 +74,28 @@ def wrap_grid(name, x0, x1, z0, z1, material, lift=0.0025, nx=16, nz=12, thick=0
     return g
 
 
+def conform(o, lift=0.0025):
+    """Drape a flat decal onto the shell top: keep its thickness, follow the surface."""
+    gl.apply_all(o)
+    ys = [v.co.y for v in o.data.vertices]
+    mid = (min(ys) + max(ys)) / 2
+    for v in o.data.vertices:
+        v.co.y = R.top(v.co.x, v.co.z) + lift + (v.co.y - mid)
+    return o
+
+
 def emblem_claw(name, size, material, depth=0.003):
-    """Gold pincer emblem: two crescent jaws, in the XY plane."""
-    pts_a, pts_b = [], []
-    for i in range(13):
-        t = i / 12
-        a = PI * (0.15 + 0.7 * t)
-        pts_a.append((math.cos(a) * 1.0 - 0.15, math.sin(a) * 1.0))
-    for i in range(13):
-        t = 1 - i / 12
-        a = PI * (0.2 + 0.62 * t)
-        pts_a.append((math.cos(a) * 0.62 - 0.05, math.sin(a) * 0.62 + 0.05))
-    left = [(x * size, (y - 0.4) * size) for x, y in pts_a]
-    o1 = extrude2d(name + "_a", left, depth, material)
-    o2 = extrude2d(name + "_b", [(-x, y) for x, y in reversed(left)], depth, material)
-    stem = extrude2d(name + "_c", [(-0.12 * size, -0.75 * size), (0.12 * size, -0.75 * size), (0.16 * size, -0.2 * size), (-0.16 * size, -0.2 * size)], depth, material)
-    return [o1, o2, stem]
+    """Heraldic pincer in the XY plane: two crescent jaws curling up toward each other on a wrist."""
+    objs = []
+    base = crescent(1.0)  # a "C": opening toward +x
+    rot = 0.55
+    left = [(x * math.cos(rot) - y * math.sin(rot), x * math.sin(rot) + y * math.cos(rot)) for x, y in base]
+    left = [(-0.36 * size + x * 0.58 * size, 0.22 * size + y * 0.58 * size) for x, y in left]
+    right = [(-x, y) for x, y in reversed(left)]
+    objs.append(extrude2d(f"{name}_jawl", left, depth, material))
+    objs.append(extrude2d(f"{name}_jawr", right, depth, material))
+    objs.append(extrude2d(f"{name}_wrist", [(-0.16 * size, -0.85 * size), (0.16 * size, -0.85 * size), (0.24 * size, -0.3 * size), (-0.24 * size, -0.3 * size)], depth, material))
+    return objs
 
 
 def horn(name, base, dirs, length, r0, material, curl=0.6, up=0.8, seg=7, flat=1.0):
@@ -119,8 +125,8 @@ def leaf_shape(length, width, n=10):
 
 
 def crescent(r, thick=0.0, n=18):
-    """Crescent moon opening to +x: outer circle r minus an inner circle 0.85r shifted by 0.42r."""
-    r2, d = 0.85, 0.42
+    """Crescent moon opening to +x: outer circle r minus an inner circle 0.93r shifted by 0.32r."""
+    r2, d = 0.93, 0.32
     xi = (1 - r2 * r2 + d * d) / (2 * d)
     yi = math.sqrt(max(0.0, 1 - xi * xi))
     a0 = math.atan2(yi, xi)
@@ -196,7 +202,7 @@ def human():
     gl.solidify(flap, 0.0018, offset=1.0)
     trim_pts = [(-0.052, yt, zr - 0.013), (-0.044, yt - 0.072, zr - 0.022), (0.0, yt - 0.09, zr - 0.023), (0.044, yt - 0.072, zr - 0.022), (0.052, yt, zr - 0.013)]
     trim = tube("tabard_trim", trim_pts, 0.0016, "gold", res=6)
-    crest = emblem_claw("tabard_crest", 0.016, "gold")
+    crest = emblem_claw("tabard_crest", 0.022, "gold")
     for o in crest:
         o.rotation_euler = (0, PI, 0)
         o.location = (0, yt - 0.04, zr - 0.026)
@@ -313,13 +319,14 @@ def orc():
     for sx in (1, -1):
         for k in range(3):
             z0 = 0.05 - k * 0.026
-            g = gl.grid(f"war_{sx}_{k}", 10, 1, 0, 1, 0, 1, 0, "paint-war")
+            g = gl.grid(f"war_{sx}_{k}", 10, 1, 0, 1, 0, 1, 0, "paint-war" if k == 1 else "paint-black")
             for v in g.data.vertices:
                 t = v.co.x
-                w = 0.0085 * (1 - 0.55 * t) * (1 if v.co.z > 0.5 else -1)
+                w = 0.011 * (1 - 0.55 * t) * (1 if v.co.z > 0.5 else -1)
                 x = sx * (0.022 + 0.06 * t)
                 z = z0 - 0.022 * t + w
-                v.co = Vector((x, R.top(x, z) + 0.0009, z))
+                v.co = Vector((x, R.top(x, z) + 0.0016, z))
+            gl.solidify(g, 0.0014, offset=1.0)
             paint.append(g)
     roots.append(piece("orc_gear", done(paul + paint), "base_link", "always"))
 
@@ -433,7 +440,8 @@ def crack_strip(name, pts, width):
         i = round(v.co.x * (len(pts) - 1))
         x, z = pts[i]
         w = width * (1 - 0.7 * abs(i / (len(pts) - 1) - 0.4)) * (1 if v.co.z > 0.5 else -1)
-        v.co = Vector((x + w * 0.7, R.top(x, z) + 0.0008, z + w))
+        v.co = Vector((x + w * 0.7, R.top(x, z) + 0.0014, z + w))
+    gl.solidify(g, 0.0014, offset=1.0)
     return g
 
 
@@ -447,7 +455,7 @@ def undead():
             x, z = pts[-1]
             pts.append((x + dx + rng.uniform(-0.008, 0.008), z + dz + rng.uniform(-0.008, 0.008)))
         cracks.append(crack_strip(f"crack{k}", pts, 0.006))
-        glow_pts = [(x, R.top(x, z) + 0.0012, z) for x, z in pts[1:5]]
+        glow_pts = [(x, R.top(x, z) + 0.0028, z) for x, z in pts[1:5]]
         cracks.append(tube(f"crackglow{k}", glow_pts, 0.0012, "glow-green"))
     # exposed wiring loops from a hole on the left rear
     hole = sphere("wire_hole", 0.016, "crack", loc=(0.06, R.top(0.06, -0.06) - 0.004, -0.06), scale=(1, 0.35, 1.2))
@@ -534,12 +542,13 @@ def nightelf():
         ears.append(torus(f"ear_ring{sx}", 0.008, 0.0022, "silver", loc=(0.1 * sx, 0.072, 0.04), rot=(0, 0.6 * sx, PI / 2)))
     moons = []
     for sx in (1, -1):
-        c = extrude2d(f"moon{sx}", crescent(0.018, 0.0), 0.0012, "paint-moon")
-        c.rotation_euler = (-PI / 2, 0, 0)
-        x, z = 0.052 * sx, -0.055
-        c.location = (x, R.top(x, z) + 0.0008, z)
+        c = extrude2d(f"moon{sx}", crescent(0.019, 0.0), 0.0014, "paint-moon")
+        c.rotation_euler = (-PI / 2, 0, -0.5 * sx)
+        c.rotation_mode = "ZXY"
+        x, z = 0.042 * sx, -0.06
+        c.location = (x, R.top(x, z) + 0.003, z)
         c.scale = (sx, 1, 1)
-        moons.append(c)
+        moons.append(conform(c, 0.0022))
     pauld = []
     for sx in (1, -1):
         for k in range(3):
@@ -676,12 +685,11 @@ def weapons():
     disc = lathe("shield_disc", [(0.0, 0.0), (0.05, 0.0), (0.055, 0.005), (0.053, 0.01), (0.034, 0.016), (0.0, 0.019)], "cloth-tint", seg=32)
     disc.rotation_euler = (PI / 2, 0, 0)
     rim = torus("shield_rim", 0.0535, 0.0042, "gold", rot=(PI / 2, 0, 0), seg=40)
-    boss = sphere("shield_boss", 0.014, "gold", loc=(0, 0, 0.02), scale=(1, 1, 0.6))
-    emb = emblem_claw("shield_emblem", 0.02, "gold", depth=0.003)
+    emb = emblem_claw("shield_emblem", 0.027, "gold", depth=0.003)
     for o in emb:
-        o.location = (0, 0.01, 0.019)
+        o.location = (0, 0.003, 0.019)
     handle = box("shield_handle", (0.008, 0.04, 0.01), "leather-dark", loc=(0, 0, -0.008), bevel=0.002)
-    sh = [disc, rim, boss, handle] + emb
+    sh = [disc, rim, handle] + emb
     for o in sh:
         o.location.z += 0.03
     roots.append(piece("weapon_shield", done(sh), "clawL", "weapon", {"id": "shield", "socket": "clawL"}))

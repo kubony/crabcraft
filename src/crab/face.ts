@@ -196,7 +196,7 @@ void main() {
     p.x += band * sin(p.y * 2.0 + uTime * 40.0) * 2.0;
   }
   vec3 led = uColor * uIntensity * (core + halo) * flick;
-  vec3 col = led + vec3(0.55, 0.6, 0.7) * well * 0.03;
+  vec3 col = led + vec3(0.55, 0.6, 0.7) * well * 0.06;
   if (uFill > 0.0) {                   // furnace glow filling the whole window (boss)
     float heat = (0.55 + 0.45 * sin(uTime * 3.1 + p.x * 0.15) * sin(uTime * 1.7 - p.y * 0.3)) * (0.6 + 0.4 * (1.0 - vUv.y));
     col += uColor * uFill * heat;

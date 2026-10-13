@@ -50,8 +50,9 @@ PALETTE: dict[str, dict] = {
     "feather-red": dict(color="#c0282e", rough=0.8),
     "feather-white": dict(color="#f2eee6", rough=0.8),
     "feather-blue": dict(color="#3d7bc4", rough=0.8),
-    "paint-war": dict(color="#a01a12", rough=0.85),
-    "paint-moon": dict(color="#e8eefc", metal=0.8, rough=0.25),
+    "paint-war": dict(color="#b81c12", rough=0.85),
+    "paint-black": dict(color="#151110", rough=0.8),
+    "paint-moon": dict(color="#d9e4ff", rough=0.35, emit="#9fbcff", strength=0.35),
     "crack": dict(color="#0c0b0a", rough=0.95),
     "wire-red": dict(color="#c4231e", rough=0.5),
     "wire-yellow": dict(color="#e6b31e", rough=0.5),
@@ -207,13 +208,10 @@ def extrude2d(name, poly, depth, material, loc=(0, 0, 0), rot=(0, 0, 0), bevel=0
     """Polygon [(x, y), ...] in the XY plane, extruded along +Z by depth (centred)."""
     bm = bmesh.new()
     vs = [bm.verts.new((x, y, -depth / 2)) for x, y in poly]
-    f = bm.faces.new(vs)
-    bmesh.ops.triangulate(bm, faces=[f])
+    bm.faces.new(vs)  # concave n-gon; Blender tessellates it correctly (triangulate() here did not)
     ext = bmesh.ops.extrude_face_region(bm, geom=bm.faces[:])
     top = [g for g in ext["geom"] if isinstance(g, bmesh.types.BMVert)]
     bmesh.ops.translate(bm, verts=top, vec=(0, 0, depth))
-    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-7)
-    bmesh.ops.dissolve_limit(bm, angle_limit=0.01, verts=bm.verts, edges=bm.edges)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     o = new_obj(name, bm, material)
     place(o, loc, rot, scale)
@@ -319,6 +317,8 @@ def finish(o: bpy.types.Object, smooth_angle=40.0, seed=0, shade=True) -> bpy.ty
     me = o.data
     bm = bmesh.new()
     bm.from_mesh(me)
+    # Mirrored/scaled builds can flip winding; every piece is closed, so point normals outward.
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     for f in bm.faces:
         f.smooth = True
     for e in bm.edges:
