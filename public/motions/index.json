@@ -176,7 +176,7 @@
    "duration": 2.5,
    "loop": true,
    "speed": 1e-05,
-   "bytes": 10730,
+   "bytes": 10741,
    "velocity": [
     -1e-05,
     0.0
@@ -214,12 +214,28 @@
    "duration": 0.96,
    "loop": true,
    "speed": 0.24387,
-   "bytes": 5498,
+   "bytes": 5509,
    "velocity": [
     0.24355,
     0.01253
    ],
    "yawRate": -0.06097
+  },
+  {
+   "id": "strafe_left_fast",
+   "source": "locomotion",
+   "kind": "locomotion",
+   "fps": 103.349282,
+   "frameCount": 216,
+   "duration": 2.09,
+   "loop": true,
+   "speed": 0.56681,
+   "bytes": 18242,
+   "velocity": [
+    0.56666,
+    -0.0129
+   ],
+   "yawRate": 0.01187
   },
   {
    "id": "strafe_right",
@@ -230,12 +246,28 @@
    "duration": 0.96,
    "loop": true,
    "speed": 0.24821,
-   "bytes": 5499,
+   "bytes": 5521,
    "velocity": [
     -0.24756,
     0.01798
    ],
    "yawRate": 0.0757
+  },
+  {
+   "id": "strafe_right_fast",
+   "source": "locomotion",
+   "kind": "locomotion",
+   "fps": 103.349282,
+   "frameCount": 216,
+   "duration": 2.09,
+   "loop": true,
+   "speed": 0.56785,
+   "bytes": 18249,
+   "velocity": [
+    -0.56784,
+    0.0027
+   ],
+   "yawRate": 0.00611
   },
   {
    "id": "turn_left",
@@ -246,7 +278,7 @@
    "duration": 0.9,
    "loop": true,
    "speed": 0.01416,
-   "bytes": 5513,
+   "bytes": 5517,
    "velocity": [
     -0.01288,
     -0.00589
@@ -262,7 +294,7 @@
    "duration": 0.9,
    "loop": true,
    "speed": 0.01419,
-   "bytes": 5511,
+   "bytes": 5522,
    "velocity": [
     0.01071,
     -0.00931
@@ -278,7 +310,7 @@
    "duration": 1.0,
    "loop": true,
    "speed": 0.2076,
-   "bytes": 5641,
+   "bytes": 5658,
    "velocity": [
     -0.00146,
     -0.2076
@@ -294,7 +326,7 @@
    "duration": 2.09,
    "loop": true,
    "speed": 0.57235,
-   "bytes": 18058,
+   "bytes": 18237,
    "velocity": [
     0.00829,
     0.57229
@@ -310,7 +342,7 @@
    "duration": 1.0,
    "loop": true,
    "speed": 0.24712,
-   "bytes": 5632,
+   "bytes": 5655,
    "velocity": [
     -0.00234,
     0.24711

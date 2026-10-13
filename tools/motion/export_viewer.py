@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "dev" / "assets" / "motion-viewer"
 
 
-def main(keep: float = 0.12, min_faces: int = 160) -> None:
+def main(keep: float = 0.22, min_faces: int = 200) -> None:
     import fast_simplification
 
     m = load_model(render=True)

@@ -102,7 +102,7 @@ def footfall_events(raw: Raw, t0: float, t1: float, *, period: float | None = No
     for k, leg in enumerate(LEGS):
         times = [x - t0 for x in onsets(raw.contacts[:, k], raw.t) if t0 <= x < t1]
         if period:
-            times = sorted({round(x % period, 4) for x in times})
+            times = sorted({round((x % period + period) % period, 4) for x in times})
         ev[f"foot_{leg}"] = times
         allf += times
     ev["footstep"] = sorted(allf)
@@ -185,11 +185,24 @@ def export_loop(raw: Raw, out: Path) -> dict:
     T = t[a] + np.arange(frames) / fps
     rq = resample(t, q, T)
     rl = np.concatenate([resample(t, lpos, T), qnormalize(resample(t, lquat, T))], -1)
-    # contract base: the pose relative to frame 0 (heading zeroed)
-    base_pos = resample(t, pos, T)
-    base_quat = qnormalize(resample(t, quat, T))
-    y0 = float(np.interp(T[0], t, yaw))
+    # Phase-align every gait loop: frame 0 is the middle-left foot touching down, so loops of
+    # different directions blend with the same tripod in stance. The loop is seamless, so the
+    # joint and local blocks roll circularly; the base block is re-read from the rollout.
+    lm = footfall_events(raw, T[0], T[0] + loop_s)["foot_LM"]
+    shift = 0
+    cycles = max(1, len(lm))
+    if raw.id != "idle" and lm:
+        shift = int(round(lm[0] * fps)) % frames
+        rq = np.roll(rq, -shift, axis=0)
+        rl = np.roll(rl, -shift, axis=0)
+        rl[:, 3:] = qcontinuous(rl[:, 3:])
+        T = T + shift / fps
+    tt = raw.t
+    base_pos = resample(tt, raw.pos, T)
+    base_quat = qnormalize(resample(tt, raw.quat, T))
+    y0 = float(np.interp(T[0], tt, raw.yaw))
     rel, rq0 = relative_to_first(base_pos, base_quat, y0, base_pos[0])
+    a_t, b_t = T[0], T[0] + loop_s
 
     # mean velocity in the local frame, game axes (x = crab left, z = forward)
     vx_r = (pavg[b] - pavg[a])
@@ -198,7 +211,8 @@ def export_loop(raw: Raw, out: Path) -> dict:
     v_local = np.array([cs * vx_r[0] - ss * vx_r[1], ss * vx_r[0] + cs * vx_r[1]]) / loop_s
     yaw_rate = float(yavg[b] - yavg[a]) / loop_s
     speed = float(np.hypot(*v_local))
-    events = footfall_events(raw, T[0], T[0] + loop_s)
+    events = footfall_events(raw, a_t, b_t, period=loop_s)
+    cycles = max(1, int(round(len(events["footstep"]) / 6)))
     cmd = raw.meta["command"]
     print(f"    speed {speed:.3f} m/s (cmd {cmd}), yawRate {yaw_rate:+.3f}, v_local {np.round(v_local, 3)}, "
           f"{frames} frames @ {fps:.2f} fps, footfalls {len(events['footstep'])}")
@@ -209,6 +223,7 @@ def export_loop(raw: Raw, out: Path) -> dict:
         extra={
             "velocity": [round(float(v_local[1]), 5), round(float(v_local[0]), 5)],
             "yawRate": round(yaw_rate, 5),
+            "cycles": cycles if raw.id != "idle" else 0,
             "root": "inplace",
             "provenance": provenance(raw, {"command_mps_mps_radps": cmd, "loop_start_s": round(float(T[0]), 4)}),
         },

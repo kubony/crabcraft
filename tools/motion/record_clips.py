@@ -31,6 +31,9 @@ LOCOMOTION = {
     "walk_back": (-0.25, 0.0, 0.0),
     "strafe_left": (0.0, 0.3, 0.0),
     "strafe_right": (0.0, -0.3, 0.0),
+    # not MotionIds: the runtime blends them in for fast sideways scuttling (A/D held while running)
+    "strafe_left_fast": (0.0, 0.62, 0.0),
+    "strafe_right_fast": (0.0, -0.62, 0.0),
     "turn_left": (0.0, 0.0, 1.6),
     "turn_right": (0.0, 0.0, -1.6),
 }
