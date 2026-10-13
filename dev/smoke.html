@@ -1,0 +1,13 @@
+<!doctype html>
+<html><head><meta charset="UTF-8" /><title>smoke</title></head>
+<body style="margin:0;background:#000">
+<script type="module">
+import * as THREE from 'three';
+const r = new THREE.WebGLRenderer({ antialias: true });
+r.setSize(innerWidth, innerHeight); document.body.appendChild(r.domElement);
+const s = new THREE.Scene(); s.background = new THREE.Color('#203040');
+const c = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 100); c.position.set(2, 1.5, 3); c.lookAt(0, 0, 0);
+s.add(new THREE.Mesh(new THREE.TorusKnotGeometry(0.6, 0.2, 128, 16), new THREE.MeshStandardMaterial({ color: '#d2202f', roughness: 0.25 })));
+s.add(new THREE.HemisphereLight('#fff', '#334', 1.5)); const d = new THREE.DirectionalLight('#fff', 2); d.position.set(3, 4, 2); s.add(d);
+r.render(s, c); window.__ready = true;
+</script></body></html>
