@@ -691,6 +691,7 @@ export default class CreateScreen implements Screen {
     const t = e.target as HTMLElement | null;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') e.preventDefault();
+    else if (e.key === 'Escape' && !e.repeat) this.back();
   };
 
   private later(ms: number, fn: () => void): void {
