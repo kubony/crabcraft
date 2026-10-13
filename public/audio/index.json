@@ -1,0 +1,266 @@
+[
+  {
+    "id": "music-title",
+    "files": [
+      "music-title.ogg",
+      "music-title.mp3"
+    ],
+    "loop": true,
+    "volume": 0.9,
+    "credit": "\"Fantasy Orchestral Theme\" by Joth",
+    "license": "CC0-1.0",
+    "source": "https://opengameart.org/content/fantasy-orchestral-theme"
+  },
+  {
+    "id": "music-town",
+    "files": [
+      "music-town.ogg",
+      "music-town.mp3"
+    ],
+    "loop": true,
+    "volume": 0.8,
+    "credit": "\"Town Theme RPG\" by cynicmusic",
+    "license": "CC0-1.0",
+    "source": "https://opengameart.org/content/town-theme-rpg"
+  },
+  {
+    "id": "music-combat",
+    "files": [
+      "music-combat.ogg",
+      "music-combat.mp3"
+    ],
+    "loop": true,
+    "volume": 0.85,
+    "credit": "\"Battle Theme A\" by cynicmusic",
+    "license": "CC0-1.0",
+    "source": "https://opengameart.org/content/battle-theme-a"
+  },
+  {
+    "id": "music-boss",
+    "files": [
+      "music-boss.ogg",
+      "music-boss.mp3"
+    ],
+    "loop": true,
+    "volume": 0.9,
+    "credit": "\"Epic Boss Battle\" by Juhani Junkala (SubspaceAudio)",
+    "license": "CC0-1.0",
+    "source": "https://opengameart.org/content/boss-battle-music"
+  },
+  {
+    "id": "music-ending",
+    "files": [
+      "music-ending.ogg",
+      "music-ending.mp3"
+    ],
+    "loop": true,
+    "volume": 0.9,
+    "credit": "\"Medieval: Rejoicing\" by RandomMind",
+    "license": "CC0-1.0",
+    "source": "https://opengameart.org/content/medieval-rejoicing"
+  },
+  {
+    "id": "sfx-click",
+    "files": [
+      "sfx-click.ogg",
+      "sfx-click.mp3"
+    ],
+    "loop": false,
+    "volume": 0.5,
+    "credit": "Kenney UI Audio",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/ui-audio"
+  },
+  {
+    "id": "sfx-hover",
+    "files": [
+      "sfx-hover.ogg",
+      "sfx-hover.mp3"
+    ],
+    "loop": false,
+    "volume": 0.3,
+    "credit": "Kenney UI Audio",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/ui-audio"
+  },
+  {
+    "id": "sfx-hit",
+    "files": [
+      "sfx-hit.ogg",
+      "sfx-hit.mp3"
+    ],
+    "loop": false,
+    "volume": 0.8,
+    "credit": "Kenney Impact Sounds + \"20 Sword Sound Effects\" by StarNinjas",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/impact-sounds ; https://opengameart.org/content/20-sword-sound-effects-attacks-and-clashes"
+  },
+  {
+    "id": "sfx-crit",
+    "files": [
+      "sfx-crit.ogg",
+      "sfx-crit.mp3"
+    ],
+    "loop": false,
+    "volume": 0.95,
+    "credit": "Kenney Impact Sounds + \"20 Sword Sound Effects\" by StarNinjas",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/impact-sounds ; https://opengameart.org/content/20-sword-sound-effects-attacks-and-clashes"
+  },
+  {
+    "id": "sfx-heal",
+    "files": [
+      "sfx-heal.ogg",
+      "sfx-heal.mp3"
+    ],
+    "loop": false,
+    "volume": 0.7,
+    "credit": "\"Cure Magic\" by Someoneman + synthesised bells (World of Crabcraft)",
+    "license": "CC0-1.0",
+    "source": "https://opengameart.org/content/cure-magic"
+  },
+  {
+    "id": "sfx-cast",
+    "files": [
+      "sfx-cast.ogg",
+      "sfx-cast.mp3"
+    ],
+    "loop": false,
+    "volume": 0.7,
+    "credit": "\"RPG Sound Pack\" by artisticdude + synthesised sweep",
+    "license": "CC0-1.0",
+    "source": "https://opengameart.org/content/rpg-sound-pack"
+  },
+  {
+    "id": "sfx-levelup",
+    "files": [
+      "sfx-levelup.ogg",
+      "sfx-levelup.mp3"
+    ],
+    "loop": false,
+    "volume": 0.85,
+    "credit": "Synthesised for World of Crabcraft",
+    "license": "Apache-2.0",
+    "source": "tools/art/audio_build.py (procedural)"
+  },
+  {
+    "id": "sfx-quest-accept",
+    "files": [
+      "sfx-quest-accept.ogg",
+      "sfx-quest-accept.mp3"
+    ],
+    "loop": false,
+    "volume": 0.7,
+    "credit": "Synthesised bells + Kenney RPG Audio",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/rpg-audio"
+  },
+  {
+    "id": "sfx-quest-complete",
+    "files": [
+      "sfx-quest-complete.ogg",
+      "sfx-quest-complete.mp3"
+    ],
+    "loop": false,
+    "volume": 0.8,
+    "credit": "Kenney Music Jingles + synthesised bells",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/music-jingles"
+  },
+  {
+    "id": "sfx-footstep-sand",
+    "files": [
+      "sfx-footstep-sand.ogg",
+      "sfx-footstep-sand.mp3"
+    ],
+    "loop": false,
+    "volume": 0.35,
+    "credit": "\"Fantozzi's Footsteps\" by Fantozzi, sliced by qubodup + Kenney RPG Audio",
+    "license": "CC0-1.0",
+    "source": "https://opengameart.org/content/fantozzis-footsteps-grasssand-stone"
+  },
+  {
+    "id": "sfx-footstep-stone",
+    "files": [
+      "sfx-footstep-stone.ogg",
+      "sfx-footstep-stone.mp3"
+    ],
+    "loop": false,
+    "volume": 0.35,
+    "credit": "\"Fantozzi's Footsteps\" by Fantozzi, sliced by qubodup + Kenney RPG Audio",
+    "license": "CC0-1.0",
+    "source": "https://opengameart.org/content/fantozzis-footsteps-grasssand-stone"
+  },
+  {
+    "id": "sfx-servo-whir",
+    "files": [
+      "sfx-servo-whir.ogg",
+      "sfx-servo-whir.mp3"
+    ],
+    "loop": false,
+    "volume": 0.4,
+    "credit": "Synthesised servo + Kenney RPG Audio latch",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/rpg-audio"
+  },
+  {
+    "id": "sfx-beacon",
+    "files": [
+      "sfx-beacon.ogg",
+      "sfx-beacon.mp3"
+    ],
+    "loop": false,
+    "volume": 0.9,
+    "credit": "\"80 CC0 RPG SFX\" by rubberduck + Kenney Sci-fi Sounds + synthesised chord",
+    "license": "CC0-1.0",
+    "source": "https://opengameart.org/content/80-cc0-rpg-sfx ; https://kenney.nl/assets/sci-fi-sounds"
+  },
+  {
+    "id": "sfx-boss-roar",
+    "files": [
+      "sfx-boss-roar.ogg",
+      "sfx-boss-roar.mp3"
+    ],
+    "loop": false,
+    "volume": 1.0,
+    "credit": "\"CC0 Deep Monster Roar\" by trazzz123 + Kenney Sci-fi and Impact Sounds",
+    "license": "CC0-1.0",
+    "source": "https://opengameart.org/content/cc0-deep-monster-roar ; https://kenney.nl/assets/sci-fi-sounds"
+  },
+  {
+    "id": "sfx-death",
+    "files": [
+      "sfx-death.ogg",
+      "sfx-death.mp3"
+    ],
+    "loop": false,
+    "volume": 0.8,
+    "credit": "\"Machine shutting down\" by Cough-E + Kenney Impact Sounds",
+    "license": "CC0-1.0",
+    "source": "https://opengameart.org/content/machine-shutting-down ; https://kenney.nl/assets/impact-sounds"
+  },
+  {
+    "id": "sfx-error",
+    "files": [
+      "sfx-error.ogg",
+      "sfx-error.mp3"
+    ],
+    "loop": false,
+    "volume": 0.6,
+    "credit": "Kenney Interface Sounds",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/interface-sounds"
+  },
+  {
+    "id": "sfx-loot",
+    "files": [
+      "sfx-loot.ogg",
+      "sfx-loot.mp3"
+    ],
+    "loop": false,
+    "volume": 0.7,
+    "credit": "Kenney RPG Audio",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/rpg-audio"
+  }
+]

@@ -1,0 +1,401 @@
+[
+ {
+  "file": "create-bg.webp",
+  "width": 2560,
+  "height": 1440,
+  "bytes": 552854,
+  "alpha": false
+ },
+ {
+  "file": "ending.webp",
+  "width": 2560,
+  "height": 1440,
+  "bytes": 592184,
+  "alpha": false
+ },
+ {
+  "file": "icons/ability-mage-1.webp",
+  "width": 128,
+  "height": 128,
+  "bytes": 6086,
+  "alpha": false
+ },
+ {
+  "file": "icons/ability-mage-2.webp",
+  "width": 128,
+  "height": 128,
+  "bytes": 9410,
+  "alpha": false
+ },
+ {
+  "file": "icons/ability-mage-3.webp",
+  "width": 128,
+  "height": 128,
+  "bytes": 7008,
+  "alpha": false
+ },
+ {
+  "file": "icons/ability-mage-4.webp",
+  "width": 128,
+  "height": 128,
+  "bytes": 9756,
+  "alpha": false
+ },
+ {
+  "file": "icons/ability-priest-1.webp",
+  "width": 128,
+  "height": 128,
+  "bytes": 7666,
+  "alpha": false
+ },
+ {
+  "file": "icons/ability-priest-2.webp",
+  "width": 128,
+  "height": 128,
+  "bytes": 7202,
+  "alpha": false
+ },
+ {
+  "file": "icons/ability-priest-3.webp",
+  "width": 128,
+  "height": 128,
+  "bytes": 9744,
+  "alpha": false
+ },
+ {
+  "file": "icons/ability-priest-4.webp",
+  "width": 128,
+  "height": 128,
+  "bytes": 10268,
+  "alpha": false
+ },
+ {
+  "file": "icons/ability-warrior-1.webp",
+  "width": 128,
+  "height": 128,
+  "bytes": 8724,
+  "alpha": false
+ },
+ {
+  "file": "icons/ability-warrior-2.webp",
+  "width": 128,
+  "height": 128,
+  "bytes": 10030,
+  "alpha": false
+ },
+ {
+  "file": "icons/ability-warrior-3.webp",
+  "width": 128,
+  "height": 128,
+  "bytes": 8034,
+  "alpha": false
+ },
+ {
+  "file": "icons/ability-warrior-4.webp",
+  "width": 128,
+  "height": 128,
+  "bytes": 10640,
+  "alpha": false
+ },
+ {
+  "file": "icons/class-mage.webp",
+  "width": 256,
+  "height": 256,
+  "bytes": 33470,
+  "alpha": true
+ },
+ {
+  "file": "icons/class-priest.webp",
+  "width": 256,
+  "height": 256,
+  "bytes": 32248,
+  "alpha": true
+ },
+ {
+  "file": "icons/class-warrior.webp",
+  "width": 256,
+  "height": 256,
+  "bytes": 30762,
+  "alpha": true
+ },
+ {
+  "file": "icons/item-rusted-cog.webp",
+  "width": 128,
+  "height": 128,
+  "bytes": 9078,
+  "alpha": false
+ },
+ {
+  "file": "icons/quest-beacon.webp",
+  "width": 128,
+  "height": 128,
+  "bytes": 10166,
+  "alpha": false
+ },
+ {
+  "file": "icons/quest-boss.webp",
+  "width": 128,
+  "height": 128,
+  "bytes": 7560,
+  "alpha": false
+ },
+ {
+  "file": "icons/quest-moonwater.webp",
+  "width": 128,
+  "height": 128,
+  "bytes": 5962,
+  "alpha": false
+ },
+ {
+  "file": "icons/quest-scroll.webp",
+  "width": 128,
+  "height": 128,
+  "bytes": 5860,
+  "alpha": false
+ },
+ {
+  "file": "loading-1.webp",
+  "width": 2560,
+  "height": 1440,
+  "bytes": 550496,
+  "alpha": false
+ },
+ {
+  "file": "loading-2.webp",
+  "width": 2560,
+  "height": 1440,
+  "bytes": 517040,
+  "alpha": false
+ },
+ {
+  "file": "logo.webp",
+  "width": 1600,
+  "height": 700,
+  "bytes": 271704,
+  "alpha": true
+ },
+ {
+  "file": "npc/brinebeard.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 72108,
+  "alpha": false
+ },
+ {
+  "file": "npc/coralline.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 52598,
+  "alpha": false
+ },
+ {
+  "file": "npc/grukk.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 65364,
+  "alpha": false
+ },
+ {
+  "file": "npc/hoofclaw.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 55756,
+  "alpha": false
+ },
+ {
+  "file": "npc/pip.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 66042,
+  "alpha": false
+ },
+ {
+  "file": "npc/rattlebolt.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 65864,
+  "alpha": false
+ },
+ {
+  "file": "npc/silvermoon.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 68028,
+  "alpha": false
+ },
+ {
+  "file": "portraits/dwarf-female.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 66896,
+  "alpha": false
+ },
+ {
+  "file": "portraits/dwarf-male.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 69332,
+  "alpha": false
+ },
+ {
+  "file": "portraits/human-female.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 49312,
+  "alpha": false
+ },
+ {
+  "file": "portraits/human-male.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 57518,
+  "alpha": false
+ },
+ {
+  "file": "portraits/nightelf-female.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 60610,
+  "alpha": false
+ },
+ {
+  "file": "portraits/nightelf-male.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 61162,
+  "alpha": false
+ },
+ {
+  "file": "portraits/orc-female.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 55366,
+  "alpha": false
+ },
+ {
+  "file": "portraits/orc-male.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 54778,
+  "alpha": false
+ },
+ {
+  "file": "portraits/tauren-female.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 59876,
+  "alpha": false
+ },
+ {
+  "file": "portraits/tauren-male.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 57050,
+  "alpha": false
+ },
+ {
+  "file": "portraits/undead-female.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 63498,
+  "alpha": false
+ },
+ {
+  "file": "portraits/undead-male.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 60518,
+  "alpha": false
+ },
+ {
+  "file": "title-bg.webp",
+  "width": 2560,
+  "height": 1440,
+  "bytes": 415096,
+  "alpha": false
+ },
+ {
+  "file": "ui/action-slot.webp",
+  "width": 128,
+  "height": 128,
+  "bytes": 3734,
+  "alpha": false
+ },
+ {
+  "file": "ui/button-red-hover.webp",
+  "width": 512,
+  "height": 99,
+  "bytes": 10076,
+  "alpha": true
+ },
+ {
+  "file": "ui/button-red-pressed.webp",
+  "width": 512,
+  "height": 99,
+  "bytes": 8754,
+  "alpha": true
+ },
+ {
+  "file": "ui/button-red.webp",
+  "width": 512,
+  "height": 99,
+  "bytes": 9548,
+  "alpha": true
+ },
+ {
+  "file": "ui/corner-claw.webp",
+  "width": 256,
+  "height": 256,
+  "bytes": 15944,
+  "alpha": true
+ },
+ {
+  "file": "ui/divider-gold.webp",
+  "width": 1024,
+  "height": 95,
+  "bytes": 35302,
+  "alpha": true
+ },
+ {
+  "file": "ui/frame-stone.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 88548,
+  "alpha": true
+ },
+ {
+  "file": "ui/parchment.webp",
+  "width": 1024,
+  "height": 1024,
+  "bytes": 66270,
+  "alpha": false
+ },
+ {
+  "file": "ui/portrait-ring.webp",
+  "width": 512,
+  "height": 512,
+  "bytes": 62778,
+  "alpha": true
+ },
+ {
+  "file": "ui/stone-fill.webp",
+  "width": 768,
+  "height": 768,
+  "bytes": 79426,
+  "alpha": false
+ },
+ {
+  "file": "ui/tooltip-bg.webp",
+  "width": 512,
+  "height": 342,
+  "bytes": 2918,
+  "alpha": false
+ },
+ {
+  "file": "ui/unit-frame.webp",
+  "width": 768,
+  "height": 371,
+  "bytes": 47556,
+  "alpha": true
+ }
+]
