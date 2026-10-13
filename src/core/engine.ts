@@ -114,10 +114,10 @@ export class Engine {
         radius: b.radius ?? 0.72,
       }),
     );
+    effects.push(new ToneMappingEffect({ mode: ToneMappingMode.AGX }));
+    // Grading runs on display values after tone mapping; before it, HDR highlights invert.
     if (opts.saturation !== undefined) effects.push(new HueSaturationEffect({ saturation: opts.saturation }));
     if (opts.contrast !== undefined) effects.push(new BrightnessContrastEffect({ contrast: opts.contrast }));
-    const tone = new ToneMappingEffect({ mode: ToneMappingMode.AGX });
-    effects.push(tone);
     if (opts.vignette !== null) {
       effects.push(
         new VignetteEffect({ offset: opts.vignette?.offset ?? 0.32, darkness: opts.vignette?.darkness ?? 0.55 }),
