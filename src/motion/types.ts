@@ -18,11 +18,12 @@ export interface MotionClip {
   /** frameCount * joints.length joint angles, radians, MuJoCo qpos convention. */
   q: Float32Array;
   /**
-   * frameCount * 7 floating-base poses in game space (Y-up, crab faces +Z at frame 0):
-   * x, y, z (metres, already scaled to CRAB_HEIGHT), qx, qy, qz, qw.
+   * frameCount * 7 floating-base poses in game axes (see MJ_TO_GAME_AXES; Y-up, crab faces +Z
+   * at frame 0): x, y, z in robot metres (the player multiplies by CrabRig.metersToUnits),
+   * then qx, qy, qz, qw. y is the base height above the ground.
    */
   base: Float32Array;
-  /** Mean planar speed over the clip, game units per second, for locomotion blending. */
+  /** Mean planar speed over the clip, robot metres per second, for locomotion blending. */
   speed?: number;
   /** Optional named moments, seconds: footfalls, "hit" frame of a claw strike, dance beats. */
   events?: Record<string, number[]>;

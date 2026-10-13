@@ -57,12 +57,24 @@ export type SocketName =
   | 'nameplate'   // above the head, for UI
   | 'chest';      // front of the body below the visor, for hit effects
 
+/**
+ * Frames. MuJoCo (jumper.xml): Z-up, robot forward = +X (display module side), robot left = +Y.
+ * Game (three.js): Y-up, crab faces +Z, crab's left = +X. The mapping is a proper rotation:
+ *   game.x = mj.y, game.y = mj.z, game.z = mj.x
+ * Quaternions map the same way (q_game = R q_mj R^-1). Every converter (GLB build, motion
+ * recording, robot mode) must use exactly this mapping.
+ */
+export const MJ_TO_GAME_AXES = { x: 'y', y: 'z', z: 'x' } as const;
+
 export interface CrabRig {
   /**
-   * Add this to the scene. Y-up, the crab faces +Z, units are metres scaled so the standing
-   * crab's shell top is at CRAB_HEIGHT. Origin is on the ground under the body centre.
+   * Add this to the scene. Y-up, the crab faces +Z, units are world units where the standing
+   * crab's shell top is at CRAB_HEIGHT (times the race posture scale). Origin is on the ground
+   * under the body centre.
    */
   readonly root: THREE.Group;
+  /** World units per robot metre for this rig (includes race scale). Motion base offsets use it. */
+  readonly metersToUnits: number;
   /** The floating-base body; motion moves this for bob/tilt, gameplay moves root. */
   readonly body: THREE.Object3D;
   readonly spec: Readonly<CrabSpec>;
