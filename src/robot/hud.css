@@ -209,8 +209,19 @@
 .rm-loading .err { margin-top: 18px; padding: 12px 14px; border-radius: 10px; background: rgba(160, 20, 30, 0.35); border: 1px solid rgba(255, 90, 100, 0.4); font: 500 12.5px/1.45 var(--rm-mono); color: #ffd6d9; white-space: pre-wrap; display: none; }
 .rm-loading .err.on { display: block; }
 
-@media (max-width: 1280px) {
-  .rm-tele { width: 290px; }
-  .rm-notice { width: 290px; }
-  .rm-btn { min-width: 64px; }
+@media (max-width: 1560px) {
+  .rm-dock, .rm-help { left: 28px; transform: none; }
+  .rm-notice { width: 300px; }
+  .rm-tele { width: 300px; }
+}
+@media (max-height: 860px) {
+  .rm-title { font-size: 32px; }
+  .rm-sub { font-size: 13px; }
+  .rm-mode { top: 180px; }
+  .rm-log { top: 392px; }
+  .rm-legs, .rm-legend { display: none; }
+  .rm-stats { margin-bottom: 0; }
+}
+@media (max-height: 700px) {
+  .rm-notice q { display: none; }
 }
