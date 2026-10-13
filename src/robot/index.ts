@@ -81,6 +81,9 @@ export interface RobotModeHandle {
   stop(): void;
 }
 
+/** A variable, not a literal: Vite would otherwise treat `new URL('../robot/', ...)` as an import. */
+const ROBOT_DIR_FROM_ASSETS = ['..', 'robot', ''].join('/');
+
 /** Page-level aliases: Q and E turn, as in the game, on the bundle's own turn keys. */
 const KEY_ALIAS: Record<string, string> = { KeyQ: 'KeyJ', KeyE: 'KeyL' };
 
@@ -100,7 +103,13 @@ const EXPRESSION: Record<string, FaceExpr> = {
 };
 
 export async function startRobotMode(container: HTMLElement, opts: RobotModeOptions = {}): Promise<RobotModeHandle> {
-  const base = opts.baseUrl ?? new URL(`${import.meta.env.BASE_URL}robot/`, location.href).href;
+  // public/robot/ sits beside the app's assets/ folder in a build (base './' makes BASE_URL
+  // relative, which would resolve against nested pages such as dev/robot.html).
+  const base =
+    opts.baseUrl ??
+    (import.meta.env.DEV
+      ? new URL(`${import.meta.env.BASE_URL}robot/`, location.href).href
+      : new URL(ROBOT_DIR_FROM_ASSETS, import.meta.url).href);
   const ownEngine = !opts.engine;
   const engine = opts.engine ?? new Engine(container, 'high');
   const disposers: (() => void)[] = [];
@@ -194,11 +203,21 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
 
   const allBodies = [...info.bodies, ...info.toys];
   let lastFrame: FrameMsg | null = null;
+  let safeSince: number | null = null;
   let lastSim = 0;
   const offFrame = engine.onFrame(({ dt }) => {
     const f = client.frame;
     if (!f) return;
     if (opts.gamepad !== false) pollPad();
+    // The bundle has no get-up policy: a robot that tipped past the tilt limit sits in `safe`,
+    // damping only, for good. Stand it back up after a moment, as a person would.
+    if (f.mode === 'safe') {
+      safeSince ??= performance.now();
+      if (performance.now() - safeSince > 3000) {
+        safeSince = null;
+        handle.reset();
+      }
+    } else safeSince = null;
     state = toState(f);
     basePos.copy(state.base.position);
     baseQuat.copy(state.base.quaternion);
