@@ -43,6 +43,8 @@ interface Action {
   weight: number;
   target: number;
   ended: boolean;
+  /** Stopped or replaced before its end: no more events. */
+  interrupted: boolean;
   opts: MotionPlayOptions;
 }
 
@@ -123,10 +125,7 @@ class Controller implements MotionControllerImpl {
     if (this.disposed) return;
     const fade = opts.fade ?? DEFAULT_FADE;
     for (const a of this.actions) {
-      if (a.target > 0) {
-        a.target = 0;
-        a.fadeOut = Math.max(0.05, fade);
-      }
+      if (a.target > 0) this.interrupt(a, Math.max(0.05, fade));
     }
     const clip = this.lib.get(id);
     if (!clip && this.lib.isMissing(id)) {
@@ -145,6 +144,7 @@ class Controller implements MotionControllerImpl {
       weight: 0,
       target: 1,
       ended: false,
+      interrupted: false,
       opts,
     });
   }
@@ -152,9 +152,18 @@ class Controller implements MotionControllerImpl {
   stop(id?: MotionId, fade?: number): void {
     for (const a of this.actions) {
       if (id && a.id !== id) continue;
-      a.target = 0;
-      if (fade !== undefined) a.fadeOut = Math.max(0.0001, fade);
+      this.interrupt(a, fade !== undefined ? Math.max(0.0001, fade) : a.fadeOut);
     }
+  }
+
+  /** Fade an action out early. Its onEnd still fires, once, so callers are never left waiting. */
+  private interrupt(a: Action, fadeOut: number): void {
+    a.target = 0;
+    a.fadeOut = fadeOut;
+    if (a.ended) return;
+    a.interrupted = true;
+    a.ended = true;
+    a.opts.onEnd?.();
   }
 
   seek(t: number): void {
@@ -214,7 +223,8 @@ class Controller implements MotionControllerImpl {
         const fadeAt = c.length - a.fadeOut * a.speed;
         if (a.target > 0 && a.t >= fadeAt) a.target = 0;
       }
-      if (a.opts.onEvent && a.weight > 0) crossedEvents(c, prev, a.t, loop, a.opts.onEvent);
+      // events from t = 0 inclusive (hit_react's "hit" is its first frame)
+      if (a.opts.onEvent && !a.interrupted) crossedEvents(c, prev === 0 ? -1e-6 : prev, a.t, loop, a.opts.onEvent);
       if (!loop && !a.ended && a.t >= c.length) {
         a.ended = true;
         if (c.hold) a.t = c.length;

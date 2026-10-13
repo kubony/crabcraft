@@ -181,6 +181,7 @@ export class MotionLibrary {
   get(id: ClipId): LoadedClip | null {
     const c = this.clips.get(id);
     if (c) return c;
+    if (this.indexLoaded && !this.entries.has(id)) return null;
     if (!this.pending.has(id) && !this.failed.has(id)) this.load(id).catch(() => undefined);
     return null;
   }

@@ -111,3 +111,75 @@ export function runSlide(rig: ViewerRig, motion: ReturnType<typeof createMotionC
   console.warn(`[slide] ${JSON.stringify(out)}`);
   return out;
 }
+
+/** Contract behaviour of the controller on a bare rig, stepped at 60 Hz. */
+export async function runSelfTest(lib: MotionLibrary) {
+  await lib.preload();
+  await lib.preload(['cast', 'hit_react', 'death', 'jump', 'attack_swipe']);
+  const results: Record<string, boolean | string> = {};
+  const rig = bareRig();
+  const captured: number[][] = [];
+  const setPose = rig.setPose.bind(rig);
+  rig.setPose = (q) => {
+    captured.push(Array.from(q));
+    setPose(q);
+  };
+  const c = createMotionController(rig, lib);
+  const run = (s: number) => {
+    for (let t = 0; t < s; t += 1 / 60) c.update(1 / 60);
+  };
+  // 1. a one-shot clip: events in order, onEnd once, action clears
+  const ev: string[] = [];
+  let ends = 0;
+  c.play('jump', { onEvent: (n) => ev.push(n), onEnd: () => ends++ });
+  results.actionWhilePlaying = c.action === 'jump';
+  run(4);
+  const order = ['takeoff', 'apex', 'land'].map((n) => ev.indexOf(n));
+  results.jumpEventsInOrder = order.every((i, k) => i >= 0 && (k === 0 || i > order[k - 1]));
+  results.jumpOnEndOnce = ends === 1;
+  results.actionClearedAfterEnd = c.action === null;
+  // 2. hit_react's first-frame hit event
+  const hits: string[] = [];
+  c.play('hit_react', { onEvent: (n) => hits.push(n) });
+  run(0.6);
+  results.hitAtFrameZero = hits.includes('hit');
+  // 3. replacing an action ends the first one
+  let castEnd = 0;
+  c.play('cast', { onEnd: () => castEnd++ });
+  run(0.2);
+  c.play('attack_swipe', { fade: 0.1 });
+  results.replacedActionEnds = castEnd === 1;
+  run(1);
+  // 4. upper body only: legs keep walking (leg joints differ from a frozen pose over time)
+  c.setLocomotion(0, 0.25 * rig.metersToUnits, 0);
+  run(1.5);
+  c.play('cast', { upperBodyOnly: true, loop: true, fade: 0.05 });
+  run(0.3);
+  captured.length = 0;
+  run(0.5);
+  const legSpread = Math.max(...captured.map((q) => q[11])) - Math.min(...captured.map((q) => q[11]));
+  const clawSpread = Math.max(...captured.map((q) => q[1])) - Math.min(...captured.map((q) => q[1]));
+  results.legsWalkUnderCast = legSpread > 0.05 ? `yes (LM_J1 range ${legSpread.toFixed(2)} rad)` : `no (${legSpread.toFixed(3)})`;
+  results.clawsFollowCast = `LF_J1 range ${clawSpread.toFixed(2)} rad`;
+  results.loopNeverEnds = c.action === 'cast';
+  c.stop('cast', 0.1);
+  c.setLocomotion(0, 0, 0);
+  run(1);
+  // 5. death holds its last frame and keeps reporting the action
+  let deathEnd = 0;
+  c.play('death', { onEnd: () => deathEnd++ });
+  run(3);
+  const h = rig.body.position.y / rig.metersToUnits;
+  results.deathHolds = c.action === 'death' && deathEnd === 1 && h < 0.07 ? `yes (body ${h.toFixed(3)} m)` : `no (${c.action}, ${deathEnd}, ${h.toFixed(3)})`;
+  c.stop();
+  run(1);
+  results.standsAfterStop = Math.abs(rig.body.position.y / rig.metersToUnits - 0.106) < 0.01;
+  // 6. an unknown clip ends at once instead of hanging
+  let missing = 0;
+  c.play('nope' as MotionId, { onEnd: () => missing++ });
+  await new Promise((r) => setTimeout(r, 50));
+  run(0.1);
+  results.unknownClipEnds = missing === 1;
+  console.warn(`[selftest] ${JSON.stringify(results)}`);
+  return results;
+}

@@ -297,7 +297,9 @@ function updateCamera() {
   }
   if (input.wheel) camDist = THREE.MathUtils.clamp(camDist * (1 + input.wheel * 0.1), 1.2, 20);
   const target = rig.root.position;
-  look.lerp(new THREE.Vector3(target.x, 0.55, target.z), look.lengthSq() ? 0.15 : 1);
+  // follow the body up (jumps) but not down (collapses)
+  const by = Math.max(0.55, rig.body.position.y * 0.8);
+  look.lerp(new THREE.Vector3(target.x, by, target.z), look.lengthSq() ? 0.15 : 1);
   const a = camAz + yaw;
   camera.position.set(
     look.x + Math.sin(a) * Math.cos(camEl) * camDist,
@@ -363,6 +365,10 @@ if (params.get('fk') === '1') {
   window.__fk = await runFkCheck(rig, lib);
 }
 
+if (params.get('selftest') === '1') {
+  const { runSelfTest } = await import('./checks');
+  await runSelfTest(lib);
+}
 if (params.get('bench') === '1') {
   const { runBench } = await import('./checks');
   await runBench(lib);
