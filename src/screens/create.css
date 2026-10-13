@@ -268,7 +268,7 @@
   position: relative;
   box-sizing: border-box;
   min-height: 600px;
-  max-height: calc(100vh / var(--s) - 230px);
+  max-height: calc(100vh / var(--s) - 250px);
   overflow: hidden;
   padding: 30px 34px 32px;
   color: var(--ink);
@@ -337,6 +337,13 @@
   color: #8c1c14;
   text-shadow: 0 1px 0 rgba(255, 240, 200, 0.6);
 }
+.cr-seal {
+  position: absolute; right: 30px; bottom: -52px;
+  width: 92px; height: 100px;
+  transform: rotate(-6deg);
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
 .cr-divider { height: 16px; margin: 18px -6px 16px; background: center / 100% 100% no-repeat; }
 
 /* ---------------------------------------------------------------- Buttons */
@@ -384,7 +391,7 @@
 
 .cr-actions {
   position: absolute; right: 22px;
-  top: min(calc(100vh / var(--s) - 182px), 712px);
+  bottom: 44px;
   width: 392px;
   display: flex; flex-direction: column; align-items: center; gap: 22px;
 }

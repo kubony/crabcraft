@@ -199,17 +199,17 @@ export function classEmblemSvg(id: ClassId): string {
     body = `
 <radialGradient id="bgw" cx="50%" cy="45%" r="70%"><stop offset="0" stop-color="#ffcf6a"/><stop offset=".35" stop-color="#e2461b"/><stop offset=".75" stop-color="#6a0d06"/><stop offset="1" stop-color="#1c0302"/></radialGradient>
 <rect width="100" height="100" fill="url(#bgw)"/>${rays('#ffe2a0', 0.16)}
-<g transform="rotate(-38 50 50)">
-  <path d="M47 6 L53 6 L54 62 L46 62 Z" fill="url(#blade)" stroke="#2b2f35" stroke-width="1"/>
-  <path d="M50 6 L50 62" stroke="#ffffff" stroke-opacity=".6" stroke-width=".8"/>
-  <rect x="36" y="61" width="28" height="6" rx="2" fill="url(#gold)" stroke="#4a2c07" stroke-width="1"/>
-  <rect x="47" y="67" width="6" height="16" fill="#3a1d0c" stroke="#1a0c04" stroke-width="1"/>
-  <circle cx="50" cy="86" r="4.5" fill="url(#gold)" stroke="#4a2c07" stroke-width="1"/>
+<g transform="rotate(42 50 52)">
+  <path d="M46.5 0 L50 -6 L53.5 0 L54 66 L46 66 Z" fill="url(#blade)" stroke="#2b2f35" stroke-width="1" transform="translate(0 4)"/>
+  <path d="M50 0 L50 70" stroke="#ffffff" stroke-opacity=".6" stroke-width=".8"/>
+  <rect x="34" y="69" width="32" height="6" rx="2" fill="url(#gold)" stroke="#4a2c07" stroke-width="1"/>
+  <rect x="47" y="75" width="6" height="15" fill="#3a1d0c" stroke="#1a0c04" stroke-width="1"/>
+  <circle cx="50" cy="93" r="4.5" fill="url(#gold)" stroke="#4a2c07" stroke-width="1"/>
 </g>
-<circle cx="50" cy="56" r="25" fill="url(#shield)" stroke="url(#gold)" stroke-width="4"/>
-<circle cx="50" cy="56" r="17" fill="none" stroke="#5a2a0a" stroke-width="1.2" opacity=".7"/>
-<path d="M42 50 C40 44 44 40 48 42 L46 47 L51 44 C53 48 50 53 46 54 Z M58 50 C60 44 56 40 52 42 L54 47 L49 44 C47 48 50 53 54 54 Z" fill="url(#gold)" stroke="#4a2c07" stroke-width=".8" transform="translate(0 6)"/>
-<circle cx="50" cy="66" r="3.4" fill="url(#gold)"/>`;
+<circle cx="50" cy="54" r="21" fill="url(#shield)" stroke="url(#gold)" stroke-width="3.6"/>
+<circle cx="50" cy="54" r="14" fill="none" stroke="#5a2a0a" stroke-width="1.1" opacity=".7"/>
+<path d="M43 49 C41 44 44 40 48 41.5 L46.5 46 L51 43.5 C53 47 50.5 51.5 47 52.5 Z M57 49 C59 44 56 40 52 41.5 L53.5 46 L49 43.5 C47 47 49.5 51.5 53 52.5 Z" fill="url(#gold)" stroke="#4a2c07" stroke-width=".8" transform="translate(0 4)"/>
+<circle cx="50" cy="62" r="3" fill="url(#gold)"/>`;
   } else if (id === 'mage') {
     body = `
 <radialGradient id="bgm" cx="62%" cy="30%" r="80%"><stop offset="0" stop-color="#b8fbff"/><stop offset=".3" stop-color="#2fa7d8"/><stop offset=".7" stop-color="#123a86"/><stop offset="1" stop-color="#050b24"/></radialGradient>
@@ -323,4 +323,45 @@ export function tornEdge(seed: number): string {
   for (let i = n - 1; i >= 0; i--) pts.push(`${((i / n) * 100).toFixed(2)}% calc(100% - ${jitter(i / n + 7)}px)`);
   for (let i = n - 1; i >= 1; i--) pts.push(`${jitter(i / n + 11)}px ${((i / n) * 100).toFixed(2)}%`);
   return `polygon(${pts.join(', ')})`;
+}
+
+const SEAL_WAX: Record<ClassId, [string, string, string]> = {
+  warrior: ['#e2463a', '#a3161b', '#4a0607'],
+  mage: ['#5aa8ff', '#1d4fb8', '#0a1a4a'],
+  priest: ['#ffe28a', '#c99a2e', '#5a3c08'],
+};
+
+/** A wax seal with ribbon tails, pressed with a crab claw, in the class colour. */
+export function waxSealSvg(id: ClassId): string {
+  const [hi, mid, lo] = SEAL_WAX[id];
+  // Irregular blob edge.
+  const pts: string[] = [];
+  const n = 22;
+  for (let i = 0; i <= n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const r = 40 + 3.2 * Math.sin(i * 2.7) + 2.2 * Math.cos(i * 5.3);
+    pts.push(`${(60 + Math.cos(a) * r).toFixed(1)} ${(56 + Math.sin(a) * r).toFixed(1)}`);
+  }
+  const blob = `M${pts[0]} ` + pts.slice(1).map((p, i) => (i % 2 ? `L${p}` : `Q${p}`)).join(' ') + ' Z';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 130">
+<defs>
+  <radialGradient id="wax" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="${hi}"/><stop offset=".55" stop-color="${mid}"/><stop offset="1" stop-color="${lo}"/></radialGradient>
+  <radialGradient id="press" cx="55%" cy="60%" r="60%"><stop offset="0" stop-color="${mid}"/><stop offset="1" stop-color="${lo}"/></radialGradient>
+  <linearGradient id="rib" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${mid}"/><stop offset="1" stop-color="${lo}"/></linearGradient>
+  <filter id="sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2.5" stdDeviation="2.2" flood-color="#2a1404" flood-opacity=".55"/></filter>
+</defs>
+<g filter="url(#sh)">
+  <path d="M44 74 L30 126 L40 118 L48 128 L58 80 Z" fill="url(#rib)"/>
+  <path d="M76 74 L90 126 L80 118 L72 128 L62 80 Z" fill="url(#rib)"/>
+  <path d="${blob}" fill="url(#wax)"/>
+</g>
+<circle cx="60" cy="56" r="27" fill="url(#press)" opacity=".85"/>
+<circle cx="60" cy="56" r="27" fill="none" stroke="${lo}" stroke-width="2" opacity=".7"/>
+<circle cx="60.8" cy="57" r="27" fill="none" stroke="${hi}" stroke-width="1" opacity=".5"/>
+<g transform="translate(60 66) scale(1.15)">
+  <path d="${CLAW}" fill="none" stroke="${lo}" stroke-width="2.6" transform="translate(-0.6 -0.6)" opacity=".8"/>
+  <path d="${CLAW}" fill="${mid}" stroke="${hi}" stroke-width="1.2" opacity=".95"/>
+</g>
+<path d="M30 40 C36 26 50 18 64 18" stroke="#fff" stroke-opacity=".35" stroke-width="3" fill="none" stroke-linecap="round"/>
+</svg>`;
 }

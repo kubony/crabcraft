@@ -533,7 +533,7 @@ function buildTopTextures(fine: Float32Array, coarse: Float32Array) {
       orm[i + 2] = Math.round(clamp01(metal) * 255);
       orm[i + 3] = 255;
       // Runes glow; the gold rails of the band glow faintly.
-      const railGlow = gi * (rn > RUNE_IN - 0.03 && rn < RUNE_OUT + 0.03 ? 0.22 : 0.0);
+      const railGlow = gi * (rn > RUNE_IN - 0.03 && rn < RUNE_OUT + 0.03 ? 0.22 : rn < 0.2 ? 0.16 : 0.0);
       const e = clamp01(k + railGlow);
       emi[i] = Math.round(e * 255);
       emi[i + 1] = Math.round(e * 0.62 * 255);

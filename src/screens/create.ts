@@ -9,7 +9,7 @@ import { CLASSES, CLASS_ORDER } from '../data/classes';
 import { RACES, RACE_ORDER } from '../data/races';
 import { art, h } from '../ui/dom';
 import '../ui/fonts.css';
-import { classEmblemSvg, cornerSvg, dividerSvg, fibreUri, grainUri, portraitSvg, sexGlyphSvg, svgUri, tornEdge } from './create/art';
+import { classEmblemSvg, cornerSvg, dividerSvg, fibreUri, grainUri, portraitSvg, sexGlyphSvg, svgUri, tornEdge, waxSealSvg } from './create/art';
 import { capitaliseName, isLetters, isValidName, NAME_MAX, NAME_MIN, randomName } from './create/names';
 import { CreateStage, VIEW, type Reaction } from './create/stage';
 import './create.css';
@@ -62,6 +62,7 @@ export default class CreateScreen implements Screen {
   private classRes!: HTMLElement;
   private parchClass!: HTMLElement;
   private parchRace!: HTMLElement;
+  private seal!: HTMLImageElement;
   private nameInput!: HTMLInputElement;
   private nameWrap!: HTMLElement;
   private nameMsg!: HTMLElement;
@@ -155,7 +156,7 @@ export default class CreateScreen implements Screen {
     const right = w - RIGHT_W * s;
     const cx = (left + right) / 2;
     const free = hgt - BAR_H * s;
-    const cy = free * 0.56;
+    const cy = free * 0.52;
     this.root.style.setProperty('--s', s.toFixed(4));
     this.root.style.setProperty('--cx', `${cx.toFixed(1)}px`);
     this.stage.frame(w, hgt, cx, cy);
@@ -238,6 +239,7 @@ export default class CreateScreen implements Screen {
     // ---- Right: parchment and actions ----
     this.parchClass = h('div', { class: 'cr-parch-sec' });
     this.parchRace = h('div', { class: 'cr-parch-sec' });
+    this.seal = h('img', { class: 'cr-seal', alt: '', draggable: 'false' });
     const parch = h(
       'div',
       { class: 'cr-parch', style: `clip-path:${tornEdge(7)}` },
@@ -254,7 +256,7 @@ export default class CreateScreen implements Screen {
     const rightCol = h(
       'div',
       { class: 'cr-anchor cr-anchor-right' },
-      h('section', { class: 'cr-parch-wrap cr-in-right' }, parch),
+      h('section', { class: 'cr-parch-wrap cr-in-right' }, parch, this.seal),
       h('div', { class: 'cr-actions cr-in-actions' }, accept, back),
     );
 
@@ -567,6 +569,7 @@ export default class CreateScreen implements Screen {
 
   private fillClass(): void {
     const c = CLASSES[this.spec.classId];
+    this.seal.src = svgUri(waxSealSvg(c.id));
     const emblem = h('img', { class: 'cr-art', alt: '', src: art(`art/icons/class-${c.id}.webp`) });
     emblem.addEventListener('error', () => emblem.classList.add('missing'));
     this.parchClass.replaceChildren(

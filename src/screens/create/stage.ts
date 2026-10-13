@@ -15,7 +15,7 @@ import { createBurst, createMotes, type Burst, type Motes } from './particles';
 import { makeCanvas, radialSprite } from './textures';
 
 export const DEFAULT_YAW = -0.42;
-const CAM_FOV = 23;
+const CAM_FOV = 24;
 const CAM_POS = new THREE.Vector3(0, 1.72, 5.4);
 const CAM_TARGET = new THREE.Vector3(0, 0.84, 0);
 const DROP_HEIGHT = 3.4;
@@ -75,6 +75,9 @@ export class CreateStage {
   private underGlow!: THREE.DirectionalLight;
   private shafts: THREE.Mesh[] = [];
   private disposables: { dispose(): void }[] = [];
+  private pendingSpec: CrabSpec | null = null;
+  private applying = false;
+  private disposed = false;
   private viewOffset = { x: 0, y: 0 };
   private sway = new THREE.Vector3();
   private focusTarget = new THREE.Vector3();
@@ -169,8 +172,28 @@ export class CreateStage {
 
   /** Re-skin the crab in place and play the matching reaction. */
   apply(spec: CrabSpec, reaction: Reaction | null): void {
-    void this.rig.applySpec({ ...spec });
+    this.pendingSpec = { ...spec };
+    if (!this.applying) void this.flushSpec();
     if (reaction && this.landed) this.react(reaction, spec);
+  }
+
+  /** applySpec may be async (gear models load); apply only the latest spec, one at a time. */
+  private async flushSpec(): Promise<void> {
+    this.applying = true;
+    while (this.pendingSpec && !this.disposed) {
+      const next = this.pendingSpec;
+      this.pendingSpec = null;
+      try {
+        await this.rig.applySpec(next);
+      } catch (err) {
+        console.warn('applySpec failed', err);
+      }
+      // New gear meshes cast shadows too.
+      this.rig.root.traverse((o) => {
+        if ((o as THREE.Mesh).isMesh) o.castShadow = true;
+      });
+    }
+    this.applying = false;
   }
 
   react(kind: Reaction, spec: CrabSpec): void {
@@ -245,14 +268,14 @@ export class CreateStage {
   }
 
   drag(dxPixels: number, dt: number): void {
-    const d = dxPixels * 0.0105;
+    const d = dxPixels * 0.0085;
     this.yaw += d;
     if (dt > 0) this.dragVel = this.dragVel * 0.6 + (d / dt) * 0.4;
   }
 
   endDrag(): void {
     this.dragging = false;
-    this.yawVel = THREE.MathUtils.clamp(this.dragVel, -9, 9);
+    this.yawVel = THREE.MathUtils.clamp(this.dragVel, -6, 6);
   }
 
   // ---------------------------------------------------------------------------------------
@@ -274,12 +297,6 @@ export class CreateStage {
     this.sparks.setScale(pxPerUnit);
   }
 
-  /** Screen-space bounds of the crab (CSS pixels), for hit-testing drags. */
-  crabScreenPoint(w: number, h: number): { x: number; y: number } {
-    const p = new THREE.Vector3(0, DAIS_TOP + 0.5, 0).project(this.camera);
-    return { x: (p.x * 0.5 + 0.5) * w, y: (-p.y * 0.5 + 0.5) * h };
-  }
-
   // ---------------------------------------------------------------------------------------
   // Frame update
   // ---------------------------------------------------------------------------------------
@@ -298,10 +315,10 @@ export class CreateStage {
     // Turntable.
     if (!this.dragging) {
       if (this.spinInput !== 0) {
-        const target = this.spinInput * 2.3;
+        const target = this.spinInput * 2.0;
         this.yawVel += (target - this.yawVel) * Math.min(1, dt * 8);
       } else {
-        this.yawVel *= Math.exp(-dt * 3.5);
+        this.yawVel *= Math.exp(-dt * 4.5);
         if (Math.abs(this.yawVel) < 0.002) this.yawVel = 0;
       }
       this.yaw += this.yawVel * dt;
@@ -340,7 +357,7 @@ export class CreateStage {
     if (this.landed && now > this.faceUntil && now > this.nextBlink) {
       this.rig.face.setExpression('blink', 0.11);
       this.at(now + 0.11, () => {
-        if (now + 0.11 >= this.faceUntil) this.rig.face.setExpression('neutral');
+        if (this.time >= this.faceUntil) this.rig.face.setExpression('neutral');
       });
       this.nextBlink = now + 2.5 + Math.random() * 4;
     }
@@ -474,6 +491,7 @@ export class CreateStage {
   }
 
   dispose(): void {
+    this.disposed = true;
     this.motion?.dispose();
     this.rig?.dispose();
     this.dais?.dispose();

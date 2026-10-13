@@ -8,13 +8,6 @@
   font-display: swap;
 }
 @font-face {
-  font-family: 'Cinzel Decorative';
-  src: url('/fonts/CinzelDecorative-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
   font-family: 'Alegreya';
   src: url('/fonts/Alegreya-Variable.woff2') format('woff2');
   font-weight: 400 900;
