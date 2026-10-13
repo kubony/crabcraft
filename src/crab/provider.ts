@@ -1,2 +1,2 @@
-// Integration switch: points at the stand-in until the real crab model is merged.
-export { createCrab, createEnemyCrab } from './stub';
+// Integration switch: the real Jumper crab (src/crab/index.ts).
+export { createCrab, createEnemyCrab } from './index';

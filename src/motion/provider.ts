@@ -1,2 +1,2 @@
-// Integration switch: points at the procedural stand-in until the recorded-policy runtime is merged.
-export { createMotionController } from './stub';
+// Integration switch: the recorded-policy motion runtime (src/motion/index.ts).
+export { createMotionController } from './index';

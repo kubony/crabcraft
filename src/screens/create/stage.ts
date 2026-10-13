@@ -16,8 +16,8 @@ import { makeCanvas, radialSprite } from './textures';
 
 export const DEFAULT_YAW = -0.42;
 const CAM_FOV = 24;
-const CAM_POS = new THREE.Vector3(0, 1.72, 5.4);
-const CAM_TARGET = new THREE.Vector3(0, 0.84, 0);
+const CAM_POS = new THREE.Vector3(0, 2.15, 8.3);
+const CAM_TARGET = new THREE.Vector3(0, 0.95, 0);
 const DROP_HEIGHT = 3.4;
 const FOCUS_LEAD = 2.0;
 const GRAVITY = 17;
