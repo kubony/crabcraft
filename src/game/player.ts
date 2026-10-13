@@ -322,7 +322,7 @@ export class Player {
     if (u.alive) {
       let regen = 0;
       if (ooc) regen += u.maxHp * 0.05;
-      if (now < u.blessingUntil) regen += u.maxHp * 0.016;
+      if (now < u.blessingUntil) regen += u.maxHp * 0.02;
       if (regen > 0 && u.hp < u.maxHp) u.hp = Math.min(u.maxHp, u.hp + regen * dt);
     }
     if (u.absorb > 0 && now >= u.absorbUntil) {

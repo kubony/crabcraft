@@ -76,6 +76,8 @@ export class Unit {
   private flashT = 0;
   private pendingHit: { fn: () => void; left: number } | null = null;
   private exprHold = 0;
+  /** Seconds since the death clip started; -1 while alive. */
+  private deathT = -1;
 
   constructor(
     public name: string,
@@ -173,7 +175,12 @@ export class Unit {
 
   /** Play a clip; onHit fires on the clip's 'hit' event or after hitAt seconds, whichever is first. */
   act(id: MotionId, o: ActionOptions = {}): void {
-    if (o.onHit) this.pendingHit = { fn: o.onHit, left: o.hitAt ?? 0.3 };
+    if (o.onHit) {
+      // A swing interrupted by the next one still lands.
+      if (this.pendingHit) this.pendingHit.fn();
+      this.pendingHit = { fn: o.onHit, left: o.hitAt ?? 0.3 };
+    }
+    if (id === 'death') this.deathT = 0;
     this.motion.play(id, {
       upperBodyOnly: o.upper,
       speed: o.speed,
@@ -254,6 +261,14 @@ export class Unit {
     }
     if (this.exprHold > 0) this.exprHold -= dt;
     if (this.culled || this.hidden) return;
+    if (!this.alive && this.deathT >= 0) {
+      this.deathT += dt;
+      // Some runtimes return to idle after a one-shot clip; a dead crab keeps its last pose.
+      if (this.deathT > 0.3 && this.motion.action !== 'death') {
+        this.rig.update(dt);
+        return;
+      }
+    } else if (this.alive) this.deathT = -1;
     this.motion.update(dt);
     this.rig.update(dt);
   }

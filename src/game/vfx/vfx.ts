@@ -1066,15 +1066,16 @@ export class Vfx {
     }
   }
 
-  firework(at: THREE.Vector3, color: THREE.Color): void {
+  firework(at: THREE.Vector3, color: THREE.Color, height = rand(14, 22)): void {
     const pos = new THREE.Vector3(at.x + rand(-3, 3), at.y, at.z + rand(-3, 3));
-    const apex = new THREE.Vector3(at.x + rand(-6, 6), at.y + rand(14, 22), at.z + rand(-6, 6));
+    const apex = new THREE.Vector3(at.x + rand(-4, 4), at.y + height, at.z + rand(-4, 4));
     const climb = rand(0.9, 1.3);
     this.attach(climb, (_dt, t) => {
       const k = t / climb;
       const e = 1 - (1 - k) * (1 - k);
       v1.lerpVectors(pos, apex, e);
-      this.add.emit({ x: v1.x, y: v1.y, z: v1.z, vy: -2, life: 0.4, size: 0.18, sizeEnd: 0.04, color: C.ember, sprite: Sprite.Glow });
+      for (let i = 0; i < 3; i++)
+        this.add.emit({ x: v1.x + rand(-0.05, 0.05), y: v1.y - i * 0.15, z: v1.z + rand(-0.05, 0.05), vx: rand(-0.4, 0.4), vy: -2.5, vz: rand(-0.4, 0.4), life: 0.5, size: 0.16, sizeEnd: 0.03, color: C.ember, sprite: Sprite.Spark, stretch: 0.05, drag: 1 });
     }, () => {
       this.glow(apex, color, 7, 0.35, 2);
       const n = this.n(110);
@@ -1090,8 +1091,8 @@ export class Vfx {
           vy: Math.cos(ph) * s,
           vz: Math.sin(ph) * Math.sin(th) * s,
           life: rand(1.2, 1.9),
-          size: rand(0.18, 0.3),
-          sizeEnd: 0.05,
+          size: rand(0.3, 0.48),
+          sizeEnd: 0.06,
           color,
           colorEnd: C.ember,
           gravity: 3.5,

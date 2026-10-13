@@ -794,7 +794,7 @@ export class Game {
       this.audio.sfx('sfx-quest-accept');
       this.hud.chat.quest(`Quest accepted: ${def.title}`);
       if (id === 'q4') this.hud.messages.banner(def.title, 'New quest: defeat Corrodius on the Iron Wreck', 'quest');
-      else this.hud.messages.info(`Quest accepted: ${def.title}`);
+      else this.hud.messages.banner('Quest Accepted', def.title, 'quest');
       this.hud.tracker.update(this.quests);
     });
     ev.on('progress', ({ objective, value }) => {

@@ -56,7 +56,7 @@ export function executeAbility(g: Game, p: Player, ab: AbilityDef, target: Unit 
         speed: 1.2,
         onHit: () => {
           if (!t.alive) return;
-          hit(g, p, t, 19, 25, 'physical', 0.05);
+          hit(g, p, t, 16, 21, 'physical', 0.05);
           g.vfx.slash(u, t, C.gold, 1.25);
           g.follow.shake(0.06, 0.15);
         },
@@ -108,7 +108,7 @@ export function executeAbility(g: Game, p: Player, ab: AbilityDef, target: Unit 
       u.act('attack_swipe', { upper: true, speed: 1.5 });
       g.vfx.projectile(from, t, 'bubble', 17, () => {
         if (!t.alive) return;
-        hit(g, p, t, 27, 33, 'water');
+        hit(g, p, t, 33, 39, 'water');
       });
       break;
     }
@@ -120,7 +120,7 @@ export function executeAbility(g: Game, p: Player, ab: AbilityDef, target: Unit 
       for (const t of enemiesNear(g, u.pos.x, u.pos.z, ab.range)) {
         const a = yawTo(u.pos.x, u.pos.z, t.pos.x, t.pos.z);
         if (Math.abs(angleDiff(a, u.yaw)) > half + Math.atan2(t.radius, Math.max(0.5, u.distTo(t)))) continue;
-        hit(g, p, t, 12, 15, 'frost');
+        hit(g, p, t, 15, 19, 'frost');
         t.slowUntil = now + 4;
         t.slowPct = 0.5;
       }
@@ -153,7 +153,7 @@ export function executeAbility(g: Game, p: Player, ab: AbilityDef, target: Unit 
       g.follow.shake(0.15, 0.3);
       g.audio.sfx('sfx-crit', { volume: 0.5 });
       for (const t of enemiesNear(g, u.pos.x, u.pos.z, ab.range)) {
-        hit(g, p, t, 16, 21, 'water');
+        hit(g, p, t, 20, 26, 'water');
         knockback(t, u.pos.x, u.pos.z, 5);
         t.stunUntil = Math.max(t.stunUntil, now + 0.6);
       }
@@ -164,7 +164,7 @@ export function executeAbility(g: Game, p: Player, ab: AbilityDef, target: Unit 
       const t = target!;
       g.vfx.smite(t);
       g.audio.sfx('sfx-cast', { volume: 0.4 });
-      const dmg = hit(g, p, t, 25, 31, 'holy');
+      const dmg = hit(g, p, t, 27, 33, 'holy');
       if (dmg > 32) g.follow.shake(0.08, 0.15);
       break;
     }

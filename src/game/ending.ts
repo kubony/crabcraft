@@ -54,7 +54,7 @@ export class EndingSequence {
     // Everyone in town, every race.
     const crowd = [...g.npcs.map((n) => n.unit), ...g.townsfolk.map((t) => t.unit)];
     const n = crowd.length;
-    const radius = Math.max(4.2, n * 0.42);
+    const radius = Math.max(5.5, n * 0.5);
     crowd.forEach((u, i) => {
       const a = (i / n) * Math.PI * 2 + spawn.yaw;
       const x = this.centre.x + Math.sin(a) * radius;
@@ -71,7 +71,7 @@ export class EndingSequence {
     this.orbit0 = spawn.yaw + Math.PI * 0.85;
     g.engine.setView(g.scene, g.camera, {
       bloom: { intensity: 1.15, threshold: 0.8 },
-      dof: { focusDistance: 9, focusRange: 5, bokehScale: 3 },
+      dof: { focusDistance: 9, focusRange: 7, bokehScale: 2.2 },
       vignette: { offset: 0.25, darkness: 0.65 },
       saturation: 0.08,
     });
@@ -85,14 +85,15 @@ export class EndingSequence {
 
   private placeCamera(t: number): void {
     const g = this.game;
-    const k = easeInOut(Math.min(1, t / 14));
-    const r = 13 - 5.5 * k;
-    const hgt = 4.2 - 2.2 * k;
-    const a = this.orbit0 + t * 0.14;
+    // Start high and wide over the ring, then settle inside it at crab height.
+    const k = easeInOut(Math.min(1, t / 12));
+    const r = 11 - 6.6 * k;
+    const hgt = 6.5 - 5.1 * k;
+    const a = this.orbit0 + t * 0.16;
     const cam = g.camera;
     cam.position.set(this.centre.x + Math.sin(a) * r, this.centre.y + hgt, this.centre.z + Math.cos(a) * r);
     cam.lookAt(this.centre.x, this.centre.y + 0.9 + (1 - k) * 0.6, this.centre.z);
-    g.engine.setFocus(cam.position.distanceTo(this.centre), 4 + (1 - k) * 4);
+    g.engine.setFocus(cam.position.distanceTo(this.centre), 6 + (1 - k) * 5);
   }
 
   update(dt: number): void {
@@ -118,10 +119,12 @@ export class EndingSequence {
 
     if (t >= this.nextFirework) {
       this.nextFirework = t + rand(0.5, 1.3);
+      // Over the bay, and now and then right above the square so the camera always catches some.
       const sea = g.seaDirection();
-      const base = this.centre.clone().addScaledVector(sea, rand(8, 30));
+      const a = Math.random() * Math.PI * 2;
+      const base = Math.random() < 0.5 ? this.centre.clone().addScaledVector(sea, rand(16, 34)) : this.centre.clone().add(new THREE.Vector3(Math.cos(a) * rand(14, 24), 0, Math.sin(a) * rand(14, 24)));
       base.y = g.world.heightAt(base.x, base.z);
-      g.vfx.firework(base, pick(FIREWORK_COLORS));
+      g.vfx.firework(base, pick(FIREWORK_COLORS), rand(7, 12));
       if (Math.random() < 0.4) g.audio.sfx('sfx-crit', { volume: 0.25, delay: 1.2 });
     }
     if (t >= this.nextBark && this.dancers.length > 1) {

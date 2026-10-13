@@ -11,8 +11,9 @@ import { C } from './vfx/vfx';
 import type { Fx } from './vfx/effects';
 import { angleDiff, rand, turnToward, yawTo } from './util';
 
-export const BOSS_HP = 1400;
-const ARENA_LEASH = 16;
+export const BOSS_HP = 1300;
+/** How far past the arena edge the player may kite before Corrodius gives up (after a grace period). */
+const ARENA_LEASH = 30;
 
 type Mech = 'slam' | 'spray' | 'undertow';
 type State = 'dormant' | 'waking' | 'idle' | 'fight' | 'dying' | 'dead';
@@ -41,6 +42,7 @@ export class Boss {
   private mech: ActiveMech | null = null;
   private stateT = 0;
   private freedStarted = false;
+  private outside = 0;
 
   constructor(private readonly game: Game, readonly unit: Unit, readonly arena: Poi, readonly freed: Unit) {
     unit.ctrl = this;
@@ -171,9 +173,10 @@ export class Boss {
         break;
     }
 
-    // Leash: the player died or left the wreck.
+    // Leash: the player died, or left the wreck and stayed away.
     const fromArena = Math.hypot(p.pos.x - this.arena.position.x, p.pos.z - this.arena.position.z);
-    if (!p.alive || fromArena > this.arena.radius + ARENA_LEASH) {
+    this.outside = fromArena > this.arena.radius + ARENA_LEASH ? this.outside + dt : 0;
+    if (!p.alive || this.outside > 4) {
       if (p.alive) g.say(u, 'Run, little shell. The rust remembers.', true);
       this.reset();
       return;
@@ -197,19 +200,19 @@ export class Boss {
       const want = yawTo(u.pos.x, u.pos.z, p.pos.x, p.pos.z);
       u.setYaw(turnToward(u.yaw, want, this.enraged ? 3 : 2.2, dt));
       if (gap > 1.0) {
-        const sp = (this.enraged ? 3.8 : 3.1) * u.speedMul(now);
+        const sp = (this.enraged ? 2.8 : 2.0) * u.speedMul(now);
         const d = u.distTo(p) || 1;
         u.moveTo(g.world, u.pos.x + ((p.pos.x - u.pos.x) / d) * sp * dt, u.pos.z + ((p.pos.z - u.pos.z) / d) * sp * dt, dt);
       }
       if (gap <= 1.6 && now >= this.nextSwing && Math.abs(angleDiff(want, u.yaw)) < 0.8) {
-        this.nextSwing = now + (this.enraged ? 1.5 : 2.4);
+        this.nextSwing = now + (this.enraged ? 1.8 : 2.6);
         u.act('attack_swipe', {
           upper: true,
           hitAt: 0.35,
           speed: this.enraged ? 1.4 : 1,
           onHit: () => {
             if (!u.alive || !p.alive || u.gapTo(p) > 2.4) return;
-            g.combat.damage(u, p, rand(10, 14) * (this.enraged ? 1.3 : 1));
+            g.combat.damage(u, p, rand(7, 10) * (this.enraged ? 1.25 : 1));
             g.vfx.slash(u, p, C.ember, 1.3);
             g.follow.shake(0.08, 0.15);
           },
@@ -301,7 +304,7 @@ export class Boss {
         g.follow.shake(0.5, 0.5);
         g.audio.sfx('sfx-crit');
         if (p.alive && Math.hypot(p.pos.x - m.at.x, p.pos.z - m.at.z) < 3.4 + p.radius * 0.5) {
-          g.combat.damage(u, p, p.maxHp * 0.3);
+          g.combat.damage(u, p, p.maxHp * 0.26);
           p.stunUntil = Math.max(p.stunUntil, g.time + 0.5);
         }
         this.mech = null;
@@ -317,7 +320,7 @@ export class Boss {
         const d = Math.hypot(p.pos.x - m.at.x, p.pos.z - m.at.z);
         const a = yawTo(m.at.x, m.at.z, p.pos.x, p.pos.z);
         if (p.alive && d < 11 + p.radius && Math.abs(angleDiff(a, m.yaw)) < 0.55 + Math.atan2(p.radius, Math.max(1, d))) {
-          g.combat.damage(u, p, rand(8, 11));
+          g.combat.damage(u, p, rand(6, 9));
           p.rust = Math.min(5, (g.time < p.rustUntil ? p.rust : 0) + 1);
           p.rustUntil = g.time + 10;
           g.hud.floats.spawn(p, `Rust x${p.rust}`, 'info');
@@ -329,7 +332,7 @@ export class Boss {
       if (p.alive && m.t < m.dur - 0.3) {
         const d = u.distTo(p);
         if (d < 18 && d > u.radius + p.radius + 0.3) {
-          const pull = 3.6;
+          const pull = 3.2;
           p.pushX = ((u.pos.x - p.pos.x) / d) * pull;
           p.pushZ = ((u.pos.z - p.pos.z) / d) * pull;
           p.pushTime = 0.05;
@@ -344,7 +347,7 @@ export class Boss {
         g.vfx.slamImpact(m.at, 5.5);
         g.follow.shake(0.55, 0.6);
         g.audio.sfx('sfx-crit');
-        if (p.alive && u.distTo(p) < 5.5 + p.radius * 0.5) g.combat.damage(u, p, p.maxHp * 0.28);
+        if (p.alive && u.distTo(p) < 5.5 + p.radius * 0.5) g.combat.damage(u, p, p.maxHp * 0.24);
         this.mech = null;
       }
     }

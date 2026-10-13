@@ -91,7 +91,7 @@ async function run(cls) {
   const fights = {
     warrior: async () => {
       await key('Digit3');
-      await sleep(2600);
+      await sleep(3300);
       await key('Digit4');
       await sleep(260);
       await shot('03-shore-combat');
