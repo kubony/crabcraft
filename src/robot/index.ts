@@ -160,9 +160,6 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
     // No saturation/contrast here: the engine applies them before AgX tone mapping, where they
     // push saturated reds below zero and AgX's log turns those pixels into NaN (black holes).
   };
-  const dbg = new URLSearchParams(location.search);
-  if (dbg.has('nodof')) view.dof = null;
-  if (dbg.has('nofx')) Object.assign(view, { dof: null, saturation: undefined, contrast: undefined, vignette: null });
   engine.setView(scene, camera, view);
   hud?.ready(info);
 

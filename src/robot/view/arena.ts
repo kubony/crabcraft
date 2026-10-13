@@ -145,7 +145,7 @@ export class Arena {
         obj = new THREE.Mesh(new THREE.SphereGeometry(t.size[0], 48, 32), mat);
         this.disposables.push(mat, obj.geometry);
       } else {
-        const col = `#${new THREE.Color(t.rgba[0], t.rgba[1], t.rgba[2]).getHexString(THREE.SRGBColorSpace)}`;
+        const col = `#${new THREE.Color().setRGB(t.rgba[0], t.rgba[1], t.rgba[2], THREE.SRGBColorSpace).getHexString(THREE.SRGBColorSpace)}`;
         const tex = blockFace(LETTERS[t.body] ?? 'A', col);
         const mat = new THREE.MeshPhysicalMaterial({ map: tex, roughness: 0.55, clearcoat: 0.4, clearcoatRoughness: 0.3 });
         const [hx, hy, hz] = t.size;
@@ -161,7 +161,7 @@ export class Arena {
   }
 
   private addProp(p: RobotPackage['scene']['props'][number]): void {
-    const color = new THREE.Color(p.rgba[0], p.rgba[1], p.rgba[2]);
+    const color = new THREE.Color().setRGB(p.rgba[0], p.rgba[1], p.rgba[2], THREE.SRGBColorSpace);
     let mesh: THREE.Object3D;
     if (p.kind === 'box') {
       // A hardback book: cover boards and a cream page block.
@@ -170,14 +170,14 @@ export class Arena {
       const cover = new THREE.MeshPhysicalMaterial({ color, roughness: 0.6, clearcoat: 0.2 });
       const pages = new THREE.MeshStandardMaterial({ color: '#efe6cf', roughness: 0.9 });
       const board = 0.0025;
-      const top = new THREE.Mesh(roundedBox(hy * 2, board, hx * 2, 0.001), cover);
+      const top = new THREE.Mesh(new THREE.BoxGeometry(hy * 2, board, hx * 2), cover);
       top.position.y = hz - board / 2;
       const bottom = top.clone();
       bottom.position.y = -hz + board / 2;
       const spine = new THREE.Mesh(new THREE.BoxGeometry(board, hz * 2, hx * 2), cover);
-      spine.position.x = -hy;
+      spine.position.x = hy; // spines toward the opening camera
       const block = new THREE.Mesh(new THREE.BoxGeometry(hy * 2 - board * 2, hz * 2 - board * 2, hx * 2 - board * 2), pages);
-      block.position.x = board / 2;
+      block.position.x = -board / 2;
       g.add(top, bottom, spine, block);
       g.traverse((o) => {
         o.castShadow = true;
