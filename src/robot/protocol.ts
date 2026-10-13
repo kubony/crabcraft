@@ -48,6 +48,10 @@ export interface ReadyInfo {
   actDiff: number | null;
   digests: { checked: number; mismatched: string[] } | null;
   downloadBytes: number;
+  /** Modes whose policy is loaded at ready; the rest arrive as `policy` messages. */
+  policiesReady: string[];
+  /** Bytes of the policies still streaming in after ready. */
+  policyBytes: number;
   loadMs: number;
   mujocoVersion: string;
   ortVersion: string;
@@ -88,4 +92,5 @@ export type FromWorker =
   | { type: 'progress'; loaded: number; total: number; label: string }
   | { type: 'ready'; info: ReadyInfo }
   | FrameMsg
-  | { type: 'error'; message: string };
+  | { type: 'error'; message: string }
+  | { type: 'policy'; mode: string; ok: boolean; error?: string; digests: { checked: number; mismatched: string[] } };

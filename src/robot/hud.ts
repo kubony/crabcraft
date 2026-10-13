@@ -64,6 +64,7 @@ export class Hud {
   private lastText = new Map<HTMLElement, string>();
   private tAcc = 0;
   private followBtn: HTMLElement | null = null;
+  private digestLine: HTMLElement | null = null;
 
   constructor(parent: HTMLElement, private readonly actions: HudActions) {
     this.loadBar = h('div');
@@ -231,6 +232,7 @@ export class Hud {
         this.actions.request(mode);
       };
       this.dock.push({ mode, el, binding: b });
+      if (!info.policiesReady.includes(mode)) el.classList.add('loading');
       return el;
     };
     this.stopBtn = h('button', { class: 'rm-btn', tabindex: '-1' }, 'Walk', h('span', { class: 'kb' }, 'WASD'));
@@ -276,7 +278,10 @@ export class Hud {
         `reference.json replay: ${rr.frames} frames, diff ${Math.max(rr.observation, rr.target)}`);
     }
     if (info.actDiff !== null) ok(info.actDiff < 1e-4, `policy outputs vs recorded actions: ${info.actDiff.toExponential(1)}`);
-    if (info.digests) ok(info.digests.mismatched.length === 0, `${info.digests.checked} bundle files match their SHA-256`);
+    if (info.digests) {
+      ok(info.digests.mismatched.length === 0, `${info.digests.checked} bundle files match their SHA-256`);
+      this.digestLine = checks.lastElementChild as HTMLElement;
+    }
     r.append(
       h(
         'div',
@@ -367,6 +372,22 @@ export class Hud {
       this.log.append(line);
       while (this.log.childElementCount > 5) this.log.firstElementChild!.remove();
     }
+  }
+
+  /** A policy finished streaming in (or failed its digest). */
+  policyReady(mode: string, ok: boolean, checked: number, mismatched: string[]): void {
+    for (const d of this.dock) if (d.mode === mode) d.el.classList.toggle('loading', false);
+    for (const d of this.dock) if (d.mode === mode && !ok) d.el.classList.add('failed');
+    if (this.digestLine) {
+      this.digestLine.textContent = `${checked} bundle files match their SHA-256`;
+      this.digestLine.className = mismatched.length ? 'bad' : 'ok';
+      if (mismatched.length) this.digestLine.textContent = `SHA-256 mismatch: ${mismatched.join(', ')}`;
+    }
+  }
+
+  /** A fault reported by the simulation after start. */
+  fault(message: string): void {
+    this.log.append(h('div', null, h('b', null, 'fault '), h('span', null, message)));
   }
 
   /** Reflects a camera toggle made from the keyboard. */

@@ -17,6 +17,12 @@ export class SimClient {
   private frameListeners = new Set<(f: FrameMsg) => void>();
   readonly ready: Promise<ReadyInfo>;
   onProgress: ((p: Progress) => void) | null = null;
+  /** A policy that streamed in after start, or failed to. */
+  onPolicy: ((mode: string, ok: boolean, checked: number, mismatched: string[]) => void) | null = null;
+  /** Policies that have streamed in so far, for a listener attached late. */
+  readonly policies = new Map<string, { ok: boolean; checked: number; mismatched: string[] }>();
+  /** A fault after start (the loop keeps running). */
+  onFault: ((message: string) => void) | null = null;
 
   constructor(baseUrl: string) {
     this.worker = new Worker(new URL('./sim/worker.ts', import.meta.url), { type: 'module', name: 'robot-sim' });
@@ -31,8 +37,12 @@ export class SimClient {
         } else if (m.type === 'ready') {
           this.info = m.info;
           resolve(m.info);
+        } else if (m.type === 'policy') {
+          this.policies.set(m.mode, { ok: m.ok, checked: m.digests.checked, mismatched: m.digests.mismatched });
+          this.onPolicy?.(m.mode, m.ok, m.digests.checked, m.digests.mismatched);
         } else if (m.type === 'error') {
-          reject(new Error(m.message));
+          if (this.info) this.onFault?.(m.message);
+          else reject(new Error(m.message));
         }
       };
       this.worker.onerror = (e) => reject(new Error(e.message || 'robot worker failed to start'));

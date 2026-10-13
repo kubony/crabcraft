@@ -141,6 +141,10 @@
   box-shadow: 0 8px 24px rgba(210, 32, 47, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 .rm-btn.on .kb { color: rgba(255, 255, 255, 0.75); }
+.rm-btn.loading { opacity: 0.55; }
+.rm-btn.loading::after { content: ''; position: absolute; left: 10px; right: 10px; bottom: 5px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--rm-led), transparent); background-size: 200% 100%; animation: rm-load 1.1s linear infinite; }
+@keyframes rm-load { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+.rm-btn.failed { opacity: 0.3; text-decoration: line-through; }
 .rm-btn.pending { border-color: rgba(255, 211, 107, 0.7); box-shadow: 0 0 0 1px rgba(255, 211, 107, 0.4), 0 0 18px rgba(255, 211, 107, 0.25); }
 .rm-help { position: absolute; left: 50%; bottom: 108px; transform: translateX(-50%); font: 500 12px/1 var(--rm-sans); color: var(--rm-dim); white-space: nowrap; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8); display: flex; gap: 16px; }
 .rm-help kbd { font: 600 10.5px/1 var(--rm-mono); padding: 3px 6px; border-radius: 5px; background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(255, 255, 255, 0.16); color: var(--rm-text); margin-right: 5px; }

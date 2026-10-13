@@ -134,14 +134,24 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
   if (import.meta.env.DEV) (window as unknown as { __robotEngine: Engine }).__robotEngine = engine;
 
   const client = new SimClient(base);
-  client.onProgress = (p) => hud?.progress(p.loaded, p.total, p.label);
+  client.onProgress = (p) => {
+    // After the worker is up, the remaining policies stream in the background.
+    if (!client.info) hud?.progress(p.loaded, p.total, p.label);
+  };
 
   let info: ReadyInfo;
   let pkg: RobotPackage;
   let robot: RobotViewLayer;
+  let arena: Arena;
   try {
     pkg = (await (await fetch(new URL('jumper/robot-package.json', base))).json()) as RobotPackage;
-    const [i, view] = await Promise.all([client.ready, StlRobotView.load(new URL('jumper/visual.glb', base).href, pkg.visualRgba)]);
+    // The page's own assets load beside the worker's boot, not after it.
+    arena = new Arena(engine.renderer, pkg);
+    const [i, view] = await Promise.all([
+      client.ready,
+      StlRobotView.load(new URL('jumper/visual.glb', base).href, pkg.visualRgba),
+      arena.upgrade(base),
+    ]);
     info = i;
     robot = view;
   } catch (err) {
@@ -154,8 +164,6 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
   const toContract = JOINT_NAMES.map((n) => info.joints.indexOf(n));
   if (toContract.some((i) => i < 0)) throw new Error('bundle wire order does not cover JOINT_NAMES');
 
-  const arena = new Arena(engine.renderer, pkg);
-  await arena.upgrade(base);
   const scene = arena.scene;
   scene.add(robot.object);
   const orbit = new OrbitFollow(engine.canvas, window.innerWidth / window.innerHeight);
@@ -171,6 +179,9 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
   };
   engine.setView(scene, camera, view);
   hud?.ready(info);
+  client.onPolicy = (mode, ok, checked, mismatched) => hud?.policyReady(mode, ok, checked, mismatched);
+  for (const [mode, p] of client.policies) hud?.policyReady(mode, p.ok, p.checked, p.mismatched);
+  client.onFault = (message) => hud?.fault(message);
 
   // ---------- Per-frame state ----------
 

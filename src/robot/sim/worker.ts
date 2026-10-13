@@ -124,7 +124,10 @@ async function boot(baseUrl: string, mujocoWasmUrl: string, ortWasmUrl: string):
     wanted.add(m.models.onnx);
     if (m.trajectory) wanted.add(m.trajectory);
   }
-  const bundleBytes = [...wanted].reduce((s, f) => s + (bundleJson.files[f]?.bytes ?? 0), 0);
+  // The policies stream in after the robot is up, except the one it starts in.
+  const startModel = (m: string | undefined) => (m && bundleJson.modes[m] ? bundleJson.modes[m].models.onnx : null);
+  const later = new Set([...wanted].filter((f) => f.startsWith('models/')));
+  const bundleBytes = [...wanted].filter((f) => !later.has(f)).reduce((s, f) => s + (bundleJson.files[f]?.bytes ?? 0), 0);
   const robotBytes = Object.entries(pkg.files).reduce((s, [f, v]) => (f === 'model.xml' || f === 'visual.glb' ? s : s + v.bytes), 0);
   l.total = bundleBytes + robotBytes + 10_117_577 + 14_239_897; // + MuJoCo and ORT wasm
   post({ type: 'progress', loaded: l.loaded, total: l.total, label: 'bundle.json' });
@@ -179,43 +182,81 @@ async function boot(baseUrl: string, mujocoWasmUrl: string, ortWasmUrl: string):
   );
 
   await ortP;
-  const sessions: Record<string, ort.InferenceSession> = {};
-  const byFile = new Map<string, Promise<ort.InferenceSession>>();
-  await Promise.all(
-    Object.entries(bundleJson.modes).map(async ([mode, entry]) => {
-      const f = entry.models.onnx;
-      if (!byFile.has(f)) {
-        byFile.set(
-          f,
-          get(f, `policy ${f.replace('models/', '')}`).then((bytes) =>
-            ort.InferenceSession.create(bytes, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' }),
-          ),
-        );
+  // Policies. The mode the cascade starts in (warm_start_ref, else initial_state) is loaded before
+  // the robot wakes; the others stream in behind it. Each is held to bundle.json's SHA-256 before
+  // its session is built.
+  const toml = text(tomlBytes);
+  const field = (k: string) => toml.match(new RegExp(`^\\s*${k}\\s*=\\s*"([^"]+)"`, 'm'))?.[1];
+  const startMode = [field('warm_start_ref'), field('initial_state')].find((m) => m && bundleJson.modes[m]) ?? Object.keys(bundleJson.modes)[0];
+  const firstFile = startModel(startMode)!;
+  let policyBytes = 0;
+  for (const f of later) if (f !== firstFile) policyBytes += bundleJson.files[f]?.bytes ?? 0;
+  l.total += bundleJson.files[firstFile]?.bytes ?? 0;
+  const digestState = { checked: 0, mismatched: [] as string[] };
+  const verify = async (f: string, bytes: Uint8Array) => {
+    const want = bundleJson.files[f]?.sha256;
+    const got = want ? await sha256(bytes) : null;
+    if (want && got !== null) {
+      digestState.checked++;
+      if (got !== want) {
+        digestState.mismatched.push(f);
+        throw new Error(`${f} does not match its SHA-256 in bundle.json`);
       }
-      sessions[mode] = await byFile.get(f)!;
-    }),
-  );
+    }
+    return bytes;
+  };
+  const byFile = new Map<string, Promise<ort.InferenceSession>>();
+  const sessionFor = (f: string) => {
+    if (!byFile.has(f)) {
+      byFile.set(
+        f,
+        get(f, `policy ${f.replace('models/', '')}`)
+          .then((b) => verify(f, b))
+          .then((bytes) => ort.InferenceSession.create(bytes, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' })),
+      );
+    }
+    return byFile.get(f)!;
+  };
+  const sessionP: Record<string, Promise<ort.InferenceSession>> = {};
+  await sessionFor(firstFile);
+  let restStarted = false;
+  const startRest = () => {
+    if (restStarted) return;
+    restStarted = true;
+    for (const [mode, entry] of Object.entries(bundleJson.modes)) {
+      sessionP[mode] = sessionFor(entry.models.onnx);
+      sessionP[mode].then(
+        () => post({ type: 'policy', mode, ok: true, digests: { ...digestState, mismatched: [...digestState.mismatched] } }),
+        (err: unknown) => post({ type: 'policy', mode, ok: false, error: String(err), digests: { ...digestState, mismatched: [...digestState.mismatched] } }),
+      );
+    }
+  };
+  for (const [mode, entry] of Object.entries(bundleJson.modes)) if (entry.models.onnx === firstFile) sessionP[mode] = sessionFor(firstFile);
   const mj = await mujocoP;
 
   // 4. Digests: bundle.json lists every file's SHA-256 and no host checks them; this one does.
   let digests: ReadyInfo['digests'] = null;
   if (self.crypto?.subtle) {
-    const mismatched: string[] = [];
-    let checked = 0;
     for (const [f, bytes] of Object.entries(files)) {
+      if (f.startsWith('models/')) continue; // checked as each arrives
       const want = bundleJson.files[f]?.sha256;
       if (!want) continue;
       const got = await sha256(bytes);
-      checked++;
-      if (got !== want) mismatched.push(f);
+      digestState.checked++;
+      if (got !== want) digestState.mismatched.push(f);
     }
-    digests = { checked, mismatched };
-    if (mismatched.length) throw new Error(`bundle files do not match bundle.json digests: ${mismatched.join(', ')}`);
+    digests = { ...digestState, mismatched: [...digestState.mismatched] };
+    if (digestState.mismatched.length) {
+      throw new Error(`bundle files do not match bundle.json digests: ${digestState.mismatched.join(', ')}`);
+    }
   }
 
   const run = async (mode: string, obs: Float32Array): Promise<Float32Array> => {
-    const s = sessions[mode];
-    if (!s) throw new Error(`no policy for mode ${mode}`);
+    // A mode asked for before its policy has arrived waits for it (the switch-in ramp usually
+    // covers the download); the governor turns the wait into a pause, not a time jump.
+    const p = sessionP[mode] ?? (startRest(), sessionP[mode]);
+    if (!p) throw new Error(`no policy for mode ${mode}`);
+    const s = await p;
     const out = await s.run({ [s.inputNames[0]]: new ort.Tensor('float32', obs, [1, obs.length]) });
     return out[s.outputNames[0]].data as Float32Array;
   };
@@ -225,7 +266,7 @@ async function boot(baseUrl: string, mujocoWasmUrl: string, ortWasmUrl: string):
     sceneXml,
     meshes,
     pkg,
-    controllerToml: text(tomlBytes),
+    controllerToml: toml,
     contracts,
     trajectories,
     WebFsm: glue.WebFsm as never,
@@ -281,13 +322,18 @@ async function boot(baseUrl: string, mujocoWasmUrl: string, ortWasmUrl: string):
     actDiff,
     digests,
     downloadBytes: l.loaded,
+    policiesReady: [],
+    policyBytes: 0,
     loadMs: performance.now() - t0,
     mujocoVersion: '3.11.0',
     ortVersion: ort.env.versions.web ?? '1.30.0',
     rendererHint: '',
   };
+  info.policiesReady = Object.keys(sessionP);
+  info.policyBytes = policyBytes;
   sim = s;
   post({ type: 'ready', info });
+  startRest();
   rebase();
   loop();
 }
@@ -314,7 +360,16 @@ async function loop(): Promise<void> {
   if (!paused) {
     const targetSim = simAnchor + ((performance.now() - realAnchor) / 1000) * speed;
     while (s.simTime + TICK_S * 0.5 < targetSim && performance.now() < budgetEnd) {
-      await s.tick();
+      try {
+        await s.tick();
+      } catch (err) {
+        // A policy that failed to load or run: say so and stand the robot back up rather than
+        // leave the loop dead.
+        post({ type: 'error', message: err instanceof Error ? err.message : String(err) });
+        s.reset();
+        rebase();
+        break;
+      }
       ticksTotal++;
       if (s.mode !== lastMode) {
         lastMode = s.mode;
