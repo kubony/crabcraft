@@ -69,7 +69,7 @@ export class Engine {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.NoToneMapping; // the ToneMappingEffect does it
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.info.autoReset = false;
     this.canvas = this.renderer.domElement;
     this.canvas.className = 'cc-canvas';

@@ -1,0 +1,38 @@
+<!doctype html>
+<html><head><meta charset="UTF-8" /><title>stub crab + world</title></head>
+<body style="margin:0;background:#000;overflow:hidden">
+<div id="app"></div>
+<script type="module">
+import '../src/ui/kit.css';
+import * as THREE from 'three';
+import { Engine } from '../src/core/engine';
+import { Input } from '../src/core/input';
+import { FollowCamera } from '../src/core/followCamera';
+import { createCrab } from '../src/crab/provider';
+import { createMotionController } from '../src/motion/provider';
+import { createWorld } from '../src/world/provider';
+const engine = new Engine(document.getElementById('app'));
+const scene = new THREE.Scene();
+const cam = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+engine.setView(scene, cam);
+const world = await createWorld({ renderer: engine.renderer, scene, quality: 'high' });
+const crab = await createCrab({ race: 'human', sex: 'male', classId: 'warrior', shell: 0, crest: 0, led: 0, name: 'Test' });
+scene.add(crab.root);
+const motion = createMotionController(crab);
+const input = new Input(engine.canvas);
+const follow = new FollowCamera(cam, { raycast: (a, b) => world.raycastSolid(a, b) });
+let yaw = 0;
+engine.onFrame(({ dt, elapsed }) => {
+  const f = (input.isDown('KeyW') ? 1 : 0) - (input.isDown('KeyS') ? 1 : 0);
+  const s = (input.isDown('KeyA') ? 1 : 0) - (input.isDown('KeyD') ? 1 : 0);
+  motion.setLocomotion(s * 4, f * 4, 0);
+  crab.root.position.x += (Math.sin(yaw) * f + Math.cos(yaw) * s) * 4 * dt;
+  crab.root.position.z += (Math.cos(yaw) * f - Math.sin(yaw) * s) * 4 * dt;
+  motion.update(dt); crab.update(dt);
+  follow.update(dt, input, crab.root.position);
+  world.update(dt, elapsed, cam);
+});
+engine.onAfterFrame(() => input.endFrame());
+engine.start();
+setTimeout(() => (window.__ready = true), 800);
+</script></body></html>

@@ -40,3 +40,39 @@ export type MotionId =
   | 'dance_crab' | 'dance_brazilian' | 'dance_dream_wings' | 'dance_maze'
   // Keyframed game-only clips (not from a policy):
   | 'attack_swipe' | 'attack_slam' | 'cast' | 'hit_react' | 'death' | 'sit';
+
+/**
+ * What gameplay drives. The integration branch adapts the motion runtime to this interface
+ * (src/motion/provider.ts), so gameplay never depends on the runtime's internals.
+ */
+export interface MotionPlayOptions {
+  loop?: boolean;
+  /** Crossfade seconds. */
+  fade?: number;
+  /** Playback rate. */
+  speed?: number;
+  /** Only the claws (LF/RF joints) play the clip; the legs keep walking. */
+  upperBodyOnly?: boolean;
+  /** Named clip events ("hit", "grab", "footstep") as they pass. */
+  onEvent?: (name: string) => void;
+  onEnd?: () => void;
+}
+
+export interface MotionController {
+  /**
+   * Desired locomotion in the crab's local frame, world units per second:
+   * vx = toward the crab's left (+X), vz = forward (+Z); yawRate in rad/s (positive = turn left).
+   * Zero velocity settles into idle.
+   */
+  setLocomotion(vx: number, vz: number, yawRate: number): void;
+  play(id: MotionId, opts?: MotionPlayOptions): void;
+  /** Stop a playing action (or all actions) and return to locomotion/idle. */
+  stop(id?: MotionId, fade?: number): void;
+  /** The full-body or upper-body action currently playing, if any. */
+  readonly action: MotionId | null;
+  /** Poses the rig for this frame. Does not call rig.update (gameplay does). */
+  update(dt: number): void;
+  dispose(): void;
+}
+
+export type CreateMotionController = (rig: import('../crab/types').CrabRig) => MotionController;
