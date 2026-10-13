@@ -42,26 +42,24 @@ body { font-family: var(--font-body); -webkit-font-smoothing: antialiased; user-
 /* ---------- Stone frame panel ---------- */
 .cc-panel {
   position: relative;
-  padding: 22px;
+  padding: 10px;
   color: var(--cc-parchment);
-  background:
-    radial-gradient(120% 90% at 50% 0%, rgba(80, 86, 98, 0.35), transparent 60%),
-    url('/art/ui/frame-stone.webp') center / cover,
-    linear-gradient(180deg, #2b2e35 0%, #17191d 100%);
-  border: 3px solid transparent;
-  border-image: linear-gradient(180deg, #f6dc8e, #a77a28 40%, #6b4a14 60%, #e2bd63) 1;
+  background: linear-gradient(180deg, #2b2e35 0%, #17191d 100%) padding-box;
+  /* 9-slice stone frame with gold trim; the fill keeps the dark stone in the middle. */
+  border: 30px solid #6b4a14;
+  border-image: url('/art/ui/frame-stone.webp') 72 fill / 30px / 0 stretch;
   box-shadow: var(--frame-shadow);
 }
 .cc-panel::before, .cc-panel::after {
   /* Gold claw corner ornaments; the image is optional. */
-  content: '';
+  content: none; /* the 9-slice frame already carries the gold corners */
   position: absolute;
   width: 46px; height: 46px;
   background: url('/art/ui/corner-claw.webp') center / contain no-repeat;
   pointer-events: none;
 }
-.cc-panel::before { left: -14px; top: -14px; }
-.cc-panel::after { right: -14px; bottom: -14px; transform: rotate(180deg); }
+.cc-panel::before { left: -36px; top: -36px; }
+.cc-panel::after { right: -36px; bottom: -36px; transform: rotate(180deg); }
 
 /* ---------- Parchment ---------- */
 .cc-parchment {
@@ -100,25 +98,34 @@ body { font-family: var(--font-body); -webkit-font-smoothing: antialiased; user-
   text-transform: uppercase;
   color: #ffe9a8;
   text-shadow: 0 1px 0 #3a0505, 0 0 8px rgba(0, 0, 0, 0.7);
-  padding: 10px 34px;
-  min-width: 200px;
-  border: 2px solid #e2bd63;
-  border-radius: 6px;
+  padding: 15px 46px;
+  min-width: 220px;
+  border: none;
+  border-radius: 0;
   background:
-    url('/art/ui/button-red.webp') center / 100% 100%,
-    linear-gradient(180deg, #d02a2a 0%, #8f1111 55%, #5c0909 100%);
-  box-shadow: 0 4px 0 #2a0505, 0 8px 18px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 200, 160, 0.45);
+    url('/art/ui/button-red.webp') center / 100% 100% no-repeat,
+    linear-gradient(180deg, #d02a2a 0%, #8f1111 55%, #5c0909 100%) center / calc(100% - 24px) calc(100% - 14px) no-repeat;
+  filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.6));
   cursor: pointer;
-  transition: transform 0.08s ease, filter 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.08s ease, filter 0.15s ease;
 }
-.cc-btn:hover { filter: brightness(1.18) saturate(1.1); box-shadow: 0 4px 0 #2a0505, 0 0 22px rgba(255, 190, 90, 0.45), inset 0 1px 0 rgba(255, 220, 180, 0.6); }
-.cc-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #2a0505, 0 4px 10px rgba(0, 0, 0, 0.5); }
+.cc-btn:hover {
+  background-image: url('/art/ui/button-red-hover.webp'), linear-gradient(180deg, #e33a3a, #9f1818);
+  filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 14px rgba(255, 190, 90, 0.45));
+}
+.cc-btn:active { background-image: url('/art/ui/button-red-pressed.webp'), linear-gradient(180deg, #8f1111, #5c0909); transform: translateY(1px); }
 .cc-btn:disabled { filter: grayscale(0.8) brightness(0.6); cursor: default; }
 .cc-btn.small { font-size: 14px; padding: 6px 18px; min-width: 120px; }
 .cc-btn.ghost {
-  background: linear-gradient(180deg, rgba(40, 42, 48, 0.9), rgba(18, 19, 22, 0.95));
+  padding: 11px 40px;
+  border: 2px solid #c9a24f;
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(44, 46, 54, 0.92), rgba(16, 17, 20, 0.96));
+  box-shadow: inset 0 1px 0 rgba(255, 220, 150, 0.18), 0 0 0 1px #2a1d06;
   color: #f2d28a;
 }
+.cc-btn.ghost:hover { background: linear-gradient(180deg, rgba(70, 60, 40, 0.95), rgba(28, 24, 18, 0.96)); border-color: #ffe08a; }
+.cc-btn.ghost:active { background: linear-gradient(180deg, rgba(20, 20, 22, 0.96), rgba(40, 36, 30, 0.95)); }
 
 /* Round gold arrow buttons used by the option pickers. */
 .cc-arrow {
