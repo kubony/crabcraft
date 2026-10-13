@@ -1,0 +1,132 @@
+// ?debug=1 only: F8 god mode, F9 complete the current objective, F10 teleport to the next
+// objective, an fps / draw-call readout, and window.cc for the playtest script.
+import * as THREE from 'three';
+import type { Game } from './game';
+import { QUESTS } from './quests';
+import { C } from './vfx/vfx';
+
+export class DebugTools {
+  private acc = 0;
+
+  constructor(private readonly game: Game) {
+    window.addEventListener('keydown', this.onKey, true);
+    game.hud.debugEl.classList.remove('hidden');
+    (window as unknown as { cc: unknown }).cc = {
+      game,
+      state: () => this.state(),
+      C,
+      THREE,
+    };
+  }
+
+  private readonly onKey = (e: KeyboardEvent): void => {
+    if (e.code === 'F8' || e.code === 'F9' || e.code === 'F10') {
+      e.preventDefault();
+      if (e.repeat) return;
+      if (e.code === 'F8') this.toggleGod();
+      if (e.code === 'F9') this.completeObjective();
+      if (e.code === 'F10') this.teleport();
+    }
+  };
+
+  toggleGod(): void {
+    const g = this.game;
+    g.god = !g.god;
+    g.hud.messages.info(g.god ? 'God mode ON' : 'God mode OFF');
+  }
+
+  completeObjective(): void {
+    const g = this.game;
+    const cur = g.quests.current();
+    if (!cur) return;
+    if (cur.step === 'accept') {
+      g.acceptQuest(cur.quest);
+      return;
+    }
+    if (cur.step === 'turnin') {
+      g.turnIn(cur.quest);
+      return;
+    }
+    const o = cur.objective!;
+    switch (o.kind) {
+      case 'kill-scrapling':
+      case 'kill-scavenger':
+      case 'collect-cog':
+      case 'deliver':
+        g.quests.completeObjective(o);
+        break;
+      case 'beacon':
+        g.lightBeacon();
+        break;
+      case 'boss':
+        if (g.boss.state === 'dormant') g.boss.wake();
+        else g.boss.debugAdvance();
+        break;
+    }
+  }
+
+  teleport(): void {
+    const g = this.game;
+    const target = g.objectivePos();
+    if (!target) return;
+    const p = g.player.unit;
+    const cur = g.quests.current();
+    let back = 3.2;
+    if (cur?.objective?.kind === 'boss') back = g.world.pois.bossArena.radius * 0.6;
+    if (cur?.objective?.kind === 'kill-scrapling' || cur?.objective?.kind === 'kill-scavenger' || cur?.objective?.kind === 'collect-cog') back = 9;
+    let dx = p.pos.x - target.x;
+    let dz = p.pos.z - target.z;
+    const len = Math.hypot(dx, dz);
+    if (len < 0.01) {
+      dx = 1;
+      dz = 0;
+    } else {
+      dx /= len;
+      dz /= len;
+    }
+    const x = target.x + dx * back;
+    const z = target.z + dz * back;
+    p.teleport(g.world, x, z, Math.atan2(-dx, -dz));
+    g.follow.yaw = p.yaw + Math.PI;
+    g.player.cancelChannel();
+    g.player.interruptCast();
+  }
+
+  state(): Record<string, unknown> {
+    const g = this.game;
+    const cur = g.quests.current();
+    return {
+      loaded: g.loaded,
+      time: g.time,
+      fps: g.engine.fps,
+      drawCalls: g.engine.drawCalls,
+      quests: { ...g.quests.status },
+      current: cur ? { quest: cur.quest, step: cur.step, label: cur.label, title: QUESTS[cur.quest].title } : null,
+      playerHp: g.player.unit.hp,
+      playerAlive: g.player.unit.alive,
+      level: g.player.unit.level,
+      target: g.player.target?.name ?? null,
+      dialogueOpen: g.hud.dialogue.isOpen,
+      boss: { state: g.boss.state, phase: g.boss.phase, hp: g.boss.unit.hp, telegraph: g.boss.telegraphActive, mech: g.boss.mechName, adds: g.boss.adds.filter((a) => a.unit.alive).length },
+      ending: g.ending.active,
+      zone: g.zone,
+      crabs: g.units.filter((u) => !u.hidden && !u.culled).length,
+      particles: g.vfx.add.count + g.vfx.alpha.count,
+    };
+  }
+
+  update(dt: number): void {
+    this.acc += dt;
+    if (this.acc < 0.5) return;
+    this.acc = 0;
+    const g = this.game;
+    const s = this.state();
+    g.hud.debugEl.classList.toggle('god', g.god);
+    g.hud.debugEl.textContent = `${g.engine.fps.toFixed(0)} fps  ${g.engine.drawCalls} calls\ncrabs ${s.crabs}  particles ${s.particles}${g.god ? '\nGOD MODE' : ''}\nF8 god  F9 objective  F10 teleport`;
+  }
+
+  dispose(): void {
+    window.removeEventListener('keydown', this.onKey, true);
+    delete (window as unknown as { cc?: unknown }).cc;
+  }
+}

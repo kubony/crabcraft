@@ -1,15 +1,17 @@
-// Placeholder until the credits screen lands.
+// Credits from the title screen: the same roll as the ending.
 import type { App, Screen } from '../app';
-import { h } from '../ui/dom';
+import { CreditsRoll } from '../game/creditsRoll';
 
-export default class Placeholder implements Screen {
+export default class CreditsScreen implements Screen {
+  private roll: CreditsRoll | null = null;
+
   enter(app: App): void {
-    app.ui.append(
-      h('div', { class: 'cc-panel', style: 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)' },
-        h('h2', { class: 'cc-title' }, 'credits'),
-        h('button', { class: 'cc-btn', onclick: () => void app.go('title') }, 'Back'),
-      ),
-    );
+    void app.audio.playMusic('music-ending', 2);
+    this.roll = new CreditsRoll(app, { mode: 'credits' });
   }
-  exit(): void {}
+
+  exit(): void {
+    this.roll?.dispose();
+    this.roll = null;
+  }
 }

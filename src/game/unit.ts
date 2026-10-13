@@ -1,0 +1,269 @@
+// A crab in the world: rig + motion controller + combat stats. Player, NPCs, townsfolk, enemies
+// and the boss are all Units; their behaviour lives in separate controllers.
+import * as THREE from 'three';
+import type { CrabRig, Expression } from '../crab/types';
+import type { MotionController, MotionId } from '../motion/types';
+import type { World } from '../world/types';
+import { angleDiff, clamp, damp } from './util';
+
+export type UnitKind = 'player' | 'npc' | 'townsfolk' | 'scrapling' | 'scavenger' | 'boss' | 'freed';
+export type Reaction = 'hostile' | 'friendly' | 'neutral' | 'player';
+
+const tmpV = new THREE.Vector3();
+const tmp2 = new THREE.Vector2();
+
+export interface ActionOptions {
+  /** Claws only; the legs keep walking. */
+  upper?: boolean;
+  /** Seconds after start when onHit fires if the clip sends no 'hit' event. */
+  hitAt?: number;
+  onHit?: () => void;
+  onEnd?: () => void;
+  speed?: number;
+  loop?: boolean;
+  fade?: number;
+}
+
+export class Unit {
+  private static nextId = 1;
+  readonly id = Unit.nextId++;
+  title = '';
+  level = 1;
+  yaw = 0;
+  /** Collision circle radius and shell-top height, measured from the rig's sockets. */
+  radius = 0.55;
+  height = 1;
+  hp = 100;
+  maxHp = 100;
+  alive = true;
+  /** Status effects; times are game seconds. */
+  stunUntil = 0;
+  slowUntil = 0;
+  slowPct = 0;
+  rust = 0;
+  rustUntil = 0;
+  absorb = 0;
+  absorbMax = 0;
+  absorbUntil = 0;
+  blessingUntil = 0;
+  lastCombat = -1e9;
+  /** External displacement velocity (knockback, pull), decays over pushTime. */
+  pushX = 0;
+  pushZ = 0;
+  pushTime = 0;
+  /** Extra height added on top of the ground (leaps, the dash hop). */
+  lift = 0;
+  /** Skipped by motion/rig updates when far away. */
+  culled = false;
+  /** Removed from play (dead and sunk, not yet spawned). */
+  hidden = false;
+  targetable = true;
+  invulnerable = false;
+  portrait = '';
+  /** LED tint to return to after a hit flash; null = the rig's own colour. */
+  baseTint: THREE.ColorRepresentation | null = null;
+  /** Owner controller, for click/interaction dispatch. */
+  ctrl: unknown = null;
+  npcId = '';
+  footstepT = 0;
+
+  private locoX = 0;
+  private locoZ = 0;
+  private locoW = 0;
+  private prevX = 0;
+  private prevZ = 0;
+  private prevYaw = 0;
+  private flashT = 0;
+  private pendingHit: { fn: () => void; left: number } | null = null;
+  private exprHold = 0;
+
+  constructor(
+    public name: string,
+    public kind: UnitKind,
+    public reaction: Reaction,
+    readonly rig: CrabRig,
+    readonly motion: MotionController,
+  ) {
+    rig.root.userData.unitId = this.id;
+  }
+
+  get pos(): THREE.Vector3 {
+    return this.rig.root.position;
+  }
+
+  get hostile(): boolean {
+    return this.reaction === 'hostile';
+  }
+
+  /** Measure height and radius from the rig's head socket (contract: top of the upper shell). */
+  measure(): void {
+    const root = this.rig.root;
+    root.updateMatrixWorld(true);
+    const head = this.rig.getSocket('head').getWorldPosition(tmpV);
+    const h = head.y - root.position.y;
+    this.height = h > 0.2 ? h : 1;
+    this.radius = clamp(this.height * 0.58, 0.35, 2.6);
+  }
+
+  setYaw(y: number): void {
+    this.yaw = y;
+    this.rig.root.rotation.y = y;
+  }
+
+  /** Place without interpolation (spawn, respawn, teleport). */
+  teleport(world: World, x: number, z: number, yaw?: number): void {
+    const p = world.resolveCollision(x, z, this.radius, tmp2);
+    this.pos.set(p.x, world.heightAt(p.x, p.y), p.y);
+    this.prevX = this.pos.x;
+    this.prevZ = this.pos.z;
+    if (yaw !== undefined) this.setYaw(yaw);
+    this.prevYaw = this.yaw;
+    this.locoX = this.locoZ = this.locoW = 0;
+    this.pushTime = 0;
+  }
+
+  /** Move to x,z with collision and ground following. */
+  moveTo(world: World, x: number, z: number, dt: number): void {
+    const p = world.resolveCollision(x, z, this.radius, tmp2);
+    this.pos.x = p.x;
+    this.pos.z = p.y;
+    const gy = world.heightAt(p.x, p.y) + this.lift;
+    this.pos.y = Math.abs(gy - this.pos.y) > 3 ? gy : damp(this.pos.y, gy, 18, dt);
+  }
+
+  forwardX(): number {
+    return Math.sin(this.yaw);
+  }
+  forwardZ(): number {
+    return Math.cos(this.yaw);
+  }
+
+  distTo(o: Unit): number {
+    return Math.hypot(o.pos.x - this.pos.x, o.pos.z - this.pos.z);
+  }
+
+  /** Edge-to-edge distance, what melee range is measured against. */
+  gapTo(o: Unit): number {
+    return Math.max(0, this.distTo(o) - this.radius - o.radius);
+  }
+
+  stunned(now: number): boolean {
+    return now < this.stunUntil;
+  }
+
+  /** Movement multiplier from slows and rust. */
+  speedMul(now: number): number {
+    let m = 1;
+    if (now < this.slowUntil) m *= 1 - this.slowPct;
+    if (now < this.rustUntil) m *= 1 - 0.1 * this.rust;
+    return m;
+  }
+
+  centre(out: THREE.Vector3): THREE.Vector3 {
+    return out.set(this.pos.x, this.pos.y + this.height * 0.5, this.pos.z);
+  }
+
+  nameplatePos(out: THREE.Vector3): THREE.Vector3 {
+    return this.rig.getSocket('nameplate').getWorldPosition(out);
+  }
+
+  socketPos(name: Parameters<CrabRig['getSocket']>[0], out: THREE.Vector3): THREE.Vector3 {
+    return this.rig.getSocket(name).getWorldPosition(out);
+  }
+
+  /** Play a clip; onHit fires on the clip's 'hit' event or after hitAt seconds, whichever is first. */
+  act(id: MotionId, o: ActionOptions = {}): void {
+    if (o.onHit) this.pendingHit = { fn: o.onHit, left: o.hitAt ?? 0.3 };
+    this.motion.play(id, {
+      upperBodyOnly: o.upper,
+      speed: o.speed,
+      loop: o.loop,
+      fade: o.fade ?? 0.12,
+      onEvent: (name) => {
+        if (name === 'hit' && this.pendingHit) {
+          const fn = this.pendingHit.fn;
+          this.pendingHit = null;
+          fn();
+        }
+      },
+      onEnd: o.onEnd,
+    });
+  }
+
+  express(e: Expression, hold = 0.8): void {
+    this.rig.face.setExpression(e, hold);
+    this.exprHold = hold;
+  }
+
+  flash(color: THREE.ColorRepresentation, seconds = 0.12): void {
+    this.rig.face.setTint(color);
+    this.flashT = seconds;
+  }
+
+  setBaseTint(c: THREE.ColorRepresentation | null): void {
+    this.baseTint = c;
+    if (this.flashT <= 0) this.rig.face.setTint(c);
+  }
+
+  /**
+   * Feed locomotion from the actual displacement this frame, in the crab's local frame
+   * (vx toward its left, vz forward, yawRate positive = left).
+   */
+  feedLocomotion(dt: number): void {
+    if (dt <= 0) return;
+    let dx = (this.pos.x - this.prevX) / dt;
+    let dz = (this.pos.z - this.prevZ) / dt;
+    const sp = Math.hypot(dx, dz);
+    if (sp > 14) {
+      dx *= 14 / sp;
+      dz *= 14 / sp;
+    }
+    const fx = Math.sin(this.yaw);
+    const fz = Math.cos(this.yaw);
+    // left = (cos yaw, -sin yaw)
+    const vz = dx * fx + dz * fz;
+    const vx = dx * fz - dz * fx;
+    const w = clamp(angleDiff(this.yaw, this.prevYaw) / dt, -6, 6);
+    this.locoX = damp(this.locoX, vx, 14, dt);
+    this.locoZ = damp(this.locoZ, vz, 14, dt);
+    this.locoW = damp(this.locoW, w, 12, dt);
+    const tiny = Math.abs(this.locoX) < 0.05 && Math.abs(this.locoZ) < 0.05 && Math.abs(this.locoW) < 0.05;
+    this.motion.setLocomotion(tiny ? 0 : this.locoX, tiny ? 0 : this.locoZ, tiny ? 0 : this.locoW);
+    this.prevX = this.pos.x;
+    this.prevZ = this.pos.z;
+    this.prevYaw = this.yaw;
+  }
+
+  get moveSpeed(): number {
+    return Math.hypot(this.locoX, this.locoZ);
+  }
+
+  /** Per-frame visuals: hit-event fallback, LED flash, motion and rig update. */
+  updateVisual(dt: number): void {
+    if (this.pendingHit) {
+      this.pendingHit.left -= dt;
+      if (this.pendingHit.left <= 0) {
+        const fn = this.pendingHit.fn;
+        this.pendingHit = null;
+        fn();
+      }
+    }
+    if (this.flashT > 0) {
+      this.flashT -= dt;
+      if (this.flashT <= 0) this.rig.face.setTint(this.baseTint);
+    }
+    if (this.exprHold > 0) this.exprHold -= dt;
+    if (this.culled || this.hidden) return;
+    this.motion.update(dt);
+    this.rig.update(dt);
+  }
+
+  cancelPendingHit(): void {
+    this.pendingHit = null;
+  }
+
+  dispose(): void {
+    this.motion.dispose();
+    this.rig.dispose();
+  }
+}

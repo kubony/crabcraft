@@ -1,15 +1,18 @@
-// Placeholder until the ending screen lands.
+// Ending: the credits roll over the celebration painting, then Play Again / Robot Mode / Title.
 import type { App, Screen } from '../app';
-import { h } from '../ui/dom';
+import { CreditsRoll } from '../game/creditsRoll';
 
-export default class Placeholder implements Screen {
-  enter(app: App): void {
-    app.ui.append(
-      h('div', { class: 'cc-panel', style: 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)' },
-        h('h2', { class: 'cc-title' }, 'ending'),
-        h('button', { class: 'cc-btn', onclick: () => void app.go('title') }, 'Back'),
-      ),
-    );
+export default class EndingScreen implements Screen {
+  private roll: CreditsRoll | null = null;
+
+  enter(app: App, params?: unknown): void {
+    const name = (params as { name?: string } | undefined)?.name ?? app.spec?.name ?? '';
+    void app.audio.playMusic('music-ending', 2);
+    this.roll = new CreditsRoll(app, { mode: 'ending', playerName: name });
   }
-  exit(): void {}
+
+  exit(): void {
+    this.roll?.dispose();
+    this.roll = null;
+  }
 }
