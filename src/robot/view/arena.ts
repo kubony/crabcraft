@@ -24,7 +24,7 @@ export class Arena {
   private room: THREE.Mesh;
   private contact: THREE.Mesh;
   private disposables: { dispose(): void }[] = [];
-  private deskMat: THREE.MeshPhysicalMaterial;
+  private deskMat: THREE.MeshStandardMaterial;
   private renderer: THREE.WebGLRenderer;
   static readonly DESK = 60;
   private tmpV = new THREE.Vector3();
@@ -71,12 +71,12 @@ export class Arena {
     const deskSize = Arena.DESK;
     wood.map.repeat.set(deskSize / tile, deskSize / tile);
     wood.roughness.repeat.copy(wood.map.repeat);
-    const deskMat = new THREE.MeshPhysicalMaterial({
+    // Standard, not physical: the desk fills most of the frame, and a clearcoat on it costs a
+    // second specular lobe per pixel for a sheen the roughness map already gives.
+    const deskMat = new THREE.MeshStandardMaterial({
       map: wood.map,
       roughnessMap: wood.roughness,
       roughness: 1,
-      clearcoat: 0.1,
-      clearcoatRoughness: 0.4,
       color: '#ffffff',
     });
     this.deskMat = deskMat;
@@ -249,7 +249,7 @@ export class Arena {
       for (const t of [diff, rough, nor]) {
         t.wrapS = t.wrapT = THREE.RepeatWrapping;
         t.repeat.set(rep, rep);
-        t.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+        t.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
         this.disposables.push(t);
       }
       const m = this.deskMat;
@@ -259,10 +259,8 @@ export class Arena {
       m.roughnessMap = rough;
       m.normalMap = nor;
       m.normalScale.set(0.6, 0.6);
-      m.roughness = 0.9;
+      m.roughness = 0.72;
       m.color.set('#e8e0d6');
-      m.clearcoat = 0.25;
-      m.clearcoatRoughness = 0.18;
       m.needsUpdate = true;
     } catch (err) {
       console.warn('Robot Mode: photo textures unavailable, keeping the procedural desk', err);

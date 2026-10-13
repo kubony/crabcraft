@@ -55,7 +55,6 @@ export interface ReadyInfo {
   loadMs: number;
   mujocoVersion: string;
   ortVersion: string;
-  rendererHint: string;
 }
 
 export interface FrameStats {

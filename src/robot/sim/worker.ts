@@ -327,7 +327,6 @@ async function boot(baseUrl: string, mujocoWasmUrl: string, ortWasmUrl: string):
     loadMs: performance.now() - t0,
     mujocoVersion: '3.11.0',
     ortVersion: ort.env.versions.web ?? '1.30.0',
-    rendererHint: '',
   };
   info.policiesReady = Object.keys(sessionP);
   info.policyBytes = policyBytes;
