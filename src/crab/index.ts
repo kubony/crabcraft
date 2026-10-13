@@ -22,18 +22,12 @@ export function lookForSpec(spec: CrabSpec): CrabLook {
     led,
     female: spec.sex === 'female',
     flicker: undead,
-    posture: {
-      ...race.posture,
-      extra:
-        spec.race === 'orc'
-          ? { LF_J1_joint: 0.12, RF_J1_joint: 0.12 }
-          : spec.race === 'undead'
-            ? { LF_J0_joint: 0.12, RF_J0_joint: -0.18 }
-            : undefined,
-    },
+    posture: { ...race.posture },
     // Undead: the rear-left walking leg is stripped to its frame (gear adds the bare struts).
     without: undead ? ['LR_hip_link', 'LR_calf_link'] : [],
     idle: 'neutral' as Expression,
+    ledHalo: spec.race === 'nightelf' ? 2.2 : 1,
+    twitch: undead,
   };
 }
 

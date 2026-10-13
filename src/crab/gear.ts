@@ -80,16 +80,32 @@ const CLASS_WEAPONS: Record<ClassId, string[]> = {
 const HATS = new Set(['captain-hat', 'chef-hat']);
 
 /**
- * How weapons sit in the claw socket beyond the modelled frame (tuned on the HOME pose so the
- * sword points up and forward, the shield faces forward and the lantern hangs).
+ * How each weapon should sit at the HOME pose, in the body frame (game axes): the weapon's +Y
+ * (handle/blade) and +Z (face) directions for a weapon in the LEFT claw; the right claw mirrors X.
+ * The mount rotation inside the claw socket is solved from the claw's HOME orientation, so the
+ * weapon then follows the claw through every motion clip.
  */
-const WEAPON_MOUNT: Record<string, { rot: [number, number, number]; pos?: [number, number, number] }> = {
-  sword: { rot: [0.25, 0, 0] },
-  shield: { rot: [0, 0.9, 0], pos: [0, 0.03, 0] },
-  staff: { rot: [0.1, 0, 0] },
-  lantern: { rot: [0.15, 0, 0] },
-  hymnal: { rot: [0, 0.6, 0], pos: [0, 0.025, 0] },
+const WEAPON_POSE: Record<string, { y: [number, number, number]; z: [number, number, number]; offset?: [number, number, number] }> = {
+  sword: { y: [-0.12, 0.88, 0.45], z: [0.0, -0.45, 0.88] },
+  shield: { y: [0.0, 1.0, 0.0], z: [0.55, 0.05, 0.84], offset: [0, 0.015, 0] },
+  staff: { y: [-0.08, 1.0, 0.12], z: [0, 0, 1] },
+  lantern: { y: [0.0, 1.0, 0.05], z: [0, 0, 1] },
+  hymnal: { y: [0.0, 0.85, -0.5], z: [0.25, 0.5, 0.83], offset: [0, 0.02, 0] },
 };
+
+function mountRotation(rig: JumperRig, socket: SocketName, id: string): THREE.Quaternion | null {
+  const pose = WEAPON_POSE[id];
+  if (!pose) return null;
+  const left = socket === 'clawL';
+  const sx = left ? 1 : -1;
+  const y = new THREE.Vector3(pose.y[0] * sx, pose.y[1], pose.y[2]).normalize();
+  const z0 = new THREE.Vector3(pose.z[0] * sx, pose.z[1], pose.z[2]);
+  const x = new THREE.Vector3().crossVectors(y, z0).normalize();
+  const z = new THREE.Vector3().crossVectors(x, y);
+  const want = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
+  const sock = rig.homeSocketQuaternion(socket);
+  return sock.invert().multiply(want);
+}
 
 function instantiate(p: Piece, tint: string): THREE.Object3D {
   const o = p.node.clone(true);
@@ -122,11 +138,10 @@ export async function dressCrab(
     const o = instantiate(p, tint);
     const parent = socket ? rig.getSocket(socket) : rig.linkNode(p.attach);
     if (socket) {
-      const mount = WEAPON_MOUNT[p.id];
-      if (mount) {
-        o.rotation.set(...mount.rot);
-        if (mount.pos) o.position.set(...mount.pos);
-      }
+      const q = mountRotation(rig, socket, p.id);
+      if (q) o.quaternion.copy(q);
+      const off = WEAPON_POSE[p.id]?.offset;
+      if (off) o.position.fromArray(off);
     }
     parent.add(o);
     rig.gearMeshes.push(o);

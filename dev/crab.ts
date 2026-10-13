@@ -9,7 +9,6 @@ import { Engine } from '../src/core/engine';
 import { initAssets } from '../src/core/assets';
 import { createCrab, createEnemyCrab, HOME_POSE } from '../src/crab/index';
 import type { JumperRig } from '../src/crab/rig';
-import { createMotionController } from '../src/motion/stub';
 import { RACES, RACE_ORDER } from '../src/data/races';
 import { CLASS_ORDER } from '../src/data/classes';
 import { JOINT_NAMES, type CrabRig, type CrabSpec, type Expression, type RaceId, type Sex } from '../src/crab/types';
@@ -120,7 +119,7 @@ const spec = (race: RaceId, sex: Sex = 'male', classId: CrabSpec['classId'] = 'w
 
 const crabs: CrabRig[] = [];
 let controls: OrbitControls | null = null;
-let ready = () => setTimeout(() => (window.__ready = true), 900);
+let ready = (): unknown => setTimeout(() => (window.__ready = true), 900);
 
 async function hero(): Promise<void> {
   studio({ floor: 0xd6d0c6, bg: 0x1e140d, fog: [9, 26] });
@@ -131,12 +130,12 @@ async function hero(): Promise<void> {
   scene.add(crab.root);
   crabs.push(crab);
   window.__crab = crab;
-  cam.fov = 26;
-  cam.position.set(0.55, 0.62, 3.0);
+  cam.fov = 24;
+  cam.position.set(0.35, 1.05, 4.6);
   controls = new OrbitControls(cam, engine.canvas);
-  controls.target.set(0, 0.55, 0);
+  controls.target.set(0, 0.42, 0);
   controls.update();
-  engine.setView(scene, cam, { dof: { focusDistance: 3.0, focusRange: 1.4, bokehScale: 3 }, bloom: { intensity: 1.0, threshold: 0.9 }, exposure: 1.0 });
+  engine.setView(scene, cam, { dof: { focusDistance: 4.3, focusRange: 2.2, bokehScale: 2.5 }, bloom: { intensity: 1.0, threshold: 0.9 }, exposure: 1.0 });
   buildPanel(crab);
   ready();
 }
@@ -149,7 +148,7 @@ async function lineup(): Promise<void> {
       const cls = CLASS_ORDER[(i + k) % 3];
       jobs.push(
         createCrab(spec(race, sex, cls, { shell: k, crest: k, led: 0 })).then((c) => {
-          c.root.position.set((i - 2.5) * 2.5, 0, k === 0 ? 0 : -2.6);
+          c.root.position.set((i - 2.5) * 2.55 + (k ? 0.6 : 0), 0, k === 0 ? 0 : -2.4);
           scene.add(c.root);
           crabs.push(c);
           if (k === 0) label(`${RACES[race].name}`, c.root, -0.35);
@@ -158,10 +157,10 @@ async function lineup(): Promise<void> {
     });
   });
   await Promise.all(jobs);
-  cam.fov = 32;
-  cam.position.set(0, 4.2, 13.5);
+  cam.fov = 30;
+  cam.position.set(0, 4.0, 14.5);
   controls = new OrbitControls(cam, engine.canvas);
-  controls.target.set(0, 0.6, -1.3);
+  controls.target.set(0.3, 0.55, -1.2);
   controls.update();
   engine.setView(scene, cam, { bloom: { intensity: 0.9, threshold: 0.9 } });
   ready();
@@ -185,6 +184,50 @@ async function raceSheet(): Promise<void> {
   controls = new OrbitControls(cam, engine.canvas);
   controls.target.set(0, 0.55, 0);
   controls.update();
+  engine.setView(scene, cam, { bloom: { intensity: 0.9, threshold: 0.9 } });
+  ready();
+}
+
+async function npcs(): Promise<void> {
+  studio({ floor: 0xcbc3b4, bg: 0x241a12, fog: [16, 40] });
+  const roster: [string, CrabSpec, string[]][] = [
+    ['Captain Brinebeard', { ...spec('dwarf', 'male', 'warrior'), shell: 0, crest: 0 }, ['captain-hat']],
+    ['Lady Silvermoon', { ...spec('nightelf', 'female', 'mage'), shell: 0, crest: 2 }, []],
+    ['Sister Coralline', { ...spec('human', 'female', 'priest'), shell: 2, crest: 2 }, []],
+    ['Grukk Shellbreaker', { ...spec('orc', 'male', 'warrior'), crest: 1 }, []],
+    ['Mama Hoofclaw', { ...spec('tauren', 'female', 'priest'), shell: 1, crest: 1 }, ['chef-hat']],
+    ['Old Rattlebolt', { ...spec('undead', 'male', 'priest'), crest: 3 }, []],
+    ['Ironjaw Pip', { ...spec('dwarf', 'female', 'warrior'), shell: 1, crest: 3 }, ['smith-goggles']],
+  ];
+  await Promise.all(
+    roster.map(([name, s0, extras], i) =>
+      createCrab(s0, extras).then((c) => {
+        c.root.position.set((i - 3) * 2.3, 0, i % 2 ? -1.4 : 0);
+        c.root.rotation.y = 0.35;
+        scene.add(c.root);
+        crabs.push(c);
+        label(name, c.getSocket('nameplate'), 0);
+      }),
+    ),
+  );
+  cam.fov = 34;
+  cam.position.set(0, 4.2, 15.5);
+  controls = new OrbitControls(cam, engine.canvas);
+  controls.target.set(0, 0.7, -0.7);
+  controls.update();
+  engine.setView(scene, cam, { bloom: { intensity: 0.9, threshold: 0.9 } });
+  ready();
+}
+
+async function rear(): Promise<void> {
+  studio({ floor: 0xcbc3b4, bg: 0x241a12 });
+  const race = (params.get('race') ?? 'undead') as RaceId;
+  const c = (await createCrab(spec(race, 'male', 'warrior', { crest: Number(params.get('crest') ?? 0) }))) as JumperRig;
+  scene.add(c.root);
+  crabs.push(c);
+  cam.fov = 28;
+  cam.position.set(2.6, 1.9, -3.6);
+  cam.lookAt(0, 0.45, 0);
   engine.setView(scene, cam, { bloom: { intensity: 0.9, threshold: 0.9 } });
   ready();
 }
@@ -301,41 +344,72 @@ async function faceClose(): Promise<void> {
   ready();
 }
 
+/** Tiny HOME-based tripod gait for the perf scene (the real clips come from the motion worker). */
+function gait(c: CrabRig, t: number, q: Float32Array): void {
+  q.set(HOME_POSE);
+  const legs: [string, number][] = [['LM', 0], ['RM', Math.PI], ['LR', Math.PI], ['RR', 0]];
+  for (const [p, ph] of legs) {
+    const i0 = JOINT_NAMES.indexOf(`${p}_J0_joint` as (typeof JOINT_NAMES)[number]);
+    const s = p[0] === 'L' ? 1 : -1;
+    q[i0] += Math.sin(t * 7 + ph) * 0.25;
+    q[i0 + 1] += Math.max(0, Math.cos(t * 7 + ph)) * 0.35 * s;
+  }
+  for (const p of ['LF', 'RF']) {
+    const i1 = JOINT_NAMES.indexOf(`${p}_J1_joint` as (typeof JOINT_NAMES)[number]);
+    q[i1] += Math.sin(t * 3.5 + (p === 'LF' ? 0 : 1.5)) * 0.08;
+  }
+  c.setPose(q);
+  c.body.position.y = 0.10647 * c.metersToUnits * (1 + Math.sin(t * 14) * 0.02);
+}
+
 async function perf(): Promise<void> {
   studio({ floor: 0xbdb39f, bg: 0x241a12, fog: [20, 60] });
   const n = Number(params.get('n') ?? 25);
-  const motions: ReturnType<typeof createMotionController>[] = [];
   const jobs: Promise<void>[] = [];
   for (let i = 0; i < n; i++) {
     const race = RACE_ORDER[i % 6];
     jobs.push(
       createCrab(spec(race, i % 2 ? 'female' : 'male', CLASS_ORDER[i % 3], { shell: i % 4, crest: i % 4, led: i % 3 })).then((c) => {
-        const a = (i / n) * Math.PI * 2;
-        c.root.position.set(Math.cos(a) * 6, 0, Math.sin(a) * 6);
-        c.root.userData.a = a;
+        c.root.userData.a = (i / n) * Math.PI * 2;
+        c.root.userData.r = 4 + (i % 3) * 2.2;
         scene.add(c.root);
         crabs.push(c);
-        motions.push(createMotionController(c));
       }),
     );
   }
   await Promise.all(jobs);
-  cam.position.set(0, 9, 16);
+  cam.fov = 40;
+  cam.position.set(0, 9, 15);
   controls = new OrbitControls(cam, engine.canvas);
   controls.target.set(0, 0.5, 0);
   controls.update();
   engine.setView(scene, cam, {});
+  const q = new Float32Array(JOINT_NAMES.length);
+  let t = 0;
   engine.onFrame(({ dt }) => {
+    t += dt;
     crabs.forEach((c, i) => {
-      const a = (c.root.userData.a += dt * 0.12);
-      c.root.position.set(Math.cos(a) * 6, 0, Math.sin(a) * 6);
-      c.root.rotation.y = -a;
-      motions[i]?.setLocomotion(2, 0, 0);
-      motions[i]?.update(dt);
-      c.body.position.y = (c.body.position.y - 0.55) + RACES[c.spec.race].posture.scale * 0.597;
+      const a = (c.root.userData.a += dt * 0.15);
+      const r = c.root.userData.r as number;
+      c.root.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
+      c.root.rotation.y = -a; // walking sideways along the circle
+      gait(c, t + i * 0.3, q);
     });
   });
-  ready();
+  // fps sample for the report
+  setTimeout(() => {
+    const samples: number[] = [];
+    const id = setInterval(() => {
+      samples.push(engine.fps);
+      if (samples.length >= 10) {
+        clearInterval(id);
+        const info = engine.renderer.info;
+        console.warn(`PERF crabs=${crabs.length} fps=${(samples.reduce((x, y) => x + y) / samples.length).toFixed(1)} calls=${info.render.calls} tris=${info.render.triangles}`);
+        ready();
+      }
+    }, 500);
+  }, 1500);
+  ready = () => setTimeout(() => (window.__ready = true), 10);
 }
 
 async function fk(): Promise<void> {
@@ -365,7 +439,24 @@ async function fk(): Promise<void> {
       }
     }
   }
-  const result = { poses: fixture.poses.length, bodies: fixture.bodies.length, maxErrorMm: worst * 1000, where, pass: worst < 1e-3 };
+  // Posture check: with each race's body offset and joint bias, every foot pad should still
+  // touch the ground at HOME (heights in robot millimetres of the foot link origins vs. human).
+  const feet = ['LF_palm_pad_b_link', 'RF_palm_pad_b_link', 'LM_foot_tip_link', 'RM_foot_tip_link', 'LR_foot_tip_link', 'RR_foot_tip_link'];
+  const footY = (c: JumperRig) => {
+    c.root.updateMatrixWorld(true);
+    return feet.map((f) => c.linkNode(f).getWorldPosition(new THREE.Vector3()).y / c.metersToUnits);
+  };
+  crab.setPose(HOME_POSE);
+  const ref = footY(crab);
+  const posture: Record<string, number> = {};
+  for (const race of RACE_ORDER) {
+    const c = (await createCrab(spec(race))) as JumperRig;
+    const ys = footY(c);
+    posture[race] = Math.round(Math.max(...ys.map((y, i) => Math.abs(y - ref[i]))) * 1e5) / 100;
+    if (posture[race] > 1) console.warn(`posture ${race}: ${ys.map((y, i) => ((y - ref[i]) * 1000).toFixed(1)).join(' ')}`);
+    c.dispose();
+  }
+  const result = { poses: fixture.poses.length, bodies: fixture.bodies.length, maxErrorMm: worst * 1000, where, pass: worst < 1e-3, postureFootErrorMm: posture };
   window.__fk = result;
   stats.textContent = `FK browser check\n${JSON.stringify(result, null, 1)}`;
   console.warn(`FK_RESULT ${JSON.stringify(result)}`);
@@ -425,7 +516,7 @@ function buildPanel(crab: JumperRig): void {
 };
 (window as unknown as Record<string, unknown>).__expr = (e: Expression) => (window.__crab as JumperRig).face.setExpression(e);
 
-const views: Record<string, () => Promise<void>> = { hero, lineup, race: raceSheet, face: faceClose, silhouette: silhouettes, enemies, faces, perf, fk };
+const views: Record<string, () => Promise<void>> = { hero, lineup, race: raceSheet, face: faceClose, npcs, rear, silhouette: silhouettes, enemies, faces, perf, fk };
 await (views[view] ?? hero)();
 
 engine.onFrame(({ dt }) => {

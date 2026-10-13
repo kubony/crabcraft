@@ -208,11 +208,10 @@ def human():
     gl.subdivide(helm, 1)
     ridge = tube("helm_ridge", [(0, TOP + 0.024, 0.04), (0, TOP + 0.031, 0.0), (0, TOP + 0.028, -0.045)], 0.004, "gold")
     band = ring_on_shell("helm_band", 0.05, 0.055, -0.01, -0.001, 0.0035, "gold")
-    plume = tube("helm_plume", [(0, TOP + 0.03, 0.0), (0, TOP + 0.068, -0.012), (0, TOP + 0.084, -0.05), (0, TOP + 0.07, -0.1), (0, TOP + 0.04, -0.135)], [0.008, 0.018, 0.02, 0.015, 0.004], "feather-red")
-    plume.scale = (0.6, 1, 1)
-    plume2 = tube("helm_plume2", [(0, TOP + 0.03, 0.0), (0, TOP + 0.058, -0.02), (0, TOP + 0.066, -0.06), (0, TOP + 0.052, -0.1)], [0.006, 0.011, 0.01, 0.003], "feather-white")
-    plume2.scale = (0.75, 1, 1)
-    plume2.location = (0, -0.004, 0.004)
+    # Brush crest running front to back along the helm ridge (reads as a knight from any side).
+    plume = tube("helm_plume", [(0, TOP + 0.03, 0.04), (0, TOP + 0.06, 0.008), (0, TOP + 0.072, -0.04), (0, TOP + 0.064, -0.088), (0, TOP + 0.042, -0.125)], [0.012, 0.024, 0.026, 0.019, 0.006], "feather-red")
+    plume.scale = (0.32, 1, 1)
+    plume2 = sphere("helm_plume_socket", 0.008, "gold", loc=(0, TOP + 0.03, 0.036))
     roots.append(piece("crest_knight-helm", done([helm, ridge, band, plume, plume2]), "base_link", "crest", {"id": "knight-helm", "race": "human"}))
 
     # cape: red cloak from the shoulders over the back, gold clasps.
@@ -485,14 +484,17 @@ def undead():
         pz = (0.05 - v.co.z) / 0.15
         v.co.y += 0.016 * math.exp(-((v.co.x) ** 2) / 0.0012) * pz
         edge = max(abs(v.co.x) / 0.088, 0)
+        rag = 0.5 + 0.5 * math.sin(v.co.z * 173 + v.co.x * 61) * math.sin(v.co.z * 97 + 1.3)
         if edge > 0.97:
-            v.co.y -= 0.02 + 0.012 * (math.sin(v.co.z * 260) > 0)
+            v.co.y -= 0.016 + 0.014 * rag
             v.co.x *= 1.04
         if v.co.z < -0.097:
-            v.co.y -= 0.03 + 0.014 * (math.sin(v.co.x * 300) > 0)
+            rag = 0.5 + 0.5 * math.sin(v.co.x * 211 + 0.7) * math.sin(v.co.x * 83)
+            v.co.y -= 0.026 + 0.016 * rag
             v.co.z -= 0.008
-    tip = tube("hood_tip", [(0, TOP + 0.008, -0.02), (0, TOP + 0.04, -0.05), (0, TOP + 0.075, -0.075), (0, TOP + 0.085, -0.11)], [0.034, 0.022, 0.01, 0.001], "cloth-dark")
-    tip.scale = (0.8, 1, 1)
+    # Floppy cowl point drooping backwards (a hood, not a fin).
+    tip = tube("hood_tip", [(0, TOP + 0.006, -0.01), (0, TOP + 0.036, -0.045), (0, TOP + 0.052, -0.085), (0.004, TOP + 0.04, -0.12), (0.01, TOP + 0.012, -0.14)], [0.04, 0.03, 0.018, 0.009, 0.002], "cloth-dark")
+    tip.scale = (1.0, 0.85, 1)
     roots.append(piece("crest_hood", done([hood, tip], smooth_angle=60), "base_link", "crest", {"id": "hood", "race": "undead"}))
 
     ch = dome("crackedhelm_dome", 0.055, 0.06, 0.03, TOP - 0.004, "rust", cz=-0.008)
@@ -671,11 +673,11 @@ def weapons():
     fuller = extrude2d("sword_fuller", [(-0.0025, 0.0), (0.0025, 0.0), (0.0018, 0.1), (-0.0018, 0.1)], 0.0058, "gold", loc=(0, 0.036, 0), bevel=0.0)
     roots.append(piece("weapon_sword", done([grip, pommel, guard, blade, fuller] + gems), "clawR", "weapon", {"id": "sword", "socket": "clawR"}))
 
-    disc = lathe("shield_disc", [(0.0, 0.0), (0.06, 0.0), (0.066, 0.006), (0.064, 0.012), (0.04, 0.018), (0.0, 0.021)], "cloth-tint", seg=32)
+    disc = lathe("shield_disc", [(0.0, 0.0), (0.05, 0.0), (0.055, 0.005), (0.053, 0.01), (0.034, 0.016), (0.0, 0.019)], "cloth-tint", seg=32)
     disc.rotation_euler = (PI / 2, 0, 0)
-    rim = torus("shield_rim", 0.064, 0.0045, "gold", rot=(PI / 2, 0, 0), seg=40)
+    rim = torus("shield_rim", 0.0535, 0.0042, "gold", rot=(PI / 2, 0, 0), seg=40)
     boss = sphere("shield_boss", 0.014, "gold", loc=(0, 0, 0.02), scale=(1, 1, 0.6))
-    emb = emblem_claw("shield_emblem", 0.024, "gold", depth=0.003)
+    emb = emblem_claw("shield_emblem", 0.02, "gold", depth=0.003)
     for o in emb:
         o.location = (0, 0.01, 0.019)
     handle = box("shield_handle", (0.008, 0.04, 0.01), "leather-dark", loc=(0, 0, -0.008), bevel=0.002)
@@ -817,10 +819,10 @@ def enemies():
     roots.append(piece("enemy_corrodius", done(hull + links + anchor + spikes + [crown_ring, crown_crack] + grate), "base_link", "enemy", {"id": "corrodius", "light": "0,0.05,0.12"}))
     gclaw = []
     for i in range(4):
-        x0 = 0.02 + i * 0.03
-        gclaw.append(palm_plate(f"gclaw_plate{i}", x0, x0 + 0.027, -0.017, 0.017, "iron", lift=0.002 + 0.0015 * i))
-        gclaw += rivets(f"gclaw_rv{i}", [(x0 + dx, dy, palm_top(x0 + dx, dy) + 0.0045 + 0.0015 * i) for dx in (0.005, 0.022) for dy in (-0.012, 0.012)], 0.0022, "rust")
-    gclaw.append(cone("gclaw_spike", 0.008, 0.0, 0.03, "rust", loc=(0.1, 0.0, palm_top(0.1, 0.0) + 0.004), rot=(PI / 2 - 0.4, 0, 0), seg=6))
+        x0 = 0.012 + i * 0.022
+        gclaw.append(palm_plate(f"gclaw_plate{i}", x0, x0 + 0.02, -0.013, 0.013, "iron", lift=0.002 + 0.0012 * i, n=6))
+        gclaw += rivets(f"gclaw_rv{i}", [(x0 + 0.01, dy, palm_top(x0 + 0.01, dy) + 0.0045 + 0.0012 * i) for dy in (-0.009, 0.009)], 0.0022, "rust")
+    gclaw.append(cone("gclaw_spike", 0.008, 0.0, 0.03, "rust", loc=(0.06, 0.0, palm_top(0.06, 0.0) + 0.004), rot=(PI / 2 - 0.4, 0, 0), seg=6))
     gclaw = [gl.mirror_x(o, o.name + "_r") for o in gclaw]
     roots.append(piece("enemy_corrodius_claw", done(gclaw), "RF_palm_link", "enemy", {"id": "corrodius"}))
     return roots

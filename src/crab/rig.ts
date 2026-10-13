@@ -3,8 +3,8 @@
 import * as THREE from 'three';
 import { LedFace } from './face';
 import { partMaterial, shellMaterial, type ShellLook } from './materials';
-import { HOME_POSE } from './pose';
-import { HUNCH_PITCH, solvePostureBias, type Posture } from './posture';
+import { HOME, HOME_POSE } from './pose';
+import { HUNCH_PITCH, linkMatrix, solvePostureBias, type Posture } from './posture';
 import type { CrabTemplate, PartClass } from './template';
 import { CRAB_HEIGHT, JOINT_NAMES, type CrabRig, type CrabSpec, type Expression, type JointName, type SocketName } from './types';
 
@@ -26,6 +26,10 @@ export interface CrabLook {
   linkScale?: Record<string, number>;
   /** Idle expression the face returns to. */
   idle: Expression;
+  /** LED halo width multiplier. */
+  ledHalo?: number;
+  /** Undead: occasional servo twitches of the whole body (on the posture group). */
+  twitch?: boolean;
 }
 
 /** Attach point inside a link frame, robot metres. */
@@ -154,7 +158,7 @@ export class JumperRig implements CrabRig {
         mesh.geometry = geo;
         mesh.material = mat;
       }
-      mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.02, 0), 0.42);
+      mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.02, 0), 0.55);
     }
 
     // Per-link scale (enemy claws); reset others.
@@ -163,7 +167,7 @@ export class JumperRig implements CrabRig {
       node.scale.setScalar(s);
     }
 
-    this.face.setStyle({ color: look.led, female: look.female, flicker: look.flicker, intensity: look.ledIntensity });
+    this.face.setStyle({ color: look.led, female: look.female, flicker: look.flicker, intensity: look.ledIntensity, halo: look.ledHalo });
     this.face.setIdle(look.idle);
     this.setPose(this.q);
     this.updateNameplate();
@@ -232,6 +236,17 @@ export class JumperRig implements CrabRig {
     return this.bias;
   }
 
+  /** Orientation of a socket relative to base_link when standing at HOME with this posture. */
+  homeSocketQuaternion(name: SocketName): THREE.Quaternion {
+    const sock = this.getSocket(name);
+    const link = this.template.linkByName.get(sock.parent?.name ?? 'base_link');
+    const q: Record<string, number> = { ...HOME };
+    JOINT_NAMES.forEach((j, i) => (q[j] += this.bias[i]));
+    const m = link ? linkMatrix(this.template, q, link.index, new THREE.Matrix4(), new THREE.Matrix4()) : new THREE.Matrix4();
+    const out = new THREE.Quaternion().setFromRotationMatrix(m);
+    return out.multiply(sock.quaternion);
+  }
+
   getSocket(name: SocketName): THREE.Object3D {
     return this.sockets.get(name) ?? this.body;
   }
@@ -248,8 +263,24 @@ export class JumperRig implements CrabRig {
     throw new Error('applySpec is provided by the crab factory');
   }
 
+  private twitchT = 1 + Math.random() * 3;
+  private twitchA = 0;
+  private twitchAxis = 0;
+
   update(dt: number): void {
     this.face.update(dt);
+    if (this.look.twitch) {
+      // A servo that skips: a sharp jerk that settles in ~0.2 s, every few seconds.
+      this.twitchT -= dt;
+      if (this.twitchT <= 0) {
+        this.twitchT = 1.2 + Math.random() * 3.5;
+        this.twitchA = (Math.random() < 0.5 ? -1 : 1) * (0.035 + Math.random() * 0.04);
+        this.twitchAxis = Math.random() < 0.6 ? 2 : 1;
+      }
+      this.twitchA *= Math.exp(-dt * 14);
+      const p = this.look.posture;
+      this.posture.rotation.set(p.hunch * HUNCH_PITCH, this.twitchAxis === 1 ? this.twitchA : 0, this.twitchAxis === 2 ? this.twitchA : 0);
+    }
     for (const fn of this.updaters) fn(dt);
   }
 

@@ -51,6 +51,7 @@ uniform float uWell;
 uniform float uMono;
 uniform float uCyclops;
 uniform float uFill;
+uniform float uHalo;
 varying vec2 vUv;
 
 float dot2(vec2 v) { return dot(v, v); }
@@ -178,7 +179,7 @@ void main() {
   d = min(d, mouth);
   float px = max(fwidth(d), 1e-3);
   float core = 1.0 - smoothstep(-px, px, d);
-  float halo = exp(-max(d, 0.0) / (R * 0.22)) * 0.35;
+  float halo = exp(-max(d, 0.0) / (R * 0.22 * uHalo)) * 0.35;
   // faint eye wells, like the TVC screen's backlit circles
   float well = (1.0 - smoothstep(R * 0.95, R * 1.05, length(uCyclops > 0.5 ? p - c : vec2(abs(p.x), p.y) - c))) * uWell;
   // LED matrix texture, fading out when pixels get small on screen
@@ -216,6 +217,8 @@ export interface FaceStyle {
   cyclops?: boolean;
   /** 0..1 glow filling the whole window (Corrodius' furnace). */
   fill?: number;
+  /** Halo width multiplier (night elves' soft glow). */
+  halo?: number;
 }
 
 export class LedFace implements CrabFace {
@@ -266,6 +269,7 @@ export class LedFace implements CrabFace {
           uMono: { value: 0 },
           uCyclops: { value: 0 },
           uFill: { value: 0 },
+          uHalo: { value: 1 },
         },
       ]),
       transparent: true,
@@ -291,6 +295,7 @@ export class LedFace implements CrabFace {
     this.intensity = style.intensity ?? 1;
     this.material.uniforms.uCyclops.value = style.cyclops ? 1 : 0;
     this.material.uniforms.uFill.value = style.fill ?? 0;
+    this.material.uniforms.uHalo.value = style.halo ?? 1;
     this.applyColor();
   }
 

@@ -6,7 +6,7 @@
 
 What it does, in order:
 
-1. Parses the URDF (links, joints, origins, axes, limits).
+1. Parses the URDF (links, joints, origins, axes) and takes joint limits from the MJCF.
 2. Imports every visual STL, welds it, and converts it to the game frame
    (game.x = mj.y, game.y = mj.z, game.z = mj.x; see src/crab/types.ts).
 3. Gives every face a material class. The class comes from the link (shell, metal, rubber, dark,
@@ -89,6 +89,13 @@ for j in root.findall("joint"):
     }
     if any(abs(a) > 1e-9 for a in rpy):
         raise SystemExit(f"joint {j.get('name')} has rpy {rpy}; this builder assumes identity rest rotations")
+# Joint limits come from the MJCF the policies were trained on: the URDF has stale/typo limits
+# (e.g. LM_J0_joint lower=0.75 instead of -0.75, RF_J4_joint lower=0.1 instead of -0.1).
+MJCF = JUMPER / "assets/jumper/jumper.xml"
+mj_range = {j.get("name"): [float(v) for v in j.get("range").split()] for j in ET.parse(MJCF).getroot().iter("joint") if j.get("range")}
+for j in joints.values():
+    if j["name"] in mj_range:
+        j["lower"], j["upper"] = mj_range[j["name"]]
 ROOT_LINK = next(n for n in links if n not in joints)
 order: list[str] = []
 

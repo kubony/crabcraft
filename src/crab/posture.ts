@@ -39,9 +39,20 @@ export function linkPosition(
   base: THREE.Matrix4,
   out: THREE.Vector3,
 ): THREE.Vector3 {
+  return out.setFromMatrixPosition(linkMatrix(t, q, link, base, new THREE.Matrix4()));
+}
+
+/** Forward kinematics on the template: world frame of one link. */
+export function linkMatrix(
+  t: CrabTemplate,
+  q: Record<string, number>,
+  link: number,
+  base: THREE.Matrix4,
+  m: THREE.Matrix4,
+): THREE.Matrix4 {
   const chain: number[] = [];
   for (let i = link; i >= 0; i = t.links[i].parent) chain.push(i);
-  const m = base.clone();
+  m.copy(base);
   const step = new THREE.Matrix4();
   const rot = new THREE.Matrix4();
   for (let k = chain.length - 1; k >= 0; k--) {
@@ -55,7 +66,7 @@ export function linkPosition(
       m.multiply(rot);
     }
   }
-  return out.setFromMatrixPosition(m);
+  return m;
 }
 
 const biasCache = new Map<string, Float32Array>();

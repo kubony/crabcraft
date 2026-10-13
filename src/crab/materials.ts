@@ -29,13 +29,15 @@ export function shellMaterial(look: ShellLook): THREE.MeshPhysicalMaterial {
   const wear = look.wear ?? 0;
   const metal = look.metal ?? 0;
   return cached(`shell:${look.color}:${wear}:${metal}`, () => {
+    // Paint calibration: the TVC's moulded red reads deeper than the raw sRGB swatch under
+    // AgX, so the albedo is darkened a little (in linear space) for every paint.
     const m = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(look.color),
+      color: new THREE.Color(look.color).multiplyScalar(0.82),
       roughness: THREE.MathUtils.lerp(0.26, 0.62, wear),
       metalness: metal,
       clearcoat: THREE.MathUtils.lerp(1, 0.15, wear),
       clearcoatRoughness: THREE.MathUtils.lerp(0.06, 0.4, wear),
-      specularIntensity: 0.7,
+      specularIntensity: 0.55,
       sheen: 0.0,
       envMapIntensity: 1.0,
     });

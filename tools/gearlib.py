@@ -47,7 +47,6 @@ PALETTE: dict[str, dict] = {
     "leaf": dict(color="#5f9e4f", rough=0.6),
     "leaf-silver": dict(color="#a9c7b4", metal=0.6, rough=0.3),
     "elf-ear": dict(color="#cfc3ea", metal=0.15, rough=0.35),
-    "shell-paint": dict(color="#d2202f", rough=0.3),
     "feather-red": dict(color="#c0282e", rough=0.8),
     "feather-white": dict(color="#f2eee6", rough=0.8),
     "feather-blue": dict(color="#3d7bc4", rough=0.8),
