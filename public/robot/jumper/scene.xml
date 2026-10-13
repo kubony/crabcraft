@@ -256,6 +256,10 @@
         </body>
       </body>
     </body>
+    <geom name="prop_book_1" type="box" size="0.105 0.15 0.016" pos="-0.95 0.8 0.016" quat="0.997564 0 0 0.0697565" rgba="0.16 0.29 0.45 1" contype="1" conaffinity="1" condim="3" friction="0.6 0.005 0.0001" />
+    <geom name="prop_book_2" type="box" size="0.095 0.135 0.014" pos="-0.94 0.79 0.046" quat="0.99863 0 0 -0.052336" rgba="0.62 0.2 0.16 1" contype="1" conaffinity="1" condim="3" friction="0.6 0.005 0.0001" />
+    <geom name="prop_book_3" type="box" size="0.085 0.12 0.012" pos="-0.96 0.81 0.072" quat="0.991445 0 0 0.130526" rgba="0.85 0.72 0.45 1" contype="1" conaffinity="1" condim="3" friction="0.6 0.005 0.0001" />
+    <geom name="prop_mug" type="cylinder" size="0.042 0.048" pos="1.05 -0.85 0.048" quat="1 0 0 0" rgba="0.93 0.92 0.88 1" contype="1" conaffinity="1" condim="3" friction="0.6 0.005 0.0001" />
     <body name="toy_ball" pos="0.55 0.2 0.045">
       <freejoint name="toy_ball_free" />
       <geom name="toy_ball" type="sphere" size="0.045" mass="0.045" rgba="0.95 0.95 0.95 1" contype="1" conaffinity="1" condim="6" friction="0.9 0.01 0.003" />

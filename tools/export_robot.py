@@ -187,6 +187,16 @@ TOYS = [
 ]
 
 
+# Static desk props, collidable so the robot bumps into them rather than through them:
+# (name, kind, half-size, pos, z-rotation deg, rgba). Rendered by the page from this list.
+PROPS = [
+    ("book_1", "box", (0.105, 0.150, 0.016), (-0.95, 0.80, 0.016), 8.0, (0.16, 0.29, 0.45, 1)),
+    ("book_2", "box", (0.095, 0.135, 0.014), (-0.94, 0.79, 0.046), -6.0, (0.62, 0.20, 0.16, 1)),
+    ("book_3", "box", (0.085, 0.120, 0.012), (-0.96, 0.81, 0.072), 15.0, (0.85, 0.72, 0.45, 1)),
+    ("mug", "cylinder", (0.042, 0.048), (1.05, -0.85, 0.048), 0.0, (0.93, 0.92, 0.88, 1)),
+]
+
+
 def build_scene(robot_xml: ET.Element, joints: list[ET.Element]) -> ET.Element:
     scene = ET.fromstring(ET.tostring(robot_xml))
     scene.set("model", "jumper_tabletop")
@@ -196,6 +206,13 @@ def build_scene(robot_xml: ET.Element, joints: list[ET.Element]) -> ET.Element:
     # mjlab's flat terrain: a default plane geom (contype 1, conaffinity 1, condim 3).
     floor = ET.Element("geom", name="terrain", type="plane", size="0 0 0.01")
     world.insert(0, floor)
+    for name, kind, size, pos, yaw, rgba in PROPS:
+        half = math.radians(yaw) / 2
+        ET.SubElement(
+            world, "geom", name=f"prop_{name}", type=kind, size=" ".join(f"{v:g}" for v in size),
+            pos=" ".join(f"{v:g}" for v in pos), quat=f"{math.cos(half):g} 0 0 {math.sin(half):g}",
+            rgba=" ".join(f"{v:g}" for v in rgba), contype="1", conaffinity="1", condim="3", friction="0.6 0.005 0.0001",
+        )
     for name, kind, size, pos, rgba, mass in TOYS:
         b = ET.SubElement(world, "body", name=f"toy_{name}", pos=" ".join(f"{v:g}" for v in pos))
         ET.SubElement(b, "freejoint", name=f"toy_{name}_free")
@@ -330,7 +347,17 @@ def main() -> None:
             ],
         },
         "model": {"file": "model.xml", "counts": counts, "option": SIM_OPTIONS, "lowestFootAtKeyframe_m": feet},
-        "scene": {"file": "scene.xml", "counts": scene_counts, "toys": [f"toy_{t[0]}" for t in TOYS]},
+        "scene": {
+            "file": "scene.xml",
+            "counts": scene_counts,
+            "toys": [
+                {"body": f"toy_{n}", "kind": k, "size": list(sz), "rgba": list(c)} for n, k, sz, _, c, _ in TOYS
+            ],
+            "props": [
+                {"name": f"prop_{n}", "kind": k, "size": list(sz), "pos": list(p), "yawDeg": y, "rgba": list(c)}
+                for n, k, sz, p, y, c in PROPS
+            ],
+        },
         "joints": [
             {
                 "name": j.get("name"),

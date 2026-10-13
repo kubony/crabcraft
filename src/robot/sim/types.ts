@@ -64,7 +64,11 @@ export interface BundleJson {
 export interface RobotPackage {
   schema: string;
   model: { file: string; option: Record<string, string> };
-  scene: { file: string; toys: string[] };
+  scene: {
+    file: string;
+    toys: { body: string; kind: 'sphere' | 'box'; size: number[]; rgba: number[] }[];
+    props: { name: string; kind: 'box' | 'cylinder'; size: number[]; pos: number[]; yawDeg: number; rgba: number[] }[];
+  };
   joints: { name: string; range: [number, number]; home: number }[];
   visualRgba: Record<string, [number, number, number, number]>;
   actuator: {

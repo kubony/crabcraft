@@ -260,8 +260,17 @@ export class RobotSim {
       fsm.letGo(now);
       this.pendingLetGo = false;
     }
-    for (const k of this.pendingKeys) fsm.setKeyCode(k.code, k.down, k.repeat, now);
-    this.pendingKeys.length = 0;
+    // A key that goes down and up between two ticks would never be seen down: the controller
+    // reads key levels once per tick. Hold its release (and everything after it) for a tick.
+    const downNow = new Set<string>();
+    let n = 0;
+    for (; n < this.pendingKeys.length; n++) {
+      const k = this.pendingKeys[n];
+      if (!k.down && downNow.has(k.code)) break;
+      if (k.down) downNow.add(k.code);
+      fsm.setKeyCode(k.code, k.down, k.repeat, now);
+    }
+    this.pendingKeys.splice(0, n);
     if (this.pad) {
       for (const [a, v] of Object.entries(this.pad.axes)) fsm.setAxis(a, v);
       for (const [b, d] of Object.entries(this.pad.buttons)) fsm.setPad(b, d);
