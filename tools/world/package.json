@@ -1,0 +1,13 @@
+{
+  "name": "crabcraft-world-tools",
+  "private": true,
+  "type": "module",
+  "description": "Offline asset pipeline for the Clawhaven zone. Not part of the game bundle. Install with `npm install --no-package-lock` in this folder.",
+  "dependencies": {
+    "@gltf-transform/core": "4.5.1",
+    "@gltf-transform/extensions": "4.5.1",
+    "@gltf-transform/functions": "4.5.1",
+    "meshoptimizer": "^0.25.0",
+    "sharp": "^0.34.0"
+  }
+}
