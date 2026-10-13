@@ -3,6 +3,39 @@
  "note": "Clips recorded as closed-loop rollouts of the Jumper example bundle's policies (KingKongRobotics/jumper, Apache-2.0) in MuJoCo, plus keyframed game-only clips. tools/motion/ rebuilds everything.",
  "clips": [
   {
+   "id": "attack_slam",
+   "source": "keyframe",
+   "kind": "keyframe",
+   "fps": 50.0,
+   "frameCount": 66,
+   "duration": 1.32,
+   "loop": false,
+   "speed": 0.0,
+   "bytes": 5138
+  },
+  {
+   "id": "attack_swipe",
+   "source": "keyframe",
+   "kind": "keyframe",
+   "fps": 50.0,
+   "frameCount": 41,
+   "duration": 0.82,
+   "loop": false,
+   "speed": 0.0,
+   "bytes": 3745
+  },
+  {
+   "id": "cast",
+   "source": "keyframe",
+   "kind": "keyframe",
+   "fps": 50.0,
+   "frameCount": 62,
+   "duration": 1.24,
+   "loop": false,
+   "speed": 0.0,
+   "bytes": 4905
+  },
+  {
    "id": "claw_left",
    "source": "claw_left",
    "kind": "claw",
@@ -69,6 +102,17 @@
    "bytes": 24180
   },
   {
+   "id": "death",
+   "source": "keyframe",
+   "kind": "keyframe",
+   "fps": 50.0,
+   "frameCount": 86,
+   "duration": 1.72,
+   "loop": false,
+   "speed": 0.0,
+   "bytes": 6312
+  },
+  {
    "id": "gesture_bow",
    "source": "gesture_bow",
    "kind": "gesture",
@@ -113,6 +157,17 @@
    "bytes": 15566
   },
   {
+   "id": "hit_react",
+   "source": "keyframe",
+   "kind": "keyframe",
+   "fps": 50.0,
+   "frameCount": 25,
+   "duration": 0.5,
+   "loop": false,
+   "speed": 0.0,
+   "bytes": 2813
+  },
+  {
    "id": "idle",
    "source": "locomotion",
    "kind": "locomotion",
@@ -138,6 +193,17 @@
    "loop": false,
    "speed": 0.0013,
    "bytes": 12322
+  },
+  {
+   "id": "sit",
+   "source": "keyframe",
+   "kind": "keyframe",
+   "fps": 50.0,
+   "frameCount": 61,
+   "duration": 1.22,
+   "loop": false,
+   "speed": 0.0,
+   "bytes": 4820
   },
   {
    "id": "strafe_left",
