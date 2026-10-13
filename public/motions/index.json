@@ -1,0 +1,255 @@
+{
+ "schema": "crabcraft-motions/1",
+ "note": "Clips recorded as closed-loop rollouts of the Jumper example bundle's policies (KingKongRobotics/jumper, Apache-2.0) in MuJoCo, plus keyframed game-only clips. tools/motion/ rebuilds everything.",
+ "clips": [
+  {
+   "id": "claw_left",
+   "source": "claw_left",
+   "kind": "claw",
+   "fps": 50.0,
+   "frameCount": 257,
+   "duration": 5.14,
+   "loop": false,
+   "speed": 0.0009,
+   "bytes": 16775
+  },
+  {
+   "id": "claw_right",
+   "source": "claw_right",
+   "kind": "claw",
+   "fps": 50.0,
+   "frameCount": 256,
+   "duration": 5.12,
+   "loop": false,
+   "speed": 0.00365,
+   "bytes": 16610
+  },
+  {
+   "id": "dance_brazilian",
+   "source": "dance_brazilian",
+   "kind": "dance",
+   "fps": 30.0,
+   "frameCount": 2074,
+   "duration": 69.133333,
+   "loop": false,
+   "speed": 0.00036,
+   "bytes": 122059
+  },
+  {
+   "id": "dance_crab",
+   "source": "dance_crab",
+   "kind": "dance",
+   "fps": 30.0,
+   "frameCount": 7157,
+   "duration": 238.566667,
+   "loop": false,
+   "speed": 0.00077,
+   "bytes": 421262
+  },
+  {
+   "id": "dance_dream_wings",
+   "source": "dance_dream_wings",
+   "kind": "dance",
+   "fps": 30.0,
+   "frameCount": 1758,
+   "duration": 58.6,
+   "loop": false,
+   "speed": 0.00108,
+   "bytes": 104009
+  },
+  {
+   "id": "dance_maze",
+   "source": "dance_maze",
+   "kind": "dance",
+   "fps": 30.0,
+   "frameCount": 387,
+   "duration": 12.9,
+   "loop": false,
+   "speed": 0.00352,
+   "bytes": 24180
+  },
+  {
+   "id": "gesture_bow",
+   "source": "gesture_bow",
+   "kind": "gesture",
+   "fps": 30.0,
+   "frameCount": 316,
+   "duration": 10.533333,
+   "loop": false,
+   "speed": 0.0032,
+   "bytes": 20038
+  },
+  {
+   "id": "gesture_hello",
+   "source": "gesture_hello",
+   "kind": "gesture",
+   "fps": 30.0,
+   "frameCount": 279,
+   "duration": 9.3,
+   "loop": false,
+   "speed": 0.00346,
+   "bytes": 17927
+  },
+  {
+   "id": "gesture_paw",
+   "source": "gesture_paw",
+   "kind": "gesture",
+   "fps": 30.0,
+   "frameCount": 251,
+   "duration": 8.366667,
+   "loop": false,
+   "speed": 0.00106,
+   "bytes": 16233
+  },
+  {
+   "id": "gesture_salute",
+   "source": "gesture_salute",
+   "kind": "gesture",
+   "fps": 30.0,
+   "frameCount": 240,
+   "duration": 8.0,
+   "loop": false,
+   "speed": 0.00173,
+   "bytes": 15566
+  },
+  {
+   "id": "idle",
+   "source": "locomotion",
+   "kind": "locomotion",
+   "fps": 50.0,
+   "frameCount": 125,
+   "duration": 2.5,
+   "loop": true,
+   "speed": 1e-05,
+   "bytes": 10730,
+   "velocity": [
+    -1e-05,
+    0.0
+   ],
+   "yawRate": 1e-05
+  },
+  {
+   "id": "jump",
+   "source": "jump",
+   "kind": "jump",
+   "fps": 50.0,
+   "frameCount": 182,
+   "duration": 3.64,
+   "loop": false,
+   "speed": 0.0013,
+   "bytes": 12322
+  },
+  {
+   "id": "strafe_left",
+   "source": "locomotion",
+   "kind": "locomotion",
+   "fps": 50.0,
+   "frameCount": 48,
+   "duration": 0.96,
+   "loop": true,
+   "speed": 0.24387,
+   "bytes": 5498,
+   "velocity": [
+    0.24355,
+    0.01253
+   ],
+   "yawRate": -0.06097
+  },
+  {
+   "id": "strafe_right",
+   "source": "locomotion",
+   "kind": "locomotion",
+   "fps": 50.0,
+   "frameCount": 48,
+   "duration": 0.96,
+   "loop": true,
+   "speed": 0.24821,
+   "bytes": 5499,
+   "velocity": [
+    -0.24756,
+    0.01798
+   ],
+   "yawRate": 0.0757
+  },
+  {
+   "id": "turn_left",
+   "source": "locomotion",
+   "kind": "locomotion",
+   "fps": 53.333333,
+   "frameCount": 48,
+   "duration": 0.9,
+   "loop": true,
+   "speed": 0.01416,
+   "bytes": 5513,
+   "velocity": [
+    -0.01288,
+    -0.00589
+   ],
+   "yawRate": 1.4113
+  },
+  {
+   "id": "turn_right",
+   "source": "locomotion",
+   "kind": "locomotion",
+   "fps": 53.333333,
+   "frameCount": 48,
+   "duration": 0.9,
+   "loop": true,
+   "speed": 0.01419,
+   "bytes": 5511,
+   "velocity": [
+    0.01071,
+    -0.00931
+   ],
+   "yawRate": -1.41412
+  },
+  {
+   "id": "walk_back",
+   "source": "locomotion",
+   "kind": "locomotion",
+   "fps": 50.0,
+   "frameCount": 50,
+   "duration": 1.0,
+   "loop": true,
+   "speed": 0.2076,
+   "bytes": 5641,
+   "velocity": [
+    -0.00146,
+    -0.2076
+   ],
+   "yawRate": -0.00261
+  },
+  {
+   "id": "walk_fast",
+   "source": "locomotion",
+   "kind": "locomotion",
+   "fps": 103.349282,
+   "frameCount": 216,
+   "duration": 2.09,
+   "loop": true,
+   "speed": 0.57235,
+   "bytes": 18058,
+   "velocity": [
+    0.00829,
+    0.57229
+   ],
+   "yawRate": 0.01336
+  },
+  {
+   "id": "walk_fwd",
+   "source": "locomotion",
+   "kind": "locomotion",
+   "fps": 50.0,
+   "frameCount": 50,
+   "duration": 1.0,
+   "loop": true,
+   "speed": 0.24712,
+   "bytes": 5632,
+   "velocity": [
+    -0.00234,
+    0.24711
+   ],
+   "yawRate": -0.00134
+  }
+ ]
+}
