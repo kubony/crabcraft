@@ -225,6 +225,8 @@ export class Hud {
       const el = h('button', { class: 'rm-btn', tabindex: '-1', title: mode }, label, h('span', { class: 'kb' }, kb));
       el.addEventListener('mousedown', (e) => e.preventDefault());
       el.onclick = () => {
+        // Pressing the active mode's button again ends it, as its own toggle would.
+        if (this.lastMode === mode) return this.actions.release();
         this.pending = { mode, until: performance.now() + 2500 };
         this.actions.request(mode);
       };
@@ -287,6 +289,14 @@ export class Hud {
         ),
         h('q', null, info.web.unverifiedByTheConsumer),
         checks,
+        info.notes.length
+          ? h(
+              'details',
+              { class: 'notes' },
+              h('summary', null, `${info.notes.length} notes from the bundle`),
+              h('ul', null, ...info.notes.map((n) => h('li', null, n))),
+            )
+          : null,
       ),
     );
 

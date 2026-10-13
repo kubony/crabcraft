@@ -17,6 +17,9 @@ export class OrbitFollow {
   private idle = 0;
   private az = this.azimuth;
   private speedZoom = 0;
+  private swayT = 0;
+  /** The azimuth the idle sway centres on: the last one a person chose. */
+  private home = this.azimuth;
   private el = this.elevation;
   private dist = this.distance;
   private readonly el0: HTMLElement;
@@ -51,8 +54,15 @@ export class OrbitFollow {
       d = Math.atan2(Math.sin(d), Math.cos(d));
       this.heading += d * (1 - Math.exp(-dt * 1.6));
     }
-    // A slow drift when nobody touches anything, so a parked robot still looks alive.
-    if (this.idle > 8 && !this.dragging) this.azimuth += dt * 0.04;
+    // Nobody touching anything: a slow sway across the robot's face, so a parked robot still
+    // reads as a live shot, without ever drifting round to its back.
+    if (this.idle > 8 && !this.dragging) {
+      this.swayT += dt;
+      const want = this.home + Math.sin(this.swayT * 0.16) * 0.55;
+      this.azimuth += (want - this.azimuth) * (1 - Math.exp(-dt * 0.5));
+    } else {
+      this.swayT = 0;
+    }
     const kz = 1 - Math.exp(-dt * 8);
     this.az += (this.azimuth - this.az) * kz;
     this.el += (this.elevation - this.el) * kz;
@@ -72,6 +82,11 @@ export class OrbitFollow {
     this.camera.lookAt(this.target);
   }
 
+  /** Input elsewhere (keys, buttons) counts as attention too. */
+  poke(): void {
+    this.idle = 0;
+  }
+
   /** Distance from the camera to what it looks at, for the depth of field. */
   get focus(): number {
     return this.camera.position.distanceTo(this.target);
@@ -82,6 +97,7 @@ export class OrbitFollow {
     // Keep the camera where it is on screen: fold the heading into the azimuth.
     if (on) this.azimuth -= this.heading;
     else this.azimuth += this.heading;
+    this.home = this.azimuth;
     this.az = this.azimuth;
     this.follow = on;
   }
@@ -103,6 +119,7 @@ export class OrbitFollow {
     this.lastX = e.clientX;
     this.lastY = e.clientY;
     this.azimuth -= dx * 0.006;
+    this.home = this.azimuth;
     this.elevation = THREE.MathUtils.clamp(this.elevation + dy * 0.004, 0.04, 1.35);
     this.idle = 0;
   };

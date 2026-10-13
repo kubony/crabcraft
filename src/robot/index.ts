@@ -246,6 +246,7 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
       if (e.code === 'KeyC' && !e.ctrlKey && !e.metaKey) return void hud?.setFollow(toggleFollow());
     }
     const code = KEY_ALIAS[e.code] ?? e.code;
+    orbit.poke();
     if (bound.has(e.code) || (e.ctrlKey && /^(Digit|Numpad)\d$/.test(e.code))) e.preventDefault();
     if (down) held.add(code);
     else held.delete(code);

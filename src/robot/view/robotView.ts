@@ -33,6 +33,7 @@ export function makeRobotMaterials() {
     metalness: 0,
     clearcoat: 1,
     clearcoatRoughness: 0.06,
+    envMapIntensity: 1.3,
   });
   const black = new THREE.MeshPhysicalMaterial({
     name: 'jumper-black',
@@ -49,6 +50,7 @@ export function makeRobotMaterials() {
     metalness: 0,
     clearcoat: 1,
     clearcoatRoughness: 0.02,
+    envMapIntensity: 2.5,
     ior: 1.55,
     specularIntensity: 1,
   });
@@ -57,6 +59,7 @@ export function makeRobotMaterials() {
     color: new THREE.Color('#d5d8dd'),
     roughness: 0.28,
     metalness: 1,
+    envMapIntensity: 2.4,
   });
   const pad = new THREE.MeshPhysicalMaterial({
     name: 'jumper-silicone',

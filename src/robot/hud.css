@@ -178,6 +178,11 @@
 .rm-notice q { display: block; color: var(--rm-text); font-style: italic; quotes: none; margin: 4px 0 7px; }
 .rm-notice .checks { display: grid; gap: 3px; font: 500 10.5px/1.35 var(--rm-mono); }
 .rm-notice .checks .ok::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #45e08a; box-shadow: 0 0 6px #45e08a; margin-right: 7px; vertical-align: 1px; }
+.rm-notice .notes { margin-top: 8px; }
+.rm-notice .notes summary { cursor: pointer; font: 600 10.5px/1.4 var(--rm-sans); color: var(--rm-faint); letter-spacing: 0.04em; outline: none; }
+.rm-notice .notes summary:hover { color: var(--rm-dim); }
+.rm-notice .notes ul { margin: 6px 0 0; padding-left: 16px; max-height: 160px; overflow: auto; font: 400 10.5px/1.4 var(--rm-sans); }
+.rm-notice .notes li { margin-bottom: 3px; }
 .rm-notice .checks .bad::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #ff5a5a; margin-right: 7px; vertical-align: 1px; }
 
 /* ---------- Loading ---------- */

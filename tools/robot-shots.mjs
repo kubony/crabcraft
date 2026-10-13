@@ -129,18 +129,23 @@ await untilMode('locomotion', 12000);
 await wait(1000);
 
 // Jump: Space. Slow motion so the apex can be caught on camera; the physics is the same.
-await page.evaluate(() => window.robot.setSpeed(0.1));
+await page.evaluate(() => window.robot.setSpeed(0.05));
 await page.keyboard.press('Space');
 log.events.push(`jump running: ${await untilMode('jump', 20000)}`);
 let apex = { y: 0 };
+let shotApex = false;
 const jEnd = Date.now() + 25000;
 while (Date.now() < jEnd) {
   const s = await sample('jump');
   if (s.y > apex.y) apex = s;
+  if (s.y > 0.2 && !shotApex) {
+    await shot('07-jump-apex');
+    shotApex = true;
+  }
   if (apex.y > 0.15 && s.y < apex.y - 0.004) break;
-  await wait(40);
+  await wait(25);
 }
-await shot('07-jump-apex');
+if (!shotApex) await shot('07-jump-apex');
 log.jump = { apexHeight: apex.y, at: apex.t };
 await page.evaluate(() => window.robot.setSpeed(1));
 await untilMode('locomotion', 10000);

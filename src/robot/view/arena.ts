@@ -27,6 +27,7 @@ export class Arena {
   private tmpQ = new THREE.Quaternion();
   /** Background colour the fog fades the desk into. */
   static readonly FOG = new THREE.Color('#3d2716');
+  static readonly SUN = new THREE.Vector3(1.35, 1.25, 0.55);
 
   constructor(renderer: THREE.WebGLRenderer, pkg: RobotPackage) {
     const s = this.scene;
@@ -42,9 +43,10 @@ export class Arena {
     this.disposables.push(env);
 
     // Lights: warm low key from the front-left (the robot faces +Z), cool rim from behind.
-    s.add(new THREE.HemisphereLight('#ffe4c4', '#4a2c18', 0.22));
-    const key = new THREE.DirectionalLight('#ffcf98', 3.1);
-    key.position.set(1.1, 1.5, 1.4);
+    s.add(new THREE.HemisphereLight('#ffe1bd', '#4a2c18', 0.25));
+    // Late-afternoon sun from the robot's left, low enough to throw long soft shadows.
+    const key = new THREE.DirectionalLight('#ffc98a', 3.6);
+    key.position.copy(Arena.SUN);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
     const sc = key.shadow.camera;
@@ -54,8 +56,8 @@ export class Arena {
     key.shadow.radius = 3;
     s.add(key, key.target);
     this.key = key;
-    const rim = new THREE.DirectionalLight('#d6e4ff', 0.8);
-    rim.position.set(-1.2, 1.0, -1.6);
+    const rim = new THREE.DirectionalLight('#ffe6cc', 1.0);
+    rim.position.set(0.8, 1.0, -1.6);
     s.add(rim);
     const bounce = new THREE.PointLight('#ff9a4a', 0.6, 3, 2);
     bounce.position.set(-0.6, 0.25, 0.4);
@@ -238,7 +240,7 @@ export class Arena {
     this.contact.scale.setScalar(1 + lift * 3);
     // Shadow frustum and key light follow the robot.
     this.key.target.position.copy(base).setY(0);
-    this.key.position.set(base.x + 1.1, 1.5, base.z + 1.4);
+    this.key.position.copy(base).setY(0).add(Arena.SUN);
     this.room.position.x = camera.position.x;
     this.room.position.z = camera.position.z;
   }
