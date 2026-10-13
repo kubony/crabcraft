@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Crabcraft art gallery</title>
+<link rel="stylesheet" href="/src/ui/theme.css" />
+<link rel="stylesheet" href="/src/ui/fonts.css" />
+<style>
+  html, body { overflow: auto; height: auto; }
+  body { margin: 0; background: #121318; color: var(--cc-parchment); font-family: var(--font-body); }
+  .wrap { max-width: 1560px; margin: 0 auto; padding: 28px 24px 80px; }
+  header { display: flex; align-items: center; gap: 28px; margin-bottom: 8px; }
+  header img { width: 420px; filter: drop-shadow(0 8px 20px #000); }
+  header h1 { margin: 0; font: 700 34px var(--font-display); letter-spacing: 0.06em; color: #f3d58a; }
+  header p { margin: 6px 0 0; color: #cdbf9b; font-size: 17px; }
+  h2 { font: 700 22px var(--font-display); letter-spacing: 0.08em; text-transform: uppercase; color: #f3d58a; margin: 40px 0 6px; }
+  h2 small { font: italic 15px var(--font-body); color: #a99c7c; text-transform: none; letter-spacing: 0; margin-left: 10px; }
+  .rule { height: 14px; margin: 0 0 16px; background: url('/art/ui/divider-gold.webp') left center / auto 14px no-repeat; }
+  .grid { display: grid; gap: 18px; }
+  .g2 { grid-template-columns: repeat(2, 1fr); }
+  .g6 { grid-template-columns: repeat(6, 1fr); }
+  .g7 { grid-template-columns: repeat(7, 1fr); }
+  .g4 { grid-template-columns: repeat(4, 1fr); }
+  figure { margin: 0; }
+  figure img { display: block; width: 100%; height: auto; border-radius: 3px; }
+  figcaption { font: 13px/1.3 ui-monospace, Menlo, monospace; color: #b9ad8d; margin-top: 5px; word-break: break-all; }
+  figcaption b { color: #f0e4c2; font-weight: 600; }
+  .checker { background: repeating-conic-gradient(#3a3d45 0 25%, #2a2c33 0 50%) 0 0 / 20px 20px; border-radius: 3px; }
+  .circle img { border-radius: 50%; box-shadow: 0 0 0 3px #6b4a14, 0 0 0 6px #e2bd63, 0 0 0 8px #3b2708, 0 8px 18px rgba(0,0,0,.7); }
+  .circle { padding: 10px; }
+  .icons { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-end; }
+  .icon-cell { text-align: center; width: 150px; }
+  .icon-cell .pair { display: flex; align-items: flex-end; justify-content: center; gap: 8px; }
+  .icon-cell img.big { width: 96px; height: 96px; border: 1px solid #000; box-shadow: 0 0 0 1px #8a7440; }
+  .icon-cell img.small { width: 48px; height: 48px; border: 1px solid #000; box-shadow: 0 0 0 1px #8a7440; }
+  .icon-cell .name { font: 600 14px var(--font-body); color: #ffd100; margin-top: 4px; }
+  .row-label { font: 700 15px var(--font-display); color: #e8c46a; letter-spacing: .08em; text-transform: uppercase; margin: 14px 0 6px; }
+  .demo { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 26px; align-items: start; }
+  .nine { border: 40px solid transparent; border-image: url('/art/ui/frame-stone.webp') 72 fill / 40px / 0 stretch; padding: 4px 6px; min-height: 150px; color: #e9d9b4; }
+  .nine h3, .kitpanel h3 { margin: 0 0 6px; font: 700 18px var(--font-display); color: #f3d58a; letter-spacing: .05em; }
+  .btns { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+  .rawbtn { width: 300px; height: 58px; background: center / 100% 100% no-repeat; display: flex; align-items: center; justify-content: center; font: 700 17px var(--font-display); letter-spacing: .08em; color: #ffe9a8; text-shadow: 0 1px 0 #3a0505, 0 0 8px rgba(0,0,0,.7); text-transform: uppercase; }
+  .ringdemo { position: relative; width: 220px; height: 220px; }
+  .ringdemo .face { position: absolute; inset: 16%; border-radius: 50%; background: center / cover; }
+  .ringdemo .ring { position: absolute; inset: 0; background: url('/art/ui/portrait-ring.webp') center / contain no-repeat; }
+  .unit { position: relative; width: 420px; height: 203px; }
+  .unit .face { position: absolute; left: 4.5%; top: 9%; width: 36%; height: 75%; border-radius: 50%; background: center / cover; }
+  .unit .frame { position: absolute; inset: 0; background: url('/art/ui/unit-frame.webp') center / contain no-repeat; }
+  .unit .bar { position: absolute; z-index: 1; left: 40.5%; width: 52%; height: 9%; border-radius: 6px; }
+  .unit .hp { top: 35%; background: linear-gradient(180deg, #7be38a, #2fbf4a 45%, #13561f); }
+  .unit .mp { top: 53.5%; background: linear-gradient(180deg, #82aaf5, #2b6de0 45%, #12306a); width: 38%; }
+  .unit .nm { position: absolute; z-index: 1; left: 42%; top: 15%; font: 700 15px var(--font-body); color: #fff; text-shadow: var(--text-shadow); }
+  .actionbar { display: flex; gap: 6px; }
+  .slot { width: 64px; height: 64px; position: relative; background: url('/art/ui/action-slot.webp') center / cover; }
+  .slot img { position: absolute; inset: 7px; width: 50px; height: 50px; }
+  .slot span { position: absolute; right: 5px; top: 2px; font: 700 13px var(--font-body); color: #fff; text-shadow: 0 0 3px #000, 0 1px 0 #000; }
+  .tip { position: relative; width: 300px; padding: 12px 14px; background: url('/art/ui/tooltip-bg.webp') center / 100% 100%; font: 14px/1.35 var(--font-body); color: #e8e2d0; }
+  .tip .t-title { color: #fff; font-weight: 700; font-size: 15px; }
+  .tip .t-meta { color: #c9b98e; font-size: 12px; margin: 2px 0 6px; }
+  .tip .t-desc { color: #ffd100; }
+  .fonts p { margin: 6px 0; }
+  .f-cinzel { font: 700 34px 'Cinzel'; color: #f3d58a; letter-spacing: .04em; }
+  .f-deco { font: 900 34px 'Cinzel Decorative'; color: #f3d58a; }
+  .f-body { font: 400 21px 'Alegreya'; }
+  .f-body i { font-style: italic; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid #2c2e36; vertical-align: middle; }
+  th { font: 700 13px var(--font-display); letter-spacing: .08em; color: #e8c46a; text-transform: uppercase; }
+  td code { font: 13px ui-monospace, Menlo, monospace; color: #f0e4c2; }
+  td audio { height: 32px; width: 300px; }
+  td.credit { color: #cdbf9b; font-size: 14px; }
+  td a { color: #9fc7ff; }
+  .kitpanel { min-height: 150px; }
+</style>
+</head>
+<body>
+<div class="wrap" id="gallery">
+  <header>
+    <img src="/art/logo.webp" alt="World of Crabcraft" />
+    <div>
+      <h1>Art, Fonts and Audio</h1>
+      <p id="summary">Loading manifest...</p>
+    </div>
+  </header>
+</div>
+<script type="module">
+import '../src/ui/kit.css';
+
+// Site root works in `pnpm dev` (/dev/art.html) and in the built dist/dev/art.html.
+const root = new URL('../', location.href).href;
+const url = (p) => root + p;
+const kb = (b) => (b / 1024).toFixed(1) + ' KB';
+const el = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') e.className = v; else if (k === 'style') e.style.cssText = v; else e.setAttribute(k, v);
+  }
+  for (const k of kids) e.append(k);
+  return e;
+};
+const g = document.getElementById('gallery');
+const section = (title, note) => {
+  const h = el('h2', {}, title);
+  if (note) h.append(el('small', {}, note));
+  g.append(h, el('div', { class: 'rule' }));
+};
+const cap = (f) => {
+  const c = el('figcaption');
+  c.innerHTML = `<b>${f.file}</b><br>${f.width}x${f.height}${f.alpha ? ' alpha' : ''} - ${kb(f.bytes)}`;
+  return c;
+};
+const fig = (f, cls = '') => el('figure', {}, el('div', { class: cls }, el('img', { src: url('art/' + f.file), alt: f.file, loading: 'eager' })), cap(f));
+
+const [art, audio] = await Promise.all([
+  fetch(url('art/index.json')).then((r) => r.json()),
+  fetch(url('audio/index.json')).then((r) => r.json()).catch(() => []),
+]);
+const by = Object.fromEntries(art.map((f) => [f.file, f]));
+const pick = (re) => art.filter((f) => re.test(f.file));
+const total = art.reduce((s, f) => s + f.bytes, 0);
+document.getElementById('summary').textContent =
+  `${art.length} images, ${(total / 1048576).toFixed(2)} MB in public/art - ${audio.length} audio entries in public/audio - fonts Cinzel, Cinzel Decorative, Alegreya`;
+
+section('Key art', '2560x1440 paintings');
+const wide = el('div', { class: 'grid g2' });
+for (const k of ['title-bg', 'create-bg', 'loading-1', 'loading-2', 'ending']) wide.append(fig(by[k + '.webp']));
+wide.append(fig(by['logo.webp'], 'checker'));
+g.append(wide);
+
+section('Race portraits', 'circular crop with a gold ring, as the creation screen will show them');
+const pr = el('div', { class: 'grid g6' });
+for (const f of pick(/^portraits\//)) pr.append(fig(f, 'circle'));
+g.append(pr);
+
+section('NPC dialogue portraits');
+const np = el('div', { class: 'grid g7' });
+for (const f of pick(/^npc\//)) np.append(fig(f));
+g.append(np);
+
+section('Class emblems');
+const ce = el('div', { class: 'grid g6' });
+for (const f of pick(/^icons\/class-/)) ce.append(fig(f, 'checker'));
+g.append(ce);
+
+const names = {
+  'warrior-1': 'Pincer Strike', 'warrior-2': 'Shell Bash', 'warrior-3': 'Sideways Charge', 'warrior-4': 'Whirlpool',
+  'mage-1': 'Bubble Bolt', 'mage-2': 'Frost Spray', 'mage-3': 'Steam Blink', 'mage-4': 'Tidal Nova',
+  'priest-1': 'Smite', 'priest-2': 'Mend Shell', 'priest-3': 'Barnacle Ward', 'priest-4': 'Holy Tide',
+  'item-rusted-cog': 'Rusted Cog', 'quest-moonwater': 'Moonwater', 'quest-scroll': 'Quest Scroll', 'quest-beacon': 'Beacon Flame', 'quest-boss': 'Corrodius',
+};
+const iconCell = (f) => {
+  const key = f.file.replace(/^icons\/(ability-)?/, '').replace('.webp', '');
+  const src = url('art/' + f.file);
+  return el('div', { class: 'icon-cell' },
+    el('div', { class: 'pair' }, el('img', { class: 'big', src }), el('img', { class: 'small', src })),
+    el('div', { class: 'name' }, names[key] ?? key), cap(f));
+};
+section('Ability icons', 'shown at 96 px and at 48 px');
+for (const c of ['warrior', 'mage', 'priest']) {
+  g.append(el('div', { class: 'row-label' }, c));
+  const row = el('div', { class: 'icons' });
+  for (const f of pick(new RegExp(`^icons/ability-${c}-`))) row.append(iconCell(f));
+  g.append(row);
+}
+section('Item and quest icons');
+const it = el('div', { class: 'icons' });
+for (const f of pick(/^icons\/(item|quest)-/)) it.append(iconCell(f));
+g.append(it);
+
+section('UI textures', 'raw files on a checkerboard');
+const ui = el('div', { class: 'grid g4' });
+for (const f of pick(/^ui\//)) ui.append(fig(f, 'checker'));
+g.append(ui);
+
+section('UI textures in use');
+const demo = el('div', { class: 'demo' });
+const portrait = url('art/portraits/dwarf-male.webp');
+demo.innerHTML = `
+  <div class="cc-panel kitpanel"><h3>.cc-panel (kit.css today)</h3>kit.css paints frame-stone.webp with <code>center / cover</code>, which crops the frame. Use the 9-slice rule on the right, or stone-fill.webp for a plain cover background.</div>
+  <div class="nine"><h3>border-image 9-slice</h3><code>border-image: url(art/ui/frame-stone.webp) 72 fill / 40px</code> keeps the claw corners crisp at any size.</div>
+  <div class="cc-parchment"><h2>Dwarf</h2><div class="cc-tagline">Short legs, long memories, longer beards.</div><div class="cc-divider"></div>Dwarf crabs dig, smelt and solder. Their braided cable beards carry a little current.</div>
+  <div class="btns">
+    <button class="cc-btn">Enter World</button>
+    <div class="rawbtn" style="background-image:url(${url('art/ui/button-red.webp')})">Normal</div>
+    <div class="rawbtn" style="background-image:url(${url('art/ui/button-red-hover.webp')})">Hover</div>
+    <div class="rawbtn" style="background-image:url(${url('art/ui/button-red-pressed.webp')})">Pressed</div>
+  </div>
+  <div><div class="ringdemo"><div class="face" style="background-image:url(${portrait})"></div><div class="ring"></div></div></div>
+  <div>
+    <div class="unit"><div class="face" style="background-image:url(${portrait})"></div><div class="bar hp"></div><div class="bar mp"></div><div class="frame"></div><div class="nm">Brinebeard</div></div>
+    <div class="actionbar" style="margin-top:14px">${[1, 2, 3, 4].map((s) => `<div class="slot"><img src="${url(`art/icons/ability-warrior-${s}.webp`)}"><span>${s}</span></div>`).join('')}</div>
+    <div class="tip" style="margin-top:14px"><div class="t-title">Shell Bash</div><div class="t-meta">15 Rage - 8 sec cooldown</div><div class="t-desc">Stuns the target for 2 sec.</div></div>
+  </div>`;
+g.append(demo);
+
+section('Fonts', 'self-hosted WOFF2, public/fonts/');
+const fonts = el('div', { class: 'fonts' });
+fonts.innerHTML = `
+  <p class="f-deco">World of Crabcraft</p>
+  <p class="f-cinzel">Clawhaven and the Brine Shore</p>
+  <p class="f-body">Human crabs built Clawhaven's sea wall and repaint it every spring. <i>They believe any problem can be solved by marching at it sideways.</i> <b>Corrodius, the Rust Tyrant</b> waits on the Iron Wreck.</p>`;
+g.append(fonts);
+
+section('Audio', 'public/audio/index.json - OGG players, MP3 links');
+const table = el('table');
+table.innerHTML = '<tr><th>id</th><th>loop</th><th>vol</th><th>length</th><th>play</th><th>credit</th><th>licence</th></tr>';
+for (const a of audio) {
+  const ogg = a.files.find((f) => f.endsWith('.ogg'));
+  const mp3 = a.files.find((f) => f.endsWith('.mp3'));
+  const tr = el('tr');
+  const len = el('td', {}, '-');
+  const player = el('audio', { controls: '', preload: 'metadata', src: url('audio/' + ogg) });
+  player.addEventListener('loadedmetadata', () => (len.textContent = player.duration.toFixed(1) + ' s'));
+  const src = (a.source || '').split(' ; ').map((s) => (s.startsWith('http') ? `<a href="${s}" target="_blank">${s.replace(/^https:\/\//, '')}</a>` : s)).join('<br>');
+  tr.append(el('td', {}, el('code', {}, a.id)), el('td', {}, a.loop ? 'yes' : ''), el('td', {}, String(a.volume ?? 1)), len, el('td', {}, player, el('div', {}, el('a', { href: url('audio/' + mp3), target: '_blank' }, 'mp3'))));
+  const cr = el('td', { class: 'credit' });
+  cr.innerHTML = `${a.credit}<br>${src}`;
+  tr.append(cr, el('td', {}, a.license));
+  table.append(tr);
+}
+g.append(table);
+
+await document.fonts.ready;
+await Promise.all([...document.images].map((i) => (i.complete ? Promise.resolve() : new Promise((r) => { i.onload = i.onerror = r; }))));
+window.__ready = true;
+</script>
+</body>
+</html>
