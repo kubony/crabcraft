@@ -639,6 +639,8 @@ def tauren():
         return out
 
     roots.append(piece("crest_great-horns", done(horns("greathorns", 1.15)), "base_link", "crest", {"id": "great-horns", "race": "tauren"}))
+    # Worn with a hat (which replaces the crest) so a tauren never loses its horns.
+    roots.append(piece("tauren_hat_horns", done(horns("hathorns", 0.75)), "base_link", "under-hat", {"race": "tauren"}))
     hf = horns("shorthorns", 0.6)
     for k, (dx, m) in enumerate([(-0.012, "feather-red"), (0.0, "feather-white"), (0.012, "feather-blue")]):
         f = extrude2d(f"hf_feather{k}", leaf_shape(0.06, 0.01), 0.002, m)

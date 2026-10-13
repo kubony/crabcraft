@@ -240,7 +240,7 @@ async function silhouettes(): Promise<void> {
   scene.overrideMaterial = new THREE.MeshBasicMaterial({ color: 0x0a0a0a });
   const jobs = RACE_ORDER.map((race, i) =>
     createCrab(spec(race, 'male', 'warrior', { crest: 0 })).then((c) => {
-      c.root.position.set((i - 2.5) * 2.45, 0, 0);
+      c.root.position.set((i - 2.5) * 2.75, 0, 0);
       c.root.rotation.y = 0.85;
       const r = c as JumperRig;
       r.face.mesh.visible = false;
@@ -253,7 +253,7 @@ async function silhouettes(): Promise<void> {
   );
   await Promise.all(jobs);
   cam.fov = 26;
-  cam.position.set(0, 1.6, 13);
+  cam.position.set(0, 1.5, 14.5);
   cam.lookAt(0, 0.6, 0);
   engine.setView(scene, cam, { bloom: { intensity: 0 }, vignette: null });
   for (const l of labels) l.el.style.color = '#222';

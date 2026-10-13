@@ -26,7 +26,7 @@ const FILES = {
 interface Piece {
   node: THREE.Object3D;
   attach: string;
-  kind: 'always' | 'crest' | 'weapon' | 'extra' | 'enemy';
+  kind: 'always' | 'crest' | 'weapon' | 'extra' | 'enemy' | 'under-hat';
   id: string;
   top: number;
 }
@@ -177,6 +177,9 @@ export async function dressCrab(
       add(p, tint);
       top = Math.max(top, p.top - shellTop);
     }
+  } else {
+    // Race features that live in the crest slot but must survive a hat (tauren horns).
+    for (const p of find(spec.race, (p) => p.kind === 'under-hat')) add(p, tint);
   }
   for (const id of extras) {
     for (const p of find('extras', (p) => p.id === id)) {
