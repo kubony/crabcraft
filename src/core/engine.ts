@@ -34,6 +34,8 @@ export interface ViewOptions {
   vignette?: { offset?: number; darkness?: number } | null;
   saturation?: number;
   contrast?: number;
+  /** Tone mapping operator (default AgX). ACES keeps saturated product reds deeper. */
+  toneMapping?: ToneMappingMode;
 }
 
 type Updater = (f: FrameInfo) => void;
@@ -114,7 +116,7 @@ export class Engine {
         radius: b.radius ?? 0.72,
       }),
     );
-    effects.push(new ToneMappingEffect({ mode: ToneMappingMode.AGX }));
+    effects.push(new ToneMappingEffect({ mode: opts.toneMapping ?? ToneMappingMode.AGX }));
     // Grading runs on display values after tone mapping; before it, HDR highlights invert.
     if (opts.saturation !== undefined) effects.push(new HueSaturationEffect({ saturation: opts.saturation }));
     if (opts.contrast !== undefined) effects.push(new BrightnessContrastEffect({ contrast: opts.contrast }));
