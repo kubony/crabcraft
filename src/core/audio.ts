@@ -10,6 +10,20 @@ export interface AudioEntry {
 
 const base = import.meta.env.BASE_URL;
 
+/**
+ * Equal-power (quarter sine) fade between two gains as a few linear ramps. Ramps, unlike value
+ * curves, may follow or cut into other automation, so a fade can start mid-fade.
+ */
+function rampEqualPower(p: AudioParam, from: number, to: number, t0: number, seconds: number): void {
+  const n = 8;
+  const d = Math.max(0.05, seconds);
+  for (let i = 1; i <= n; i++) {
+    const k = i / n;
+    const w = from < to ? Math.sin(k * Math.PI * 0.5) : Math.cos(k * Math.PI * 0.5);
+    p.linearRampToValueAtTime(from < to ? to * w : from * w, t0 + d * k);
+  }
+}
+
 export class AudioManager {
   readonly ctx: AudioContext;
   private master: GainNode;
@@ -18,6 +32,9 @@ export class AudioManager {
   private entries = new Map<string, AudioEntry>();
   private buffers = new Map<string, Promise<AudioBuffer | null>>();
   private music: { id: string; src: AudioBufferSourceNode; gain: GainNode } | null = null;
+  /** Bumped by every playMusic/stopMusic; a decode that finishes late checks it. */
+  private musicTicket = 0;
+  private wantMusic = '';
   private ready: Promise<void>;
   musicVolume = 0.55;
   sfxVolume = 0.8;
@@ -83,38 +100,46 @@ export class AudioManager {
   }
 
   async playMusic(id: string, fadeSeconds = 1.5): Promise<void> {
-    if (this.music?.id === id) return;
+    // Already playing it, or already on the way (a track that is still decoding).
+    if (this.music?.id === id || (!this.music && this.wantMusic === id)) return;
+    this.wantMusic = id;
+    const ticket = ++this.musicTicket;
     const prev = this.music;
     this.music = null;
-    if (prev) {
-      const t = this.ctx.currentTime;
-      prev.gain.gain.setValueAtTime(prev.gain.gain.value, t);
-      prev.gain.gain.linearRampToValueAtTime(0, t + fadeSeconds);
-      prev.src.stop(t + fadeSeconds + 0.05);
-    }
+    if (prev) this.fadeOut(prev, fadeSeconds);
     const buf = await this.load(id);
-    if (!buf) return;
+    // A newer request (or stopMusic) came in while this one decoded: never start two tracks.
+    if (!buf || ticket !== this.musicTicket) return;
     const src = this.ctx.createBufferSource();
     src.buffer = buf;
     src.loop = this.entries.get(id)?.loop ?? true;
     const gain = this.ctx.createGain();
     const vol = this.entries.get(id)?.volume ?? 1;
     const t = this.ctx.currentTime;
+    // Equal-power fade in: no dip in loudness halfway through a crossfade.
     gain.gain.setValueAtTime(0, t);
-    gain.gain.linearRampToValueAtTime(vol, t + fadeSeconds);
+    rampEqualPower(gain.gain, 0, vol, t, fadeSeconds);
     src.connect(gain).connect(this.musicBus);
     src.start();
     this.music = { id, src, gain };
   }
 
   stopMusic(fadeSeconds = 1.5): void {
+    this.musicTicket++;
+    this.wantMusic = '';
     if (!this.music) return;
-    const { src, gain } = this.music;
-    const t = this.ctx.currentTime;
-    gain.gain.setValueAtTime(gain.gain.value, t);
-    gain.gain.linearRampToValueAtTime(0, t + fadeSeconds);
-    src.stop(t + fadeSeconds + 0.05);
+    this.fadeOut(this.music, fadeSeconds);
     this.music = null;
+  }
+
+  private fadeOut(m: { src: AudioBufferSourceNode; gain: GainNode }, fadeSeconds: number): void {
+    const t = this.ctx.currentTime;
+    const g = m.gain.gain;
+    const from = g.value;
+    g.cancelScheduledValues(t);
+    g.setValueAtTime(from, t);
+    rampEqualPower(g, from, 0, t, fadeSeconds);
+    m.src.stop(t + fadeSeconds + 0.05);
   }
 
   /** Fire-and-forget sound effect. `pitch` jitters playback rate by ± that fraction. */
