@@ -21,6 +21,7 @@ import { DebugTools } from './debug';
 import { EndingSequence } from './ending';
 import { Enemy, ENEMY_STATS, type EnemyKind } from './enemies';
 import { Npc, Townsfolk } from './npcs';
+import { NavHints } from './nav';
 import { ObjectiveMarker } from './objective';
 import { Player } from './player';
 import {
@@ -89,6 +90,9 @@ export class Game {
   player!: Player;
   boss!: Boss;
   objective!: ObjectiveMarker;
+  nav!: NavHints;
+  /** Next waypoint of the quest hint (debug and playtest read it). */
+  hintVia: THREE.Vector3 | null = null;
   units: Unit[] = [];
   enemies: Enemy[] = [];
   npcs: Npc[] = [];
@@ -167,6 +171,7 @@ export class Game {
     this.vfx.density = app.engine.quality === 'low' ? 0.55 : 1;
     this.objective = new ObjectiveMarker(this.vfx.fx);
     this.scene.add(this.objective.group);
+    this.nav = new NavHints(this.world);
 
     progress(0.58, 'Waking the crabs of Clawhaven');
     const pois = this.world.pois;
@@ -463,7 +468,9 @@ export class Game {
     }
     if (!paused) this.vfx.update(dt);
     this.updateSelection();
-    this.objective.update(this.time, this.world, this.player.unit.pos, this.ending.active || !this.player.unit.alive ? null : this.objectivePos(), this.player.inCombat);
+    const goal = this.ending.active || !this.player.unit.alive ? null : this.objectivePos();
+    this.hintVia = goal ? this.nav.waypoint(this.player.unit.pos, goal, this.time) : null;
+    this.objective.update(this.time, this.world, this.player.unit.pos, goal, this.hintVia, this.player.inCombat);
     if (!this.ending.active) this.updateCamera(dt);
     this.world.update(dt, f.elapsed, this.camera);
     this.updateZone();

@@ -57,7 +57,7 @@ export class ObjectiveMarker {
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     });
-    const disc = new THREE.CircleGeometry(0.16, 16).rotateX(-Math.PI / 2);
+    const disc = new THREE.CircleGeometry(0.24, 20).rotateX(-Math.PI / 2);
     this.crumbs = new THREE.InstancedMesh(disc, this.crumbMat, CRUMBS);
     this.crumbs.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(CRUMBS * 3), 3);
     this.crumbs.frustumCulled = false;
@@ -65,7 +65,8 @@ export class ObjectiveMarker {
     this.group.add(this.chevron, this.crumbs);
   }
 
-  update(time: number, world: World, from: THREE.Vector3, target: THREE.Vector3 | null, combat: boolean): void {
+  /** `target` gets the beam; the chevron and breadcrumbs lead toward `via`, the next waypoint. */
+  update(time: number, world: World, from: THREE.Vector3, target: THREE.Vector3 | null, via: THREE.Vector3 | null, combat: boolean): void {
     const show = this.enabled && !!target;
     const dist = target ? Math.hypot(target.x - from.x, target.z - from.z) : 0;
     this.beam.mesh.visible = show && dist > 5;
@@ -79,8 +80,10 @@ export class ObjectiveMarker {
     this.chevron.visible = !near && !combat;
     this.crumbs.visible = !near && !combat && dist > 10;
     if (near || !target) return;
-    const dx = (target.x - from.x) / dist;
-    const dz = (target.z - from.z) / dist;
+    const lead = via ?? target;
+    const leadDist = Math.max(0.001, Math.hypot(lead.x - from.x, lead.z - from.z));
+    const dx = (lead.x - from.x) / leadDist;
+    const dz = (lead.z - from.z) / leadDist;
     const yaw = Math.atan2(dx, dz);
     const cr = 1.55;
     const cx = from.x + dx * cr;
@@ -91,7 +94,7 @@ export class ObjectiveMarker {
     this.chevron.scale.setScalar(0.8);
     if (!this.crumbs.visible) return;
     const flow = (time * 2.6) % SPACING;
-    const n = Math.min(CRUMBS, Math.floor((dist - 4) / SPACING));
+    const n = Math.min(CRUMBS, Math.floor((Math.min(dist, leadDist + 2) - 4) / SPACING));
     for (let i = 0; i < CRUMBS; i++) {
       const d = 3 + i * SPACING + flow;
       const x = from.x + dx * d;
@@ -103,7 +106,7 @@ export class ObjectiveMarker {
       this.s.set(sc, sc, sc);
       this.m.compose(this.p, this.q, this.s);
       this.crumbs.setMatrixAt(i, this.m);
-      this.col.copy(C.gold).multiplyScalar(0.55 * k * fadeIn);
+      this.col.copy(C.gold).multiplyScalar(0.9 * k * fadeIn);
       this.crumbs.setColorAt(i, this.col);
     }
     this.crumbs.instanceMatrix.needsUpdate = true;
