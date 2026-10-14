@@ -31,15 +31,26 @@ export function lookForSpec(spec: CrabSpec): CrabLook {
   };
 }
 
+/**
+ * The same look on the real robot's kinematics: paint, LED and gear stay, but the race posture
+ * (scale, body height, stance, hunch, joint bias) and the undead servo twitch go, so every link
+ * sits exactly where the physics puts the robot's.
+ */
+export function exactLook(look: CrabLook): CrabLook {
+  return { ...look, posture: { scale: 1, bodyHeight: 1, stanceWidth: 1, hunch: 0 }, twitch: false };
+}
+
 class Crab extends JumperRig {
   private extras: string[];
   private enemy: EnemyKind | null;
+  private exact: boolean;
   private dressing = 0;
 
-  constructor(t: CrabTemplate, spec: CrabSpec, look: CrabLook, extras: string[], enemy: EnemyKind | null) {
-    super(t, spec, look);
+  constructor(t: CrabTemplate, spec: CrabSpec, look: CrabLook, extras: string[], enemy: EnemyKind | null, exact = false) {
+    super(t, spec, exact ? exactLook(look) : look);
     this.extras = extras;
     this.enemy = enemy;
+    this.exact = exact;
   }
 
   async dress(): Promise<void> {
@@ -50,7 +61,7 @@ class Crab extends JumperRig {
   override async applySpec(spec: CrabSpec): Promise<void> {
     this.spec = { ...spec };
     this.root.name = `crab:${spec.name}`;
-    if (!this.enemy) this.applyLook(lookForSpec(spec));
+    if (!this.enemy) this.applyLook(this.exact ? exactLook(lookForSpec(spec)) : lookForSpec(spec));
     await this.dress();
   }
 }
@@ -62,6 +73,18 @@ class Crab extends JumperRig {
 export async function createCrab(spec: CrabSpec, extras: string[] = []): Promise<CrabRig> {
   const [t] = await Promise.all([loadCrabTemplate(), preloadGear()]);
   const crab = new Crab(t, spec, lookForSpec(spec), extras, null);
+  await crab.dress();
+  return crab;
+}
+
+/**
+ * A player crab for Robot Mode: dressed exactly like createCrab's, but on the robot's own
+ * kinematics (see exactLook), so posing it from live physics state overlays the simulated robot.
+ * metersToUnits is the plain CRAB_HEIGHT scale; scale root by 1 / metersToUnits for metres.
+ */
+export async function createRobotCrab(spec: CrabSpec): Promise<CrabRig> {
+  const [t] = await Promise.all([loadCrabTemplate(), preloadGear()]);
+  const crab = new Crab(t, spec, lookForSpec(spec), [], null, true);
   await crab.dress();
   return crab;
 }
