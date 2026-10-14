@@ -62,6 +62,8 @@ interface Attachment {
 
 const v1 = new THREE.Vector3();
 const v2 = new THREE.Vector3();
+const UP = new THREE.Vector3(0, 1, 0);
+const tilt = new THREE.Quaternion();
 
 export interface WardHandle {
   hit(): void;
@@ -784,7 +786,8 @@ export class Vfx {
 
   // ---------------------------------------------------------------- enemy mechanics
 
-  telegraphCircle(at: THREE.Vector3, radius: number, dur: number, color = N.red): Fx {
+  /** `ground` is the normal of the ground under the mark; a sloped deck would swallow a flat one. */
+  telegraphCircle(at: THREE.Vector3, radius: number, dur: number, color = N.red, ground?: THREE.Vector3): Fx {
     const fx = this.fx.spawn('decal', dur, (f, _dt, k) => {
       f.u.uProgress.value = k;
       f.u.uAlpha.value = Math.min(1, f.t * 6);
@@ -792,11 +795,12 @@ export class Vfx {
     (fx.u.uColor.value as THREE.Color).copy(color);
     (fx.u.uParam.value as THREE.Vector4).x = Math.PI;
     fx.mesh.position.set(at.x, at.y + 0.07, at.z);
+    this.layDecal(fx, 0, ground);
     fx.mesh.scale.set(radius, 1, radius);
     return fx;
   }
 
-  telegraphCone(at: THREE.Vector3, yaw: number, range: number, half: number, dur: number, color = N.ember): Fx {
+  telegraphCone(at: THREE.Vector3, yaw: number, range: number, half: number, dur: number, color = N.ember, ground?: THREE.Vector3): Fx {
     const fx = this.fx.spawn('decal', dur, (f, _dt, k) => {
       f.u.uProgress.value = k;
       f.u.uAlpha.value = Math.min(1, f.t * 6);
@@ -804,9 +808,15 @@ export class Vfx {
     (fx.u.uColor.value as THREE.Color).copy(color);
     (fx.u.uParam.value as THREE.Vector4).x = half;
     fx.mesh.position.set(at.x, at.y + 0.08, at.z);
-    fx.mesh.rotation.y = yaw;
+    this.layDecal(fx, yaw, ground);
     fx.mesh.scale.set(range, 1, range);
     return fx;
+  }
+
+  /** Pooled decals are reused: set the whole rotation, tilted onto the ground's plane if given. */
+  private layDecal(fx: Fx, yaw: number, ground?: THREE.Vector3): void {
+    fx.mesh.rotation.set(0, yaw, 0);
+    if (ground) fx.mesh.quaternion.premultiply(tilt.setFromUnitVectors(UP, ground));
   }
 
   slamImpact(at: THREE.Vector3, radius: number): void {

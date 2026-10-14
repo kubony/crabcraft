@@ -12,6 +12,8 @@ export class Npc {
   private helloCd = 0;
   private gestureAt: number;
   talking = false;
+  /** While talking: a point to face instead of the player (the dialogue camera cheats the look). */
+  lookAt: THREE.Vector3 | null = null;
   private lineIndex = 0;
 
   constructor(private readonly game: Game, readonly unit: Unit, readonly def: NpcDef, readonly poi: Poi) {
@@ -38,7 +40,8 @@ export class Npc {
     }
     const d = u.distTo(p);
     const near = p.alive && d < 9;
-    const want = near || this.talking ? yawTo(u.pos.x, u.pos.z, p.pos.x, p.pos.z) : this.poi.yaw;
+    const look = this.talking && this.lookAt ? this.lookAt : p.pos;
+    const want = near || this.talking ? yawTo(u.pos.x, u.pos.z, look.x, look.z) : this.poi.yaw;
     u.setYaw(turnToward(u.yaw, want, 2.6, dt));
     if (p.alive && d < 7 && now > this.helloCd && !this.talking && !u.motion.action) {
       this.helloCd = now + 40;

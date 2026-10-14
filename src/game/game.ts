@@ -18,6 +18,7 @@ import type { QuestMark } from '../ui/hud/plates';
 import { Boss } from './boss';
 import { Combat } from './combat';
 import { DebugTools } from './debug';
+import { CameraDirector } from './director';
 import { EndingSequence } from './ending';
 import { Enemy, ENEMY_STATS, type EnemyKind } from './enemies';
 import { Npc, Townsfolk } from './npcs';
@@ -87,6 +88,7 @@ export class Game {
   vfx!: Vfx;
   hud!: Hud;
   follow!: FollowCamera;
+  director!: CameraDirector;
   player!: Player;
   boss!: Boss;
   objective!: ObjectiveMarker;
@@ -117,8 +119,6 @@ export class Game {
   private loadingEl: HTMLElement | null = null;
   private cogMisses = 0;
   private robotConfirmUntil = 0;
-  private userDistance = 7.5;
-  private bossCam = false;
   private beaconLit = false;
   private readyFlag = false;
 
@@ -272,6 +272,11 @@ export class Game {
     const fu = this.addUnit('Little Red', 'freed', 'friendly', freedRig);
     fu.title = 'Free at last';
     this.boss = new Boss(this, bu, pois.bossArena, fu);
+    this.director = new CameraDirector(this);
+    // His armour thins where it covers the player's crab, the player's claws where they cross the
+    // face of the NPC it talks to (both get their own copies of the shared crab materials).
+    this.director.bossSee.apply(bossRig.root);
+    this.director.playerSee.apply(playerRig.root);
     for (const r of addRigs) {
       const u = this.addUnit('Scrapling', 'scrapling', 'hostile', r);
       const e = new Enemy(this, u, 'scrapling', pois.bossArena.position.clone(), 4);
@@ -286,7 +291,7 @@ export class Game {
     pu.teleport(this.world, spawn.position.x, spawn.position.z, spawn.yaw);
 
     this.follow = new FollowCamera(this.camera, {
-      distance: this.userDistance,
+      distance: 7.5,
       minDistance: 2.5,
       maxDistance: 22,
       lookHeight: Math.max(0.8, pu.height * 0.85 + 0.25),
@@ -340,11 +345,14 @@ export class Game {
     this.vfx.fx.prewarm();
     this.camera.position.set(pu.pos.x, pu.pos.y + 3, pu.pos.z - 6);
     this.camera.lookAt(pu.pos);
+    // The boss is hidden until the beacon wakes him; compile his see-through materials now too.
+    bu.rig.root.visible = true;
     try {
       await this.engine.renderer.compileAsync(this.scene, this.camera);
     } catch {
       /* compileAsync is an optimisation only */
     }
+    bu.rig.root.visible = !bu.hidden;
     if (!this.alive) return;
 
     if (new URLSearchParams(location.search).get('debug') === '1') this.debug = new DebugTools(this);
@@ -501,7 +509,7 @@ export class Game {
     const goal = this.ending.active || !this.player.unit.alive ? null : this.objectivePos();
     this.hintVia = goal ? this.nav.waypoint(this.player.unit.pos, goal, this.time) : null;
     this.objective.update(this.time, this.world, this.player.unit.pos, goal, this.hintVia, this.player.inCombat);
-    if (!this.ending.active) this.updateCamera(dt);
+    if (!this.ending.active) this.director.update(dt);
     this.world.update(dt, f.elapsed, this.camera);
     this.updateZone();
     this.updateInteractPrompt();
@@ -509,19 +517,6 @@ export class Game {
     this.hud.update(dt);
     this.debug?.update(dt);
   };
-
-  private updateCamera(dt: number): void {
-    const engaged = this.boss.engaged;
-    if (engaged && !this.bossCam) {
-      this.bossCam = true;
-      this.userDistance = this.follow.distance;
-      this.follow.distance = Math.max(this.follow.distance, 11);
-    } else if (!engaged && this.bossCam) {
-      this.bossCam = false;
-      this.follow.distance = Math.min(this.follow.distance, Math.max(this.userDistance, 4));
-    }
-    this.follow.update(dt, this.input, this.player.unit.pos);
-  }
 
   private updateStatuses(): void {
     const now = this.time;
