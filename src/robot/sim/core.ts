@@ -377,6 +377,11 @@ export class RobotSim {
    * body, robot bodies first then toys, in the order of `bodies` then `toyBodies`.
    */
   bodyPoses(out: Float32Array): Float32Array {
+    // mj_step leaves xpos/xquat at the start of the step and qpos at its end. Recompute the
+    // kinematics so the poses are of the same instant as the joint angles sent beside them (a
+    // layer posed from qpos and one posed from these poses then agree). The controller reads
+    // only qpos/qvel and mj_step recomputes all of this, so the simulation is unchanged.
+    this.mj.mj_kinematics(this.model, this.data);
     const xpos = this.data.xpos as Float64Array;
     const xquat = this.data.xquat as Float64Array;
     let o = 0;
