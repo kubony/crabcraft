@@ -20,7 +20,7 @@ export interface Fountain {
  * bronze on raised edges, with clearcoat highlights like the robot's shell.
  */
 export function bronzeMaterial(): THREE.MeshPhysicalMaterial {
-  const m = new THREE.MeshPhysicalMaterial({ color: '#ffffff', metalness: 0.15, roughness: 0.38, clearcoat: 1, clearcoatRoughness: 0.18, envMapIntensity: 0.7 });
+  const m = new THREE.MeshPhysicalMaterial({ color: '#ffffff', metalness: 0.1, roughness: 0.5, clearcoat: 0.35, clearcoatRoughness: 0.4, envMapIntensity: 0.45 });
   addPatch(m, 'claw-lacquer', (shader) => {
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vBW;\nvarying vec3 vBN;')
@@ -35,7 +35,7 @@ export function bronzeMaterial(): THREE.MeshPhysicalMaterial {
           // Wear shows on edges (normals near horizontal-sideways) and in noisy patches.
           float edge = 1.0 - abs(vBN.z);
           ccWear = smoothstep(0.62, 0.9, n * 0.7 + edge * 0.45);
-          vec3 lacquer = vec3(0.62, 0.05, 0.05);
+          vec3 lacquer = vec3(0.21, 0.008, 0.012);
           vec3 bronze = vec3(0.55, 0.32, 0.12);
           diffuseColor.rgb *= mix(lacquer, bronze, ccWear);
         }`,

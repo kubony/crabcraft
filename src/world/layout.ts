@@ -175,7 +175,7 @@ export const LOTS: Lot[] = [
 export const GROVE = { x: -80, z: 50, r: 15, poolR: 5.5, h: 6.2 } as const;
 
 /** Wooden pier into the bay from the Brine Shore. */
-export const DOCK = { x0: 112, x1: 146, z: 23, width: 4, y: 1.25, headZ0: 15, headZ1: 31, headX0: 140 } as const;
+export const DOCK = { x0: 112, x1: 146, z: 23, width: 4, y: 0.85, headZ0: 15, headZ1: 31, headX0: 140 } as const;
 
 interface PoiDef {
   x: number;

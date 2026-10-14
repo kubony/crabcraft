@@ -396,8 +396,10 @@ export interface TerrainTextures {
   rock: THREE.Texture | null;
 }
 
-/** Tiling RGBA noise (seamless by sampling 4D-style wraps of simplex on a torus). */
+let sharedNoise: THREE.DataTexture | null = null;
+/** Tiling RGBA noise (seamless: simplex sampled on circles), shared by terrain, sky and water. */
 export function noiseTexture(size = 256): THREE.DataTexture {
+  if (sharedNoise && sharedNoise.image.width === size) return sharedNoise;
   const S = new Simplex(11);
   const data = new Uint8Array(size * size * 4);
   const tau = Math.PI * 2;
@@ -435,6 +437,7 @@ export function noiseTexture(size = 256): THREE.DataTexture {
   t.minFilter = THREE.LinearMipmapLinearFilter;
   t.generateMipmaps = true;
   t.needsUpdate = true;
+  sharedNoise = t;
   return t;
 }
 

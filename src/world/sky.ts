@@ -19,9 +19,11 @@ export interface SkyUniforms {
   uSunVis: { value: number };
   uCloudCover: { value: number };
   uTime: { value: number };
+  /** Tiling RGBA noise shared by sky and water (see terrain.noiseTexture). */
+  uNoise: { value: THREE.Texture | null };
 }
 
-export function createSkyUniforms(uTime: { value: number }): SkyUniforms {
+export function createSkyUniforms(uTime: { value: number }, noise: THREE.Texture | null = null): SkyUniforms {
   return {
     uSunDir: { value: new THREE.Vector3(0, 0.2, 1).normalize() },
     uMoonDir: { value: new THREE.Vector3(0, 0.5, 1).normalize() },
@@ -38,6 +40,7 @@ export function createSkyUniforms(uTime: { value: number }): SkyUniforms {
     uSunVis: { value: 1 },
     uCloudCover: { value: 0.5 },
     uTime,
+    uNoise: { value: noise },
   };
 }
 
@@ -57,6 +60,7 @@ uniform float uMoon;
 uniform float uSunVis;
 uniform float uCloudCover;
 uniform float uTime;
+uniform sampler2D uNoise;
 `;
 
 /** vec3 ccSky(vec3 dir, float detail): detail 1 adds sun disk, clouds and stars. */
@@ -115,11 +119,11 @@ vec3 ccSky(vec3 d, float detail) {
   if (y > 0.0) {
     vec2 p = d.xz / (y + 0.06);
     vec2 wind = uTime * vec2(0.006, 0.0025);
-    float c = cc_fbm(p * 0.55 + wind);
-    float c2 = cc_fbm(p * 1.4 - wind * 1.7 + 11.0);
+    float c = texture2D(uNoise, (p * 0.55 + wind) / 3.0).r;
+    float c2 = texture2D(uNoise, (p * 1.4 - wind * 1.7) / 9.0 + 0.3).g;
     float band = smoothstep(0.015, 0.08, y) * (1.0 - smoothstep(0.32, 0.7, y));
     float dens = smoothstep(0.62 - uCloudCover * 0.25, 0.82, c + c2 * 0.18) * band;
-    float wisp = smoothstep(0.55, 0.8, cc_fbm(vec2(p.x * 0.25, p.y * 1.8) + wind * 2.0)) * smoothstep(0.08, 0.3, y) * 0.5;
+    float wisp = smoothstep(0.55, 0.8, texture2D(uNoise, (vec2(p.x * 0.25, p.y * 1.8) + wind * 2.0) / 5.0 + 0.6).a) * smoothstep(0.08, 0.3, y) * 0.5;
     float lit = clamp(pow(sd, 3.0) * 0.8 + (c2 - 0.35) * 0.9, 0.0, 1.0);
     vec3 cc = mix(uCloudShade, uCloudLit, lit);
     cc += uGlow * pow(sd, 12.0) * 0.8 * uSunVis;

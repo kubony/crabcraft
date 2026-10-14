@@ -14,7 +14,7 @@ import { buildLighthouse } from './lighthouse';
 import { stylise, WORLD_UNIFORMS } from './materials';
 import { blendMood, cloneMood, MOODS, type Mood } from './moods';
 import { createSky, createSkyUniforms } from './sky';
-import { createTerrainMaterial, Terrain } from './terrain';
+import { createTerrainMaterial, noiseTexture, Terrain } from './terrain';
 import { createWater } from './water';
 import { buildWreck } from './wreck';
 
@@ -60,7 +60,7 @@ export const createWorld: CreateWorld = async ({ renderer, scene, quality, onPro
   root.add(terrainMesh);
 
   // Sky and water share the sky uniforms so reflections match the dome.
-  const skyU = createSkyUniforms(uTime);
+  const skyU = createSkyUniforms(uTime, noiseTexture());
   const sky = createSky(skyU);
   root.add(sky);
 
@@ -377,12 +377,22 @@ export const createWorld: CreateWorld = async ({ renderer, scene, quality, onPro
     },
     dispose() {
       scene.remove(root);
+      if (scene.fog === fog) scene.fog = null;
+      if (envRT && scene.environment === envRT.texture) scene.environment = null;
       envRT?.dispose();
       pmrem.dispose();
+      const mats = new Set<THREE.Material>();
       root.traverse((o) => {
         const mesh = o as THREE.Mesh;
         if (mesh.geometry) mesh.geometry.dispose();
+        const m = mesh.material;
+        if (m) for (const mm of Array.isArray(m) ? m : [m]) mats.add(mm);
+        if ((o as THREE.InstancedMesh).isInstancedMesh) (o as THREE.InstancedMesh).dispose();
       });
+      for (const m of mats) {
+        for (const v of Object.values(m)) if (v instanceof THREE.Texture) v.dispose();
+        m.dispose();
+      }
     },
   };
   void wreck;

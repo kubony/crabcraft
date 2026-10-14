@@ -411,11 +411,11 @@ export function buildDressing(
         rf.y = abs(rf.y);
         float fres = 0.04 + 0.96 * pow(1.0 - max(dot(n, v), 0.0), 5.0);
         float caust = pow(cc_vnoise(vW.xz * 2.2 + vec2(t * 0.35, -t * 0.2)) * cc_vnoise(vW.zx * 1.9 - t * 0.3) * 2.0, 2.0);
-        vec3 deep = vec3(0.02, 0.18, 0.30);
-        vec3 glow = vec3(0.25, 0.95, 1.1);
+        vec3 deep = vec3(0.0, 0.10, 0.20);
+        vec3 glow = vec3(0.08, 0.85, 1.0);
         float centre = exp(-r * 0.35);
         vec3 col = deep + glow * (0.18 + 0.55 * centre + caust * 0.45 + ripple * 0.08 * centre) * uPoolGlow;
-        col = mix(col, ccSky(rf, 0.0) + vec3(1.0, 0.97, 0.88) * pow(max(dot(rf, uMoonDir), 0.0), 400.0) * 8.0 * uMoon, fres * 0.6);
+        col = mix(col, ccSky(rf, 0.0) + vec3(1.0, 0.97, 0.88) * pow(max(dot(rf, uMoonDir), 0.0), 400.0) * 8.0 * uMoon, fres * 0.3);
         float rim = smoothstep(${(GROVE.poolR - 0.6).toFixed(2)}, ${(GROVE.poolR + 0.6).toFixed(2)}, r);
         col += vec3(0.6, 1.0, 0.95) * rim * 0.35 * uPoolGlow;
         gl_FragColor = vec4(col, 0.92);

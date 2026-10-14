@@ -155,6 +155,7 @@ export function buildFoliage(nature: Kit, terrain: Terrain, col: Collision, qual
       if (jz > 150 && jx > 120) d = Math.max(d, 0.7); // south arm of the bay
       // Keep the lighthouse bridgehead and the view of the tower clear.
       if (Math.hypot(jx - LIGHTHOUSE.bridgeFrom[0], jz - LIGHTHOUSE.bridgeFrom[1]) < 26) continue;
+      if (Math.hypot(jx - WRECK.x, jz - WRECK.z) < 52) continue;
       d *= 0.35 + 0.9 * n;
       // Keep the grove clearing open with a ring of trees around it.
       const gr = Math.hypot(jx - GROVE.x, jz - GROVE.z);
@@ -312,26 +313,31 @@ export function buildFoliage(nature: Kit, terrain: Terrain, col: Collision, qual
   const lowPineMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, flatShading: true });
   stylise(lowPineMat, 1.1, [1.0, 1.0, 0.95]);
   windSway(lowPineMat, 0.25, 9, 0.8);
+  // Pines: full kit models up close, the light Pine_5 mid-range, cone pines far away. Only the
+  // ranges inside the sun's shadow frustum cast shadows.
+  const NEAR = quality === 'high' ? 48 : 36;
+  const MID = quality === 'high' ? 125 : 95;
   const pineFar = new InstanceField(
     'pine-far',
     [
-      { parts: [], maxDist: 70 },
-      { parts: partsFor('Pine_5', 'tree'), maxDist: 190 },
-      { parts: [{ geometry: lowPine(), material: lowPineMat }], maxDist: 900 },
+      { parts: [], maxDist: NEAR },
+      { parts: partsFor('Pine_5', 'tree'), maxDist: MID },
+      { parts: [{ geometry: lowPine(), material: lowPineMat }], maxDist: 900, castShadow: false },
     ],
     40,
     8,
   );
   for (const [name, mats] of trees.items) {
     if (name.startsWith('Pine_')) {
-      const near = new InstanceField(`pine-near-${name}`, [{ parts: partsFor(name, 'tree'), maxDist: 70 }], 40, 8);
+      const near = new InstanceField(`pine-near-${name}`, [{ parts: partsFor(name, 'tree'), maxDist: NEAR }], 40, 8);
       for (const m of mats) {
         near.add(m);
         pineFar.add(m);
       }
       fields.push(near);
     } else {
-      const f = new InstanceField(name, [{ parts: partsFor(name, 'tree'), maxDist: 340 }], 50, 12);
+      const parts = partsFor(name, 'tree');
+      const f = new InstanceField(name, [{ parts, maxDist: 100 }, { parts, maxDist: 340, castShadow: false }], 50, 12);
       for (const m of mats) f.add(m);
       fields.push(f);
     }
@@ -341,7 +347,10 @@ export function buildFoliage(nature: Kit, terrain: Terrain, col: Collision, qual
     n.startsWith('Petal') || n.startsWith('Pebble') ? 45 : n.startsWith('Mushroom') ? 60 : n.startsWith('Flower') || n.startsWith('Clover') ? 75 : n.startsWith('Fern') ? 85 : n.startsWith('Bush') ? 150 : 420;
   for (const [name, mats] of small.items) {
     const shadow = quality === 'high' && (name.startsWith('Bush') || name.startsWith('Rock'));
-    const f = new InstanceField(name, [{ parts: partsFor(name, 'small'), maxDist: smallRange(name), castShadow: shadow }], 30, 4);
+    const parts = partsFor(name, 'small');
+    const range = smallRange(name);
+    const levels = shadow && range > 90 ? [{ parts, maxDist: 90, castShadow: true }, { parts, maxDist: range, castShadow: false }] : [{ parts, maxDist: range, castShadow: shadow }];
+    const f = new InstanceField(name, levels, 30, 4);
     for (const m of mats) f.add(m);
     fields.push(f);
   }
@@ -355,7 +364,7 @@ export function buildFoliage(nature: Kit, terrain: Terrain, col: Collision, qual
   });
   const tuftCount = quality === 'high' ? 18000 : 8000;
   const tuftFields = tufts.map(
-    (g, i) => new InstanceField(`grass-${i}`, [{ parts: [{ geometry: g, material: grassMat }], maxDist: quality === 'high' ? 80 : 55, castShadow: false }], 18, 1.2),
+    (g, i) => new InstanceField(`grass-${i}`, [{ parts: [{ geometry: g, material: grassMat }], maxDist: quality === 'high' ? 60 : 42, castShadow: false }], 18, 1.2),
   );
   const m4 = new THREE.Matrix4();
   let placedTufts = 0;

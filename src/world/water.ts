@@ -82,10 +82,13 @@ export function createWater(
           float ph = dot(dirs[i], p) * f + t * (0.9 + f * 1.6);
           g += dirs[i] * cos(ph) * f * (0.32 / (1.0 + float(i)));
         }
+        // Two octaves of value-noise ripples on top of the swell (analytic enough to stay smooth).
         vec2 q = p * 0.9 + t * vec2(-0.35, 0.12);
-        float e = 0.15;
-        float n0 = cc_fbm(q);
-        g += vec2(cc_fbm(q + vec2(e, 0.0)) - n0, cc_fbm(q + vec2(0.0, e)) - n0) / e * 0.18;
+        float e = 0.12;
+        float n0 = cc_vnoise(q) + 0.5 * cc_vnoise(q * 2.1 + 5.0);
+        float nx = cc_vnoise(q + vec2(e, 0.0)) + 0.5 * cc_vnoise((q + vec2(e, 0.0)) * 2.1 + 5.0);
+        float nz = cc_vnoise(q + vec2(0.0, e)) + 0.5 * cc_vnoise((q + vec2(0.0, e)) * 2.1 + 5.0);
+        g += vec2(nx - n0, nz - n0) / e * 0.12;
         return g;
       }
 
@@ -128,14 +131,14 @@ export function createWater(
         col += vec3(0.6, 0.7, 1.0) * pow(max(dot(n, hm), 0.0), 300.0) * 6.0 * uMoon;
 
         // Shore foam: lapping bands that run up the beach plus noisy edge foam.
-        float fn = cc_fbm(xz * 0.35 + vec2(t * 0.05, -t * 0.03));
+        float fn = texture2D(uNoise, (xz * 0.35 + vec2(t * 0.05, -t * 0.03)) / 9.0 + 0.5).g;
         float band = sin(depth * 6.0 - t * 1.6 + fn * 5.0) * 0.5 + 0.5;
         float shore = 1.0 - smoothstep(0.0, 0.55, depth);
         float foam = smoothstep(0.55, 0.9, band) * (1.0 - smoothstep(0.1, 1.1, depth)) * 0.85;
         foam = max(foam, smoothstep(0.35, 0.75, fn) * shore);
         foam = max(foam, shore * 0.55);
         // Whitecaps far out, sparse.
-        foam += smoothstep(0.8, 0.95, cc_fbm(xz * 0.08 + t * 0.03)) * smoothstep(8.0, 20.0, depth) * 0.25;
+        foam += smoothstep(0.78, 0.92, texture2D(uNoise, (xz * 0.08 + t * 0.03) / 3.0).r) * smoothstep(8.0, 20.0, depth) * 0.25;
         col = mix(col, uFoam * (0.6 + 0.4 * uSunLight), clamp(foam, 0.0, 1.0));
 
         // Lighthouse beam on the water: a bright sweep along its heading plus a halo at the base.
