@@ -204,5 +204,5 @@ Audio, `public/audio/` (OGG + MP3): `music-title`, `music-town`, `music-combat`,
 `music-ending`, `sfx-*` (click, hover, hit, crit, heal, cast, levelup, quest-accept,
 quest-complete, footstep-sand, footstep-stone, servo-whir, beacon, boss-roar).
 
-3D, `public/models/`: `crab/jumper.glb` (base robot), `gear/<race>-*.glb`, `weapons/*.glb`,
+3D, `public/models/`: `crab/jumper.glb` (base robot), `crab/jumper-lod.glb` (its far LOD, `tools/build_crab_lod.mjs`), `gear/<race>-*.glb`, `weapons/*.glb`,
 `world/*.glb`. Motions in `public/motions/`. Robot Mode runtime in `public/robot/`.

@@ -201,6 +201,8 @@ interface Bubble {
   inner: HTMLElement;
   unit: Unit;
   until: number;
+  /** Measured height in px (0 = measure on the next update). */
+  h: number;
 }
 
 export class Bubbles {
@@ -219,10 +221,11 @@ export class Bubbles {
       const inner = h('div');
       const el = h('div', { class: 'bubble' }, inner);
       this.el.append(el);
-      b = { el, inner, unit, until: 0 };
+      b = { el, inner, unit, until: 0, h: 0 };
       this.list.push(b);
     }
     b.inner.textContent = text;
+    b.h = 0;
     b.inner.style.animation = 'none';
     void b.inner.offsetWidth;
     b.inner.style.animation = '';
@@ -236,8 +239,11 @@ export class Bubbles {
     this.list = [];
   }
 
-  update(g: Game): void {
+  /** `topLimit`: no bubble rises above this screen y (the boss frame, the top of the screen). */
+  update(g: Game, topLimit = 96): void {
     const cam = g.camera;
+    // Measure new bubbles first (reads), then place every bubble (writes).
+    for (const b of this.list) if (!b.h && b.el.style.display !== 'none') b.h = b.inner.offsetHeight;
     for (let i = this.list.length - 1; i >= 0; i--) {
       const b = this.list[i];
       if (g.time > b.until || b.unit.hidden || !this.enabled) {
@@ -253,7 +259,9 @@ export class Bubbles {
       }
       b.el.style.display = '';
       const lift = b.unit.kind === 'npc' ? 58 : 34;
-      b.el.style.transform = `translate3d(${scr.x.toFixed(1)}px, ${(scr.y - lift).toFixed(1)}px, 0)`;
+      // A giant (Corrodius) has his head above the frame: keep his yells on screen, under the HUD.
+      const y = Math.max(scr.y - lift, topLimit + (b.h || 48) + 10);
+      b.el.style.transform = `translate3d(${scr.x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
     }
   }
 }

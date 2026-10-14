@@ -1,5 +1,5 @@
 // App shell: owns the engine, input, audio and UI root, and switches between screens.
-import { Engine, type Quality } from './core/engine';
+import { Engine, type QualitySetting } from './core/engine';
 import { Input } from './core/input';
 import { AudioManager } from './core/audio';
 import { initAssets } from './core/assets';
@@ -37,7 +37,9 @@ export class App {
   spec: CrabSpec | null = null;
 
   constructor(root: HTMLElement) {
-    const quality = (localStorageGet('cc.quality') as Quality) || 'high';
+    // 'auto' (the default) is the high tier with dynamic resolution; the player can pin a tier.
+    const q = localStorageGet('cc.quality');
+    const quality: QualitySetting = q === 'low' || q === 'high' || q === 'auto' ? q : 'auto';
     this.engine = new Engine(root, quality);
     initAssets(this.engine.renderer);
     this.ui = h('div', { class: 'cc-layer', id: 'cc-ui' });

@@ -56,13 +56,16 @@ export function partMaterial(cls: Exclude<PartClass, 'shell'>, variant = ''): TH
           clearcoatRoughness: 0.2,
         });
       case 'visor':
+        // Deep black glass: a crisp clearcoat highlight, but little sky in it, so the LED face
+        // keeps its contrast at game distance.
         return new THREE.MeshPhysicalMaterial({
-          color: 0x020203,
-          roughness: 0.12,
+          color: 0x010102,
+          roughness: 0.16,
           metalness: 0,
           clearcoat: 1,
-          clearcoatRoughness: 0.09,
-          specularIntensity: 0.8,
+          clearcoatRoughness: 0.08,
+          specularIntensity: 0.45,
+          envMapIntensity: 0.45,
         });
       case 'metal':
         return new THREE.MeshStandardMaterial({

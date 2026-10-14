@@ -13,9 +13,12 @@ export interface Fountain {
   radius: number;
 }
 
-/** The claw statue is painted Jumper red (matte enamel with a warm sheen so dusk light keeps it red). */
+/**
+ * The claw statue is painted Jumper red: matte enamel with a faint red sheen. (An orange sheen
+ * washed the sunlit side to coral; the TVC's lit red is about rgb(211, 60, 42).)
+ */
 export function bronzeMaterial(): THREE.MeshPhysicalMaterial {
-  return new THREE.MeshPhysicalMaterial({ color: '#a8121a', metalness: 0.0, roughness: 0.55, sheen: 0.3, sheenColor: '#ff6040', sheenRoughness: 0.6, envMapIntensity: 0.2 });
+  return new THREE.MeshPhysicalMaterial({ color: '#8c0c14', metalness: 0.0, roughness: 0.55, sheen: 0.15, sheenColor: '#ff2a18', sheenRoughness: 0.6, envMapIntensity: 0.2 });
 }
 
 export function buildFountain(

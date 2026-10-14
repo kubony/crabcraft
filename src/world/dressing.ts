@@ -77,7 +77,9 @@ export function buildDressing(
     return lp;
   };
   for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
+    // The post at 112.5 degrees stood a few steps in front of the first camera at the spawn and
+    // filled the left of the opening shot; it moves 15 degrees round the ring, out of that view.
+    const a = (i / 8) * Math.PI * 2 + Math.PI / 8 + (i === 2 ? THREE.MathUtils.degToRad(15) : 0);
     const x = Math.cos(a) * 13.6;
     const z = Math.sin(a) * 13.6;
     const lp = lamp(x, z, Math.atan2(-x, -z));

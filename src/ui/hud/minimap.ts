@@ -118,8 +118,15 @@ export class Minimap {
       c.fill();
       c.stroke();
       c.lineWidth = 3 * d;
-      c.strokeText(info!.label, x, y - 7 * d);
-      c.fillText(info!.label, x, y - 7 * d);
+      // Keep the whole label inside the round map: below the dot near the top edge, and slid
+      // sideways along the rim instead of cut off by it.
+      let ly = y - 7 * d;
+      if (ly - 10 * d < half - Math.sqrt(Math.max(0, (half - 8 * d) ** 2 - (x - half) ** 2))) ly = y + 14 * d;
+      const w = c.measureText(info!.label).width;
+      const chord = Math.sqrt(Math.max(0, (half - 10 * d) ** 2 - (ly - 4 * d - half) ** 2));
+      const lx = Math.min(Math.max(x, half - chord + w / 2), half + chord - w / 2);
+      c.strokeText(info!.label, lx, ly);
+      c.fillText(info!.label, lx, ly);
     }
     // Units
     for (const u of g.units) {

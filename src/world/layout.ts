@@ -169,7 +169,8 @@ export const LOTS: Lot[] = [
   { id: 'gate-n', kind: 'gatetower', x: 66, z: -6.5, yaw: -Math.PI / 2, sx: 2, sz: 2, floors: 2, style: 0, h: NaN },
   { id: 'gate-s', kind: 'gatetower', x: 66, z: 6.5, yaw: -Math.PI / 2, sx: 2, sz: 2, floors: 2, style: 0, h: NaN },
   { id: 'keeper', kind: 'cottage', x: 152, z: -128, yaw: faceTo(152, -128, 160, -116), sx: 2, sz: 3, floors: 1, style: 1, h: HEADLAND_H },
-  { id: 'hut', kind: 'hut', x: 104, z: 31, yaw: faceTo(104, 31, 116, 22), sx: 2, sz: 2, floors: 1, style: 0, h: NaN },
+  // The fisher's hut sits back on the dune grass, clear of the beach where the Scraplings are fought.
+  { id: 'hut', kind: 'hut', x: 95, z: 31, yaw: faceTo(95, 31, 114, 23), sx: 2, sz: 2, floors: 1, style: 0, h: NaN },
 ];
 
 export const GROVE = { x: -80, z: 50, r: 15, poolR: 5.5, h: 6.2 } as const;
@@ -199,7 +200,8 @@ export const POI_DEFS: Record<PoiId, PoiDef> = {
   chapel: { x: 0, z: -35, yaw: Math.PI, radius: 5 },
   tavern: { x: -1, z: 30, yaw: 0, radius: 5 },
   grove: { x: GROVE.x + 7, z: GROVE.z - 4, yaw: faceTo(GROVE.x + 7, GROVE.z - 4, GROVE.x, GROVE.z), radius: 9 },
-  shore: { x: 113, z: 30, yaw: Math.PI / 2, radius: 24 },
+  // Open sand south of the pier: the middle of the Scrapling hunt.
+  shore: { x: 115, z: 36, yaw: Math.PI / 2, radius: 24 },
   lighthouse: { x: 166, z: -119, yaw: faceTo(166, -119, LIGHTHOUSE.x, LIGHTHOUSE.z), radius: 6 },
   beacon: {
     x: LIGHTHOUSE.x + lhDir[0] * 3.5,

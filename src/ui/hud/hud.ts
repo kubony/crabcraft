@@ -9,6 +9,7 @@ import { ChatLog, Messages } from './messages';
 import { GameMenu } from './menu';
 import { Bubbles, FloatingText, Nameplates } from './plates';
 import { DialogueWindow, QuestLogPanel, QuestTracker } from './questui';
+import { ControlHints } from './hints';
 
 export class Hud {
   readonly root: HTMLElement;
@@ -28,6 +29,7 @@ export class Hud {
   readonly messages: Messages;
   readonly chat: ChatLog;
   readonly menu: GameMenu;
+  readonly hints: ControlHints;
   private dmgFlash: HTMLElement;
   private lowHp: HTMLElement;
   private letterTop: HTMLElement;
@@ -54,6 +56,7 @@ export class Hud {
     this.messages = new Messages();
     this.chat = new ChatLog();
     this.menu = new GameMenu(game);
+    this.hints = new ControlHints();
     this.dmgFlash = h('div', { class: 'dmg-flash hud-keep' });
     this.lowHp = h('div', { class: 'low-hp' });
     this.letterTop = h('div', { class: 'letterbox top hud-keep' });
@@ -79,6 +82,7 @@ export class Hud {
       this.prompt.el,
       this.actionBar.el,
       this.messages.el,
+      this.hints.el,
       this.debugEl,
       this.dialogue.el,
       this.questLog.el,
@@ -92,6 +96,11 @@ export class Hud {
 
   update(dt: number): void {
     const g = this.game;
+    // Layout reads before this frame's writes: where the boss frame ends, for the speech bubbles.
+    const bossOn = this.bossFrame.el.classList.contains('on');
+    const topLimit = bossOn ? this.bossFrame.el.getBoundingClientRect().bottom + 6 : 96;
+    this.root.classList.toggle('boss-on', bossOn);
+    this.hints.el.classList.toggle('muted', this.dialogue.isOpen || this.questLog.open || this.menu.open);
     this.playerFrame.update(g);
     this.targetFrame.update(g);
     this.bossFrame.update(g);
@@ -99,9 +108,10 @@ export class Hud {
     this.castBar.update();
     this.plates.update(g);
     this.floats.update(g, dt);
-    this.bubbles.update(g);
+    this.bubbles.update(g, topLimit);
     this.minimap.update(dt);
     this.dialogue.update(dt);
+    this.hints.update(dt);
     const p = g.player.unit;
     const low = p.alive && p.hp / p.maxHp < 0.3 && !g.cinematic;
     this.lowHp.style.opacity = low ? '1' : '0';

@@ -67,10 +67,27 @@ export class DebugTools {
 
   teleport(): void {
     const g = this.game;
-    const target = g.objectivePos();
+    let target = g.objectivePos();
     if (!target) return;
     const p = g.player.unit;
     const cur = g.quests.current();
+    // Hunting from far away: drop in next to the pack nearest the middle of the hunting ground.
+    const hunt = cur?.objective?.kind;
+    if (hunt === 'kill-scrapling' || hunt === 'kill-scavenger' || hunt === 'collect-cog') {
+      const area = g.world.pois[cur!.objective!.poi].position;
+      const kind = hunt === 'kill-scavenger' ? 'scavenger' : 'scrapling';
+      let best: THREE.Vector3 | null = null;
+      let bestD = Infinity;
+      for (const e of g.enemies) {
+        if (e.kind !== kind || e.isAdd || !e.unit.alive || e.unit.hidden) continue;
+        const d = Math.hypot(e.unit.pos.x - area.x, e.unit.pos.z - area.z);
+        if (d < bestD) {
+          bestD = d;
+          best = e.unit.pos;
+        }
+      }
+      if (best && target.distanceTo(area) < 0.01) target = best;
+    }
     let back = 3.2;
     if (cur?.objective?.kind === 'boss') back = Math.min(4.5, g.world.pois.bossArena.radius * 0.6);
     // The beacon spot is the walkable gallery tile itself; stepping back could drop us off the tower.
@@ -110,6 +127,8 @@ export class DebugTools {
       loaded: g.loaded,
       time: g.time,
       fps: g.engine.fps,
+      pixelRatio: g.engine.pixelRatio,
+      gpuMs: g.engine.gpuMs,
       drawCalls: g.engine.drawCalls,
       quests: { ...g.quests.status },
       current: cur ? { quest: cur.quest, step: cur.step, label: cur.label, title: QUESTS[cur.quest].title } : null,
@@ -133,7 +152,9 @@ export class DebugTools {
     const g = this.game;
     const s = this.state();
     g.hud.debugEl.classList.toggle('god', g.god);
-    g.hud.debugEl.textContent = `${g.engine.fps.toFixed(0)} fps  ${g.engine.drawCalls} calls\ncrabs ${s.crabs}  particles ${s.particles}${g.god ? '\nGOD MODE' : ''}\nF8 god  F9 objective  F10 teleport`;
+    const e = g.engine;
+    const gpu = e.gpuMs >= 0 ? `  gpu ${e.gpuMs.toFixed(1)} ms` : '';
+    g.hud.debugEl.textContent = `${e.fps.toFixed(0)} fps  ${e.drawCalls} calls\nres ${e.pixelRatio}x ${e.setting}${gpu}\ncrabs ${s.crabs}  particles ${s.particles}${g.god ? '\nGOD MODE' : ''}\nF8 god  F9 objective  F10 teleport`;
   }
 
   dispose(): void {
