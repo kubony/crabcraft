@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { ToneMappingMode } from 'postprocessing';
 import { Engine, type ViewOptions } from '../core/engine';
+import { capture } from '../capture/clock';
 import { initAssets } from '../core/assets';
 import { JOINT_NAMES, type ClassId, type CrabSpec, type RaceId, type Sex } from '../crab/types';
 import { CLASS_ORDER } from '../data/classes';
@@ -568,6 +569,8 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
       }
     },
   };
+  // Capture mode (dev only): the trailer script frames its own shots and shows or hides the HUD.
+  if (capture) (window as unknown as { __robotMode: unknown }).__robotMode = { handle, orbit, hud, layer, engine, client };
   return handle;
 }
 

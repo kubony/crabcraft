@@ -17,6 +17,10 @@ let sim: RobotSim | null = null;
 let speed = 1;
 let paused = false;
 let stopped = false;
+/** Capture mode (dev only): the page steps the sim in lockstep with its frames. */
+let capture = false;
+/** The loop iteration in flight, so an `advance` never ticks the sim at the same time. */
+let inFlight: Promise<void> = Promise.resolve();
 
 self.onmessage = (e: MessageEvent<ToWorker>) => {
   const m = e.data;
@@ -46,6 +50,16 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
     case 'pause':
       paused = m.paused;
       rebase();
+      break;
+    case 'capture':
+      capture = m.on;
+      if (!capture) {
+        rebase();
+        void loop();
+      }
+      break;
+    case 'advance':
+      void advanceTo(m.to, m.now, m.id);
       break;
     case 'stop':
       stopped = true;
@@ -352,9 +366,13 @@ function rebase(): void {
   simAnchor = sim ? sim.simTime : 0;
 }
 
-async function loop(): Promise<void> {
-  if (stopped || !sim) return;
-  const s = sim;
+function loop(): Promise<void> {
+  if (stopped || !sim || capture) return Promise.resolve();
+  inFlight = runLoop(sim);
+  return inFlight;
+}
+
+async function runLoop(s: RobotSim): Promise<void> {
   const budgetEnd = performance.now() + 10;
   if (!paused) {
     const targetSim = simAnchor + ((performance.now() - realAnchor) / 1000) * speed;
@@ -369,12 +387,7 @@ async function loop(): Promise<void> {
         rebase();
         break;
       }
-      ticksTotal++;
-      if (s.mode !== lastMode) {
-        lastMode = s.mode;
-        motionStart = null;
-      }
-      if (s.runningPolicy && !motionStart && s.contracts[s.mode]?.reference) motionStart = { mode: s.mode, at: s.simTime };
+      noteTick(s);
     }
     // More than 100 ms behind: the machine cannot keep up at this speed. Drop the debt rather
     // than spiral; the ratio below shows it as slow motion.
@@ -391,6 +404,38 @@ async function loop(): Promise<void> {
   }
   const ahead = (s.simTime - (simAnchor + ((performance.now() - realAnchor) / 1000) * speed)) * 1000 / speed;
   setTimeout(loop, paused ? 30 : Math.max(0, Math.min(8, ahead)));
+}
+
+function noteTick(s: RobotSim): void {
+  ticksTotal++;
+  if (s.mode !== lastMode) {
+    lastMode = s.mode;
+    motionStart = null;
+  }
+  if (s.runningPolicy && !motionStart && s.contracts[s.mode]?.reference) motionStart = { mode: s.mode, at: s.simTime };
+}
+
+/** Capture mode: tick to `to` sim seconds, then post the frame. `now` (the page's clock) keeps
+ * the sim/real ratio honest while frames take longer than real time to make. */
+async function advanceTo(to: number, now: number, id: number): Promise<void> {
+  await inFlight;
+  const s = sim;
+  if (s && !stopped) {
+    while (s.simTime + TICK_S * 0.5 < to) {
+      try {
+        await s.tick();
+      } catch (err) {
+        post({ type: 'error', message: err instanceof Error ? err.message : String(err) });
+        s.reset();
+        break;
+      }
+      noteTick(s);
+    }
+    ratioWindow.push({ real: now, sim: s.simTime, ticks: ticksTotal });
+    while (ratioWindow.length > 2 && ratioWindow[0].real < now - 1000) ratioWindow.shift();
+    postFrame(s);
+  }
+  post({ type: 'advanced', id, simTime: s?.simTime ?? 0 });
 }
 
 function postFrame(s: RobotSim): void {

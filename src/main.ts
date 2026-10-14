@@ -1,3 +1,5 @@
+// Capture mode first (dev server with ?capture only): it must own the clock before anything reads it.
+import './capture/clock';
 import './ui/kit.css';
 import { App } from './app';
 
