@@ -20,6 +20,7 @@ engine.setView(scene, cam);
 const world = await createWorld({ renderer: engine.renderer, scene, quality: 'high' });
 const crab = await createCrab({ race: 'human', sex: 'male', classId: 'warrior', shell: 0, crest: 0, led: 0, name: 'Test' });
 scene.add(crab.root);
+const sp = world.pois.spawn.position; crab.root.position.set(sp.x, world.heightAt(sp.x, sp.z), sp.z);
 const motion = createMotionController(crab);
 const input = new Input(engine.canvas);
 const follow = new FollowCamera(cam, { raycast: (a, b) => world.raycastSolid(a, b) });
@@ -30,6 +31,7 @@ engine.onFrame(({ dt, elapsed }) => {
   motion.setLocomotion(s * 4, f * 4, 0);
   crab.root.position.x += (Math.sin(yaw) * f + Math.cos(yaw) * s) * 4 * dt;
   crab.root.position.z += (Math.cos(yaw) * f - Math.sin(yaw) * s) * 4 * dt;
+  crab.root.position.y = world.heightAt(crab.root.position.x, crab.root.position.z);
   motion.update(dt); crab.update(dt);
   follow.update(dt, input, crab.root.position);
   world.update(dt, elapsed, cam);
