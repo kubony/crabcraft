@@ -237,7 +237,7 @@ export class Engine {
     this.bloom.scale = this.bloomScale();
     effects.push(this.bloom);
     if (opts.toneMapping !== undefined) effects.push(new ToneMappingEffect({ mode: opts.toneMapping }));
-    else effects.push(new AgxLookEffect(opts.agxLook?.saturation ?? 1.32, opts.agxLook?.power ?? 1.06));
+    else effects.push(new AgxLookEffect(opts.agxLook?.saturation ?? 1.22, opts.agxLook?.power ?? 1.06));
     // Grading runs on display values after tone mapping; before it, HDR highlights invert.
     if (opts.saturation !== undefined) effects.push(new HueSaturationEffect({ saturation: opts.saturation }));
     if (opts.contrast !== undefined) effects.push(new BrightnessContrastEffect({ contrast: opts.contrast }));
