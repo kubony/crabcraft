@@ -358,7 +358,18 @@ export class Game {
     });
     this.loaded = true;
     this.hideLoading();
-    this.hud.root.style.visibility = '';
+    // The HUD fades in once the loading painting has mostly gone, instead of showing through it.
+    const hudRoot = this.hud.root;
+    hudRoot.style.opacity = '0';
+    hudRoot.style.visibility = '';
+    setTimeout(() => {
+      hudRoot.style.transition = 'opacity 0.8s ease';
+      hudRoot.style.opacity = '1';
+      setTimeout(() => {
+        hudRoot.style.transition = '';
+        hudRoot.style.opacity = '';
+      }, 900);
+    }, 700);
     this.intro();
   }
 
@@ -394,11 +405,17 @@ export class Game {
     const img = `art/loading-${1 + Math.floor(Math.random() * 2)}.webp`;
     const el = h(
       'div',
-      { class: 'loading', style: `background-image:url("${art(img)}")` },
-      h('div', { class: 'ld-title cc-title' }, 'Clawhaven'),
-      h('div', { class: 'ld-tip' }, tip),
-      h('div', { class: 'ld-bar' }, h('i')),
-      h('div', { class: 'ld-label' }, 'Loading'),
+      { class: 'loading' },
+      h('div', { class: 'ld-art', style: `background-image:url("${art(img)}")` }),
+      h('div', { class: 'ld-shade' }),
+      h('div', { class: 'ld-zone' }, h('div', { class: 'ld-title cc-title' }, 'Clawhaven'), h('div', { class: 'ld-sub' }, 'The Tidelands  |  Harbour town of six peoples')),
+      h(
+        'div',
+        { class: 'ld-foot' },
+        h('div', { class: 'ld-tip' }, h('span', { class: 'ld-tip-k' }, 'Tip'), tip),
+        h('div', { class: 'ld-bar' }, h('i')),
+        h('div', { class: 'ld-label' }, 'Loading'),
+      ),
     );
     const probe = new Image();
     probe.onerror = () => el.classList.add('fallback');
@@ -432,11 +449,13 @@ export class Game {
     this.hud.chat.system('Captain Brinebeard by the fountain has work for you. Walk up to him and press F.');
     this.hud.tracker.update(this.quests);
     const brine = this.npcById('brinebeard');
+    // After the zone banner (4.3 s) has faded, so the greeting bubble does not sit on top of it.
     setTimeout(() => {
       if (!this.alive || !brine) return;
       brine.unit.act('gesture_hello');
       this.say(brine.unit, 'Ahoy! Over here, fresh shell!');
-    }, 2200);
+    }, 4600);
+    setTimeout(() => this.alive && this.hud.hints.start(), 900);
     this.updateMusic(true);
   }
 
@@ -594,6 +613,14 @@ export class Game {
       hud.messages.info('Press R again to open Robot Mode (your quest progress will reset)');
     }
     if (this.controlsLocked) return;
+    const hints = hud.hints;
+    if (hints.active) {
+      if (inp.isDown('KeyW') || inp.isDown('KeyA') || inp.isDown('KeyS') || inp.isDown('KeyD')) hints.mark('move');
+      if ((inp.isButtonDown(0) || inp.isButtonDown(2)) && Math.abs(inp.dx) > 2) hints.mark('look');
+      if (inp.wasPressed('Tab')) hints.mark('target');
+      for (let i = 1; i <= 4; i++) if (inp.wasPressed(`Digit${i}`)) hints.mark('ability');
+      if (inp.wasPressed('KeyF')) hints.mark('interact');
+    }
     if (inp.wasPressed('Tab')) this.player.tabTarget();
     for (let i = 1; i <= 4; i++) if (inp.wasPressed(`Digit${i}`) || inp.wasPressed(`Numpad${i}`)) this.player.useAbility(i);
     if (inp.wasPressed('KeyF')) {
