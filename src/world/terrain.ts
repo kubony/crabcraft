@@ -532,8 +532,14 @@ if (ccCob > 0.003) {
 }
 if (ccRock > 0.003) {
   vec3 rockC = cc_tri(uRock, vCcWorld, nW, 0.16) * 0.8 + texture2D(uRock, vCcWorld.xz * 0.045 + vCcWorld.y * 0.03).rgb * 0.35;
-  float strata = 0.85 + 0.15 * sin(vCcWorld.y * 2.3 + n1 * 3.0);
-  rockC = mix(rockC, cc_srgb(vec3(0.58, 0.50, 0.44)) * strata, 0.4);
+  // Layered sandstone: warm bands, darker seams, vertical cracks.
+  float band = sin(vCcWorld.y * 1.35 + n1 * 2.5 + n3 * 4.0);
+  float strata = 0.78 + 0.22 * smoothstep(-0.6, 0.6, band);
+  float seam = smoothstep(0.92, 0.99, abs(sin(vCcWorld.y * 0.9 + n1 * 1.5)));
+  float crack = smoothstep(0.62, 0.7, texture2D(uNoise, vec2(dot(vCcWorld.xz, vec2(0.7, 0.7)) * 0.05, vCcWorld.y * 0.004)).b);
+  vec3 stone = mix(cc_srgb(vec3(0.66, 0.52, 0.40)), cc_srgb(vec3(0.55, 0.47, 0.42)), n2);
+  rockC = mix(rockC, stone * strata, 0.55);
+  rockC *= 1.0 - 0.35 * seam - 0.3 * crack;
   col = mix(col, rockC, ccRock);
 }
 // Underwater: darker and greener seabed.

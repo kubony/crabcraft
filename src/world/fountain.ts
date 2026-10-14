@@ -3,8 +3,6 @@
 import * as THREE from 'three';
 import type { Collision } from './collision';
 import { bezier, lathe, placed, tube } from './geom';
-import { addPatch } from './materials';
-import { GLSL_NOISE } from './noise';
 import { CC_SKY, CC_SKY_UNIFORMS, type SkyUniforms } from './sky';
 
 export interface Fountain {
@@ -15,35 +13,9 @@ export interface Fountain {
   radius: number;
 }
 
-/**
- * The claw statue wears Jumper's own finish: glossy red lacquer over a darker base, worn to warm
- * bronze on raised edges, with clearcoat highlights like the robot's shell.
- */
+/** The claw statue is painted Jumper red (matte enamel with a warm sheen so dusk light keeps it red). */
 export function bronzeMaterial(): THREE.MeshPhysicalMaterial {
-  const m = new THREE.MeshPhysicalMaterial({ color: '#ffffff', metalness: 0.1, roughness: 0.5, clearcoat: 0.35, clearcoatRoughness: 0.4, envMapIntensity: 0.45 });
-  addPatch(m, 'claw-lacquer', (shader) => {
-    shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vBW;\nvarying vec3 vBN;')
-      .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvBW = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvBN = normalize(mat3(modelMatrix) * objectNormal);');
-    shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', `#include <common>\nvarying vec3 vBW;\nvarying vec3 vBN;\n${GLSL_NOISE}\nfloat ccWear;`)
-      .replace(
-        '#include <map_fragment>',
-        `#include <map_fragment>
-        {
-          float n = cc_fbm(vBW.xy * 2.1 + vBW.z * 1.7);
-          // Wear shows on edges (normals near horizontal-sideways) and in noisy patches.
-          float edge = 1.0 - abs(vBN.z);
-          ccWear = smoothstep(0.62, 0.9, n * 0.7 + edge * 0.45);
-          vec3 lacquer = vec3(0.21, 0.008, 0.012);
-          vec3 bronze = vec3(0.55, 0.32, 0.12);
-          diffuseColor.rgb *= mix(lacquer, bronze, ccWear);
-        }`,
-      )
-      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(0.3, 0.5, ccWear);')
-      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = mix(0.05, 0.8, ccWear);');
-  });
-  return m;
+  return new THREE.MeshPhysicalMaterial({ color: '#a8121a', metalness: 0.0, roughness: 0.55, sheen: 0.3, sheenColor: '#ff6040', sheenRoughness: 0.6, envMapIntensity: 0.2 });
 }
 
 export function buildFountain(
