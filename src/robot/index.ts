@@ -288,6 +288,7 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
   let snapped = false;
   const fwd = new THREE.Vector3();
   const up = new THREE.Vector3();
+  const focusAt = new THREE.Vector3();
 
   const toState = (f: FrameMsg): RobotState => {
     const q = new Float32Array(JOINT_NAMES.length);
@@ -356,7 +357,10 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
     arena.update(allBodies, f.poses.subarray(0), basePos, camera);
     // Toys follow the robot bodies in the pose array.
     orbit.update(dt, basePos, yaw, speed);
-    engine.setFocus(orbit.focus, 0.22);
+    // Focus on the robot itself, not on the camera's eased target: walking at 0.75 m/s that
+    // target trails the body by about 15 cm, past the 22 cm focus range, and blurs the robot.
+    focusAt.set(basePos.x, basePos.y * 0.6 + 0.02, basePos.z);
+    engine.setFocus(camera.position.distanceTo(focusAt), 0.22);
     up.set(0, 1, 0).applyQuaternion(baseQuat);
     hud?.update(f, { speed, height: basePos.y, tilt: THREE.MathUtils.radToDeg(Math.acos(Math.min(1, up.y))) }, dt);
     for (const fn of stateListeners) fn(state);
