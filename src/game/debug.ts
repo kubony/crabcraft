@@ -67,10 +67,27 @@ export class DebugTools {
 
   teleport(): void {
     const g = this.game;
-    const target = g.objectivePos();
+    let target = g.objectivePos();
     if (!target) return;
     const p = g.player.unit;
     const cur = g.quests.current();
+    // Hunting from far away: drop in next to the pack nearest the middle of the hunting ground.
+    const hunt = cur?.objective?.kind;
+    if (hunt === 'kill-scrapling' || hunt === 'kill-scavenger' || hunt === 'collect-cog') {
+      const area = g.world.pois[cur!.objective!.poi].position;
+      const kind = hunt === 'kill-scavenger' ? 'scavenger' : 'scrapling';
+      let best: THREE.Vector3 | null = null;
+      let bestD = Infinity;
+      for (const e of g.enemies) {
+        if (e.kind !== kind || e.isAdd || !e.unit.alive || e.unit.hidden) continue;
+        const d = Math.hypot(e.unit.pos.x - area.x, e.unit.pos.z - area.z);
+        if (d < bestD) {
+          bestD = d;
+          best = e.unit.pos;
+        }
+      }
+      if (best && target.distanceTo(area) < 0.01) target = best;
+    }
     let back = 3.2;
     if (cur?.objective?.kind === 'boss') back = Math.min(4.5, g.world.pois.bossArena.radius * 0.6);
     // The beacon spot is the walkable gallery tile itself; stepping back could drop us off the tower.
