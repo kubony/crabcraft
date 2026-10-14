@@ -157,6 +157,11 @@ export class Player {
     if (!moving && !turn && !g.follow.steering && t && t.alive && t !== u && (this.cast || now - this.lastAttack < 1.6)) {
       u.setYaw(turnToward(u.yaw, yawTo(u.pos.x, u.pos.z, t.pos.x, t.pos.z), 9, dt));
     }
+    // Turn to the crab you are talking to, so the dialogue shot looks over your shoulder at it.
+    const talk = g.hud.dialogue.unit;
+    if (talk && !moving && !turn && !g.follow.steering && !stunned && !this.dash) {
+      u.setYaw(turnToward(u.yaw, yawTo(u.pos.x, u.pos.z, talk.pos.x, talk.pos.z), 4.5, dt));
+    }
 
     // Jump
     if (free && inp.wasPressed('Space') && this.jumpT <= 0 && !stunned && !this.dash) {

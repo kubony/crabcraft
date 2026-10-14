@@ -52,6 +52,8 @@ export class EndingSequence {
     g.audio.playMusic('music-ending', 2.5);
     await g.app.blackout(true, 1100);
     if (!g.alive) return;
+    // Under the black: drop any dialogue shot and its long lens before the ending camera takes over.
+    g.follow.cut();
 
     g.world.setMood(2);
     g.world.setBeaconLit(true);
