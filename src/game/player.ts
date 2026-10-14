@@ -222,11 +222,11 @@ export class Player {
     }
 
     u.feedLocomotion(dt);
-    this.updateCombat(dt);
+    this.updateCombat();
     this.updateResources(dt);
   }
 
-  private updateCombat(dt: number): void {
+  private updateCombat(): void {
     const g = this.game;
     const u = this.unit;
     const now = g.time;
@@ -305,7 +305,6 @@ export class Player {
         });
       }
     }
-    void dt;
   }
 
   private updateResources(dt: number): void {
@@ -378,14 +377,13 @@ export class Player {
   private checkReach(ab: AbilityDef, t: Unit): boolean {
     const u = this.unit;
     const d = u.distTo(t) - t.radius;
-    if (isMeleeAbility(ab)) {
-      if (u.gapTo(t) > MELEE_GAP + 0.3) return this.error('Out of range.'), false;
-      return true;
-    }
-    if (d > ab.range) return this.error('Out of range.'), false;
-    if (ab.id === 'sideways-charge' && u.gapTo(t) < 2) return this.error('Target too close.'), false;
-    if (!this.lineOfSight(t)) return this.error('Target not in line of sight.'), false;
-    return true;
+    let err = '';
+    if (isMeleeAbility(ab)) err = u.gapTo(t) > MELEE_GAP + 0.3 ? 'Out of range.' : '';
+    else if (d > ab.range) err = 'Out of range.';
+    else if (ab.id === 'sideways-charge' && u.gapTo(t) < 2) err = 'Target too close.';
+    else if (!this.lineOfSight(t)) err = 'Target not in line of sight.';
+    if (err) this.error(err);
+    return !err;
   }
 
   lineOfSight(t: Unit): boolean {

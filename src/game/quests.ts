@@ -432,7 +432,8 @@ export class QuestLog {
       }
     }
     for (const id of QUEST_ORDER) {
-      if (this.status[id] === 'available') {
+      // The Rust Tide is pushed to the player when the beacon catches; nobody hands it out.
+      if (this.status[id] === 'available' && id !== 'q4') {
         const giver = QUESTS[id].giver;
         return { quest: id, step: 'accept', poi: `npc:${giver}` as PoiId, label: `Speak with ${npcName(giver)}` };
       }

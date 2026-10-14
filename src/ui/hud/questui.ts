@@ -167,6 +167,12 @@ export class DialogueWindow {
     return this.shown < this.total;
   }
 
+  /** The highlighted button (Accept, Complete Quest), or the only one (Goodbye). */
+  choosePrimary(): void {
+    const b = (this.buttonsEl.querySelector('.cc-btn:not(.ghost)') ?? this.buttonsEl.querySelector('.cc-btn')) as HTMLButtonElement | null;
+    b?.click();
+  }
+
   skipTyping(): void {
     this.shown = this.total;
     this.render();

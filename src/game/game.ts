@@ -46,7 +46,7 @@ const createCrabX = createCrab as unknown as CreateCrabWithExtras;
 export const DEFAULT_SPEC: CrabSpec = { race: 'human', sex: 'male', classId: 'warrior', shell: 0, crest: 0, led: 0, name: 'Pinchwick' };
 
 const CULL_DIST = 80;
-const SHADOW_DIST = 30;
+const SHADOW_DIST = 18;
 
 const ZONES: { name: string; anchors: PoiId[] }[] = [
   { name: 'Clawhaven', anchors: ['spawn', 'forge', 'chapel', 'tavern'] },
@@ -197,7 +197,8 @@ export class Game {
     const town = this.world.spawns.find((s) => s.id === 'townsfolk');
     const rnd = mulberry32(1337);
     const folkSpecs: CrabSpec[] = [];
-    const races: RaceId[] = [...RACE_ORDER, ...RACE_ORDER.slice(0, 3)];
+    // One of every race plus two more; with the named NPCs the square is busy without costing frames.
+    const races: RaceId[] = [...RACE_ORDER, 'nightelf', 'undead'];
     races.forEach((race, i) => {
       const rd = RACES[race];
       folkSpecs.push({
@@ -333,7 +334,7 @@ export class Game {
 
     // Compile every shader before the first frame so nothing hitches mid-fight.
     progress(0.96, 'Lighting the lamps');
-    const warm = this.vfx.fx.prewarm();
+    this.vfx.fx.prewarm();
     this.camera.position.set(pu.pos.x, pu.pos.y + 3, pu.pos.z - 6);
     this.camera.lookAt(pu.pos);
     try {
@@ -341,7 +342,6 @@ export class Game {
     } catch {
       /* compileAsync is an optimisation only */
     }
-    void warm;
     if (!this.alive) return;
 
     if (new URLSearchParams(location.search).get('debug') === '1') this.debug = new DebugTools(this);
@@ -588,9 +588,10 @@ export class Game {
     if (inp.wasPressed('Tab')) this.player.tabTarget();
     for (let i = 1; i <= 4; i++) if (inp.wasPressed(`Digit${i}`) || inp.wasPressed(`Numpad${i}`)) this.player.useAbility(i);
     if (inp.wasPressed('KeyF')) {
-      if (hud.dialogue.isOpen && hud.dialogue.typing) {
-        hud.dialogue.skipTyping();
-      } else this.interact();
+      // F also drives the dialogue: finish the text, then take the main choice.
+      if (hud.dialogue.isOpen && hud.dialogue.typing) hud.dialogue.skipTyping();
+      else if (hud.dialogue.isOpen) hud.dialogue.choosePrimary();
+      else this.interact();
     }
     for (const b of [0, 2] as const) {
       if (inp.wasClicked(b)) {
@@ -853,7 +854,6 @@ export class Game {
   }
 
   private onBeaconQuestDone(): void {
-    const silver = this.npcById('silvermoon');
     this.hud.chat.whisper('Lady Silvermoon', 'The light returns! Look to the bay... the Iron Wreck is waking.');
     setTimeout(() => {
       if (!this.alive) return;
@@ -866,7 +866,6 @@ export class Game {
       this.vfx.mendGlow(this.player.unit);
       this.hud.chat.system('Lady Silvermoon blesses you with moonwater. Your shell slowly mends while you fight.');
       this.quests.accept('q4');
-      void silver;
     }, 2600);
   }
 
@@ -967,7 +966,6 @@ export class Game {
   }
 
   private playerDied(): void {
-    const p = this.player.unit;
     this.deadUntil = this.time + 3.6;
     this.player.interruptCast();
     this.player.cancelChannel();
@@ -978,7 +976,6 @@ export class Game {
     this.hud.chat.system('You have died.');
     if (this.boss.engaged) this.say(this.boss.unit, 'Another shell for the scrap heap!', true);
     for (const e of this.enemies) e.evade();
-    void p;
   }
 
   private updateDeath(): void {

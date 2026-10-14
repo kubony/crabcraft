@@ -15,7 +15,7 @@ const CONTROLS: [string, string][] = [
   ['Space', 'Jump'],
   ['Tab / Click', 'Target an enemy'],
   ['1 2 3 4', 'Abilities'],
-  ['F', 'Talk, interact (hold at the beacon)'],
+  ['F', 'Talk, continue a conversation, hold at the beacon'],
   ['L', 'Quest log'],
   ['M', 'Music on / off'],
   ['Enter', 'Chat bubbles on / off'],
