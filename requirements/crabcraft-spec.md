@@ -1,10 +1,10 @@
 # World of Crabcraft 요구사항
 
-정리일: 2026-10-13 (KST), /clarify 세션. 위키 기록: https://wiki.repact.ai.kr/doc/2026-10-13-world-of-crabcraft-M9rrnwveeg
+정리일: 2026-10-13 (KST), /clarify 세션.
 
 ## 원래 요청
 
-> oldcraft를 crabcraft로 만들거야. world of crabcraft야. crab-robot-challenge의 캐릭터를 이용해서 oldcraft의 등장인물을 모두 crab으로 바꾸는거야. 이건 crab robot challenge에 출품할거야. 1등, 아니 영원히 1등할 수 있는 퀄리티로 달리는걸 목표로해. 사람도 크랩, 드워프도 크랩, 언데드도 크랩 다 크랩인데 그 특색을 살리는 디자인을 적용해줘. 디자인은 /Users/inkeun/Downloads/jumper-tvc-3-web.mp4를 참조하고, 크랩 애셋은 공개된걸 사용해줘.
+> oldcraft를 crabcraft로 만들거야. world of crabcraft야. crab-robot-challenge의 캐릭터를 이용해서 oldcraft의 등장인물을 모두 crab으로 바꾸는거야. 이건 crab robot challenge에 출품할거야. 1등, 아니 영원히 1등할 수 있는 퀄리티로 달리는걸 목표로해. 사람도 크랩, 드워프도 크랩, 언데드도 크랩 다 크랩인데 그 특색을 살리는 디자인을 적용해줘. 디자인은 jumper-tvc-3-web.mp4를 참조하고, 크랩 애셋은 공개된걸 사용해줘.
 
 ## 목표
 
@@ -84,9 +84,9 @@
 
 ## 참고 경로
 
-- oldcraft 빌드: `/Users/inkeun/projects/oldcraft` (Unity Mono, Wine 실행, `evidence/character-creation.png`)
-- Jumper 원본: `/Users/inkeun/projects/crab-robot-challenge/.cache/jumper` (Apache-2.0)
+- World of OLDcraft: 제작자 Stefan3DAI 가 공유한 Unity(Mono) Windows 빌드. 화면 배치만 참고했다
+- Jumper 원본: https://github.com/KingKongRobotics/jumper (Apache-2.0)
   - visual STL: `assets/jumper/urdf/jumper/meshes/visual/`
   - MJCF: `assets/jumper/jumper.xml`
 - 외형과 장면 라이브러리: https://github.com/KingKongRobotics/jumper-design
-- 디자인 참조 영상: `/Users/inkeun/Downloads/jumper-tvc-3-web.mp4` (1920x1080, 30fps, 86.8초)
+- 디자인 참조 영상: Jumper TVC (1920x1080, 30fps, 86.8초). 레포에는 넣지 않았다

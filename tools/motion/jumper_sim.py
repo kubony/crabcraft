@@ -21,8 +21,9 @@ Physics is reproduced from the upstream training configuration rather than copie
   curve (exp decay with cutoff) and the 300 ms thermal peak budget
   (`tasks/jumper/common/actuator.py`), armature/damping/frictionloss from the MJCF.
 
-Run with the read-only interpreter that has mujoco + onnxruntime:
-    /Users/inkeun/projects/crab-robot-challenge/.venv/bin/python -I tools/motion/<script>.py
+Run with a Python that has mujoco 3.11 + onnxruntime, pointing JUMPER_ROOT at a checkout of
+https://github.com/KingKongRobotics/jumper:
+    JUMPER_ROOT=/path/to/jumper python -I tools/motion/<script>.py
 """
 
 from __future__ import annotations
@@ -40,7 +41,7 @@ from pathlib import Path
 import mujoco
 import numpy as np
 
-JUMPER = Path(os.environ.get("JUMPER_ROOT", "/Users/inkeun/projects/crab-robot-challenge/.cache/jumper"))
+JUMPER = Path(os.environ.get("JUMPER_ROOT", "jumper"))
 BUNDLE = JUMPER / "out" / "bundle_example" / "jumper"
 ASSETS = JUMPER / "assets" / "jumper"
 JUMPER_XML = ASSETS / "jumper.xml"

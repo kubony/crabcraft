@@ -1,7 +1,7 @@
 # Contest entry: World of Crabcraft
 
 Ready-to-paste text for the Crab Robot Open-source Challenge 2026 (BE UNLIMITED) entry, in English and
-in Simplified Chinese. Replace `[repository URL]` with the public link before submitting.
+in Simplified Chinese.
 
 ## English
 
@@ -65,7 +65,7 @@ Choose Enter World to create a crab and play, or Robot Mode to drive the live ro
 Needs Node.js, pnpm and a desktop browser with WebGL2 (tested in Chrome on an Apple M4 Pro Mac).
 `pnpm build` produces a static site in `dist/` that any static host can serve.
 
-Source: [repository URL] (Apache-2.0)
+Source: https://github.com/kubony/crabcraft (Apache-2.0)
 
 ## 简体中文
 
@@ -103,4 +103,4 @@ pnpm dev        # 打开 http://localhost:5173
 
 选择 Enter World 创建螃蟹开始游戏，或选择 Robot Mode 操控实时运行的机器人（`/?screen=robot`）。需要 Node.js、pnpm 和支持 WebGL2 的桌面浏览器（在 Apple M4 Pro Mac 的 Chrome 上测试）。`pnpm build` 会在 `dist/` 生成静态站点，可以部署到任意静态托管服务。
 
-源代码：[repository URL]（Apache-2.0）
+源代码：https://github.com/kubony/crabcraft（Apache-2.0）
