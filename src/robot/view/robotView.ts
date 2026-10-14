@@ -10,8 +10,10 @@ import { MJ_TO_GAME, mjPosToGame, mjQuatToGame } from './frames';
 export interface RobotRenderFrame {
   bodies: readonly string[];
   poses: Float32Array;
-  /** 22 joint angles in JOINT_NAMES (wire) order. */
+  /** 22 joint angles in the bundle's wire order (named by `joints`), MuJoCo qpos convention. */
   q: Float32Array;
+  /** Joint name of each entry of `q` (the bundle's wire_joint_order). */
+  joints: readonly string[];
   mode: string;
   running: boolean;
   simTime: number;
@@ -20,6 +22,8 @@ export interface RobotRenderFrame {
 export interface RobotViewLayer {
   readonly object: THREE.Object3D;
   update(frame: RobotRenderFrame, dt: number): void;
+  /** The LED face's reaction to the current mode, for layers that have a face. */
+  setExpression?(e: FaceExpr): void;
   dispose(): void;
 }
 
@@ -244,6 +248,9 @@ export class StlRobotView implements RobotViewLayer {
   private mats: Mats;
   private tmpV = new THREE.Vector3();
   private tmpQ = new THREE.Quaternion();
+  private meshes: THREE.Mesh[] = [];
+  private xrayMeshes: THREE.Mesh[] | null = null;
+  private xrayMat: THREE.ShaderMaterial | null = null;
 
   private constructor(gltfScene: THREE.Object3D, rgba: Record<string, number[]>) {
     this.object.name = 'jumper-robot';
@@ -267,6 +274,7 @@ export class StlRobotView implements RobotViewLayer {
       node.add(mesh);
       this.object.add(node);
       this.nodes.set(body, node);
+      this.meshes.push(mesh);
       if (body === 'display_module_link') {
         faceHost = node;
         geo.computeBoundingBox();
@@ -287,6 +295,67 @@ export class StlRobotView implements RobotViewLayer {
   static async load(url: string, rgba: Record<string, number[]>): Promise<StlRobotView> {
     const gltf = await new GLTFLoader().loadAsync(url);
     return new StlRobotView(gltf.scene, rgba);
+  }
+
+  setExpression(e: FaceExpr): void {
+    this.face.set(e);
+  }
+
+  /**
+   * X-ray: the physics robot drawn over everything else on screen (depth test off) as a glowing
+   * rim-lit hologram, at `opacity` (0 hides it; the meshes are built on the first call either
+   * way, so they can be compiled ahead). Used to check that another layer follows the physics
+   * exactly, and as the flash when the appearance switches.
+   */
+  setXray(opacity: number): void {
+    if (!this.xrayMeshes) {
+      this.xrayMat = new THREE.ShaderMaterial({
+        name: 'jumper-xray',
+        uniforms: { uColor: { value: new THREE.Color(0.32, 1.0, 0.94) }, uOpacity: { value: 1 } },
+        vertexShader: /* glsl */ `
+          varying vec3 vN;
+          varying vec3 vV;
+          void main() {
+            vec4 mv = modelViewMatrix * vec4(position, 1.0);
+            vN = normalize(normalMatrix * normal);
+            vV = normalize(-mv.xyz);
+            gl_Position = projectionMatrix * mv;
+          }`,
+        fragmentShader: /* glsl */ `
+          uniform vec3 uColor;
+          uniform float uOpacity;
+          varying vec3 vN;
+          varying vec3 vV;
+          void main() {
+            float rim = 1.0 - abs(dot(normalize(vN), normalize(vV)));
+            float a = (0.07 + 0.93 * pow(rim, 2.6)) * uOpacity;
+            gl_FragColor = vec4(uColor * a, 1.0);
+          }`,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthTest: false,
+        depthWrite: false,
+        toneMapped: false,
+        fog: false,
+      });
+      this.xrayMeshes = this.meshes.map((m) => {
+        const g = new THREE.Mesh(m.geometry, this.xrayMat!);
+        g.renderOrder = 20;
+        g.name = 'xray';
+        g.castShadow = false;
+        g.receiveShadow = false;
+        m.parent!.add(g);
+        return g;
+      });
+    }
+    if (this.xrayMat) this.xrayMat.uniforms.uOpacity.value = opacity;
+    for (const g of this.xrayMeshes ?? []) g.visible = opacity > 0;
+  }
+
+  /** Shows or hides the painted surfaces and the face (the x-ray is separate). */
+  setSolid(on: boolean): void {
+    for (const m of this.meshes) m.visible = on;
+    this.face.mesh.visible = on;
   }
 
   update(f: RobotRenderFrame, dt: number): void {
@@ -312,6 +381,7 @@ export class StlRobotView implements RobotViewLayer {
       if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).geometry.dispose();
     });
     for (const m of Object.values(this.mats)) m.dispose();
+    this.xrayMat?.dispose();
     this.face.dispose();
   }
 }

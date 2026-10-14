@@ -12,8 +12,26 @@
       import '../src/ui/kit.css';
       import { startRobotMode } from '../src/robot/index.ts';
       const params = new URLSearchParams(location.search);
-      const robot = await startRobotMode(document.getElementById('app'), { hud: params.get('hud') !== '0' });
+      // ?race=orc&class=mage (&sex, &shell, &crest, &led) dresses the robot as that crab;
+      // ?look=bare|crab picks the first appearance; ?xray shows the physics robot over the crab.
+      const spec = params.has('race')
+        ? {
+            race: params.get('race'),
+            classId: params.get('class') ?? 'warrior',
+            sex: params.get('sex') ?? 'male',
+            shell: Number(params.get('shell') ?? 0),
+            crest: Number(params.get('crest') ?? 0),
+            led: Number(params.get('led') ?? 0),
+            name: params.get('name') ?? 'Harness',
+          }
+        : null;
+      const robot = await startRobotMode(document.getElementById('app'), {
+        hud: params.get('hud') !== '0',
+        spec,
+        appearance: params.get('look') ?? undefined,
+      });
       window.robot = robot;
+      if (params.has('xray')) robot.setXray(true);
       // Ready for a screenshot once the policy is running and a few frames are on screen.
       const off = robot.onState((s) => {
         if (s.runningPolicy && s.simTime > 1.5) {

@@ -6,18 +6,26 @@
 import * as THREE from 'three';
 import { ToneMappingMode } from 'postprocessing';
 import { Engine, type ViewOptions } from '../core/engine';
-import { JOINT_NAMES } from '../crab/types';
+import { initAssets } from '../core/assets';
+import { JOINT_NAMES, type ClassId, type CrabSpec, type RaceId, type Sex } from '../crab/types';
+import { CLASS_ORDER } from '../data/classes';
+import { RACES, RACE_ORDER } from '../data/races';
+import { randomName } from '../screens/create/names';
 import { SimClient } from './client';
-import { Hud } from './hud';
+import { Hud, type CrabPick } from './hud';
 import type { FrameMsg, FrameStats, ReadyInfo } from './protocol';
 import type { RobotPackage } from './sim/types';
+import { AppearanceLayer, type Appearance } from './view/appearance';
 import { Arena } from './view/arena';
+import { CrabRigView, type AlignmentSample } from './view/crabRigView';
 import { mjPosToGame, mjQuatToGame } from './view/frames';
 import { OrbitFollow } from './view/orbit';
 import { StlRobotView, type FaceExpr, type RobotViewLayer } from './view/robotView';
 
 export type { RobotViewLayer, RobotRenderFrame } from './view/robotView';
 export type { ReadyInfo, FrameStats } from './protocol';
+export type { Appearance } from './view/appearance';
+export type { AlignmentSample } from './view/crabRigView';
 
 /** Modes of the Jumper bundle. Others a future bundle adds still work by name. */
 export type RobotModeName =
@@ -39,6 +47,10 @@ export interface RobotModeOptions {
   keyboard?: boolean;
   /** Read a connected gamepad (default true). */
   gamepad?: boolean;
+  /** The player's crab (character creation). Robot Mode can wear it instead of the bare robot. */
+  spec?: CrabSpec | null;
+  /** First appearance (default: the player's crab when `spec` is set, else the bare robot). */
+  appearance?: Appearance;
 }
 
 /** The robot's state for one frame, in game axes (Y-up, the crab faces +Z, left +X). */
@@ -76,8 +88,17 @@ export interface RobotModeHandle {
   getStats(): FrameStats | null;
   /** Called on every rendered frame with the latest state. */
   onState(fn: (s: RobotState) => void): () => void;
-  /** Swap how the robot is drawn (raw meshes now, a stylised CrabRig later). */
+  /** Swap how the robot is drawn for a custom layer (setAppearance brings the built-in one back). */
   setViewLayer(layer: RobotViewLayer): void;
+  /** Bare robot or a geared crab, on the same live simulation (dresses the crab if needed). */
+  setAppearance(kind: Appearance): Promise<void>;
+  readonly appearance: Appearance;
+  /** Dresses the crab layer as `spec` (and shows it). */
+  wearCrab(spec: CrabSpec): Promise<void>;
+  /** X-ray: the physics robot drawn as a hologram over the crab. */
+  setXray(on: boolean): void;
+  /** Debug: how far the crab's links are from the physics bodies this frame (null when bare). */
+  measureAlignment(): AlignmentSample | null;
   stop(): void;
 }
 
@@ -88,6 +109,7 @@ const ROBOT_DIR_FROM_ASSETS = ['..', 'robot', ''].join('/');
 const KEY_ALIAS: Record<string, string> = { KeyQ: 'KeyJ', KeyE: 'KeyL' };
 
 const EXPRESSION: Record<string, FaceExpr> = {
+  locomotion: 'neutral',
   jump: 'focused',
   dance_crab: 'happy',
   dance_brazilian: 'happy',
@@ -112,6 +134,8 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
       : new URL(ROBOT_DIR_FROM_ASSETS, import.meta.url).href);
   const ownEngine = !opts.engine;
   const engine = opts.engine ?? new Engine(container, 'high');
+  // The crab layer loads its model and gear through the shared glTF loader.
+  initAssets(engine.renderer);
   const disposers: (() => void)[] = [];
   let slow = false;
   const toggleFollow = (): boolean => {
@@ -128,6 +152,12 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
       client.send({ type: 'speed', value: slow ? 0.25 : 1 });
       return slow;
     },
+    appearance: (kind) => void handle.setAppearance(kind),
+    pickCrab: (p) => void handle.wearCrab(pickSpec(p)),
+    toggleXray: () => {
+      handle.setXray(!layer.xrayOn);
+      return layer.xrayOn;
+    },
     back: opts.onBack,
   });
   if (ownEngine) engine.start();
@@ -139,9 +169,22 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
     if (!client.info) hud?.progress(p.loaded, p.total, p.label);
   };
 
+  // Appearance: the player's crab when there is one. Without one the bare robot starts, and the
+  // HUD offers a race and class picker (or a random crab) to dress it.
+  const ownSpec = opts.spec ?? null;
+  let crabSpec: CrabSpec | null = ownSpec;
+  let wanted: Appearance = opts.appearance ?? (ownSpec ? 'crab' : 'bare');
+  if (wanted === 'crab' && !crabSpec) crabSpec = randomSpec();
+  let crabLoading = false;
+  let crabTicket = 0;
+  // Starts with the robot's own download; a failure only costs the crab, never Robot Mode.
+  const firstCrab = wanted === 'crab' && crabSpec ? CrabRigView.create(crabSpec).catch((err: unknown) => err) : null;
+  crabLoading = !!firstCrab;
+
   let info: ReadyInfo;
   let pkg: RobotPackage;
   let robot: RobotViewLayer;
+  let layer: AppearanceLayer;
   let arena: Arena;
   try {
     pkg = (await (await fetch(new URL('jumper/robot-package.json', base))).json()) as RobotPackage;
@@ -153,7 +196,8 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
       arena.upgrade(base),
     ]);
     info = i;
-    robot = view;
+    layer = new AppearanceLayer(view);
+    robot = layer;
   } catch (err) {
     hud?.error(err instanceof Error ? err.message : String(err));
     client.stop();
@@ -168,6 +212,40 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
   scene.add(robot.object);
   const orbit = new OrbitFollow(engine.canvas, window.innerWidth / window.innerHeight);
   const camera = orbit.camera;
+
+  /** Shows a dressed crab once its shaders are built, so the switch never stalls a frame. */
+  const installCrab = async (view: CrabRigView, ticket: number): Promise<boolean> => {
+    try {
+      await engine.renderer.compileAsync(view.object, camera, scene);
+    } catch {
+      /* compiles on first draw instead */
+    }
+    if (ticket !== crabTicket || stopped) {
+      view.dispose();
+      return false;
+    }
+    layer.setCrab(view);
+    return true;
+  };
+  const appearanceState = () => ({
+    kind: wanted,
+    spec: crabSpec,
+    own: !!ownSpec && crabSpec === ownSpec,
+    loading: crabLoading,
+    xray: layer.xrayOn,
+  });
+  const syncHud = () => hud?.setAppearance(appearanceState());
+  /** The HUD picker (shown when there is no saved crab): a race, a class, or a random roll. */
+  const pickSpec = (p: CrabPick): CrabSpec => {
+    if (p.random) return randomSpec();
+    const cur = crabSpec && crabSpec !== ownSpec ? crabSpec : randomSpec();
+    if (p.race && p.race !== cur.race) {
+      // A new race shows that race's defaults: first paint, crest and LED colour.
+      return { ...cur, race: p.race, shell: 0, crest: 0, led: 0, name: randomName(p.race, cur.sex, cur.name), classId: p.classId ?? cur.classId };
+    }
+    return { ...cur, classId: p.classId ?? cur.classId };
+  };
+  let stopped = false;
   const view: ViewOptions = {
     bloom: { intensity: 0.85, threshold: 0.92, radius: 0.7 },
     dof: { focusDistance: 0.8, focusRange: 0.22, bokehScale: 5.5 },
@@ -178,7 +256,23 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
     // push saturated reds below zero and AgX's log turns those pixels into NaN (black holes).
   };
   engine.setView(scene, camera, view);
+  // The x-ray hologram's shader, built now so the first switch flash does not stall a frame.
+  void engine.renderer.compileAsync(layer.object, camera, scene).catch(() => undefined);
   hud?.ready(info);
+  syncHud();
+  if (firstCrab) {
+    const ticket = ++crabTicket;
+    void firstCrab.then(async (v) => {
+      if (v instanceof CrabRigView) {
+        if (await installCrab(v, ticket)) layer.show(wanted);
+      } else {
+        console.warn('Robot Mode: the crab could not be dressed, showing the bare robot', v);
+        if (ticket === crabTicket) wanted = 'bare';
+      }
+      if (ticket === crabTicket) crabLoading = false;
+      syncHud();
+    });
+  }
   client.onPolicy = (mode, ok, checked, mismatched) => hud?.policyReady(mode, ok, checked, mismatched);
   for (const [mode, p] of client.policies) hud?.policyReady(mode, p.ok, p.checked, p.mismatched);
   client.onFault = (message) => hud?.fault(message);
@@ -214,8 +308,12 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
 
   const allBodies = [...info.bodies, ...info.toys];
   let lastFrame: FrameMsg | null = null;
+  let lastExpr: FaceExpr | null = null;
   let safeSince: number | null = null;
   let lastSim = 0;
+  const renderFrame = (f: FrameMsg) => ({
+    bodies: info.bodies, poses: f.poses, q: f.q, joints: info.joints, mode: f.mode, running: f.running, simTime: f.simTime,
+  });
   const offFrame = engine.onFrame(({ dt }) => {
     const f = client.frame;
     if (!f) return;
@@ -249,8 +347,12 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
       lastSim = f.simTime;
       lastFrame = f;
     }
-    robot.update({ bodies: info.bodies, poses: f.poses, q: f.q, mode: f.mode, running: f.running, simTime: f.simTime }, dt);
-    if (robot instanceof StlRobotView) robot.face.set(f.running ? (EXPRESSION[f.mode] ?? 'neutral') : f.mode === 'safe' ? 'dead' : 'neutral');
+    const expr: FaceExpr = f.running ? (EXPRESSION[f.mode] ?? 'neutral') : f.mode === 'safe' ? 'dead' : 'neutral';
+    if (expr !== lastExpr) {
+      lastExpr = expr;
+      robot.setExpression?.(expr);
+    }
+    robot.update(renderFrame(f), dt);
     arena.update(allBodies, f.poses.subarray(0), basePos, camera);
     // Toys follow the robot bodies in the pose array.
     orbit.update(dt, basePos, yaw, speed);
@@ -264,6 +366,7 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
   // ---------- Input ----------
 
   const held = new Set<string>();
+  const bundleKeys = new Set<string>(Object.values(info.keyCodes));
   const bound = new Set<string>([...Object.values(info.keyCodes), 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ...Object.keys(KEY_ALIAS)]);
   const typing = (e: Event) => {
     const t = e.target as HTMLElement | null;
@@ -274,6 +377,10 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
     if (down && !e.repeat) {
       if (e.code === 'KeyR' && !e.ctrlKey && !e.metaKey) return handle.reset();
       if (e.code === 'KeyC' && !e.ctrlKey && !e.metaKey) return void hud?.setFollow(toggleFollow());
+      // T: bare robot or your crab, unless a future bundle binds T itself.
+      if (e.code === 'KeyT' && !e.ctrlKey && !e.metaKey && !bundleKeys.has('KeyT')) {
+        return void handle.setAppearance(wanted === 'crab' ? 'bare' : 'crab');
+      }
     }
     const code = KEY_ALIAS[e.code] ?? e.code;
     orbit.poke();
@@ -390,17 +497,64 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
       stateListeners.add(fn);
       return () => stateListeners.delete(fn);
     },
-    setViewLayer(layer) {
+    setViewLayer(custom) {
       scene.remove(robot.object);
-      robot.dispose();
-      robot = layer;
+      if (robot !== layer) robot.dispose();
+      robot = custom;
+      lastExpr = null;
       scene.add(robot.object);
     },
+    async setAppearance(kind) {
+      if (robot !== layer) handle.setViewLayer(layer);
+      wanted = kind;
+      if (kind === 'bare') {
+        layer.show('bare');
+        syncHud();
+        return;
+      }
+      if (!crabSpec) crabSpec = randomSpec();
+      if (!layer.crab && !crabLoading) return handle.wearCrab(crabSpec);
+      layer.show('crab');
+      syncHud();
+    },
+    get appearance() {
+      return wanted;
+    },
+    async wearCrab(spec) {
+      if (robot !== layer) handle.setViewLayer(layer);
+      const ticket = ++crabTicket;
+      crabSpec = spec;
+      wanted = 'crab';
+      crabLoading = true;
+      syncHud();
+      try {
+        const v = await CrabRigView.create(spec);
+        if (await installCrab(v, ticket)) layer.show(wanted);
+      } catch (err) {
+        console.warn('Robot Mode: the crab could not be dressed', err);
+        if (ticket === crabTicket && !layer.crab) wanted = 'bare';
+      } finally {
+        if (ticket === crabTicket) crabLoading = false;
+        syncHud();
+      }
+    },
+    setXray(on) {
+      layer.setXray(on);
+      syncHud();
+    },
+    measureAlignment() {
+      const f = client.frame;
+      const c = layer.crab;
+      if (!f || !c || wanted !== 'crab') return null;
+      return c.measure(renderFrame(f));
+    },
     stop() {
+      stopped = true;
       for (const d of disposers.splice(0)) d();
       client.stop();
       orbit.dispose();
-      robot.dispose();
+      if (robot !== layer) robot.dispose();
+      layer.dispose();
       arena.dispose();
       hud?.dispose();
       if (ownEngine) {
@@ -411,4 +565,21 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
     },
   };
   return handle;
+}
+
+const pick = <T,>(a: readonly T[]): T => a[Math.floor(Math.random() * a.length)];
+
+/** A crab from the races and classes of character creation, every option rolled. */
+function randomSpec(race: RaceId = pick(RACE_ORDER), classId: ClassId = pick(CLASS_ORDER)): CrabSpec {
+  const r = RACES[race];
+  const sex: Sex = Math.random() < 0.5 ? 'male' : 'female';
+  return {
+    race,
+    sex,
+    classId,
+    shell: Math.floor(Math.random() * r.shellColors.length),
+    crest: Math.floor(Math.random() * r.crestStyles.length),
+    led: Math.floor(Math.random() * r.ledColors.length),
+    name: randomName(race, sex),
+  };
 }

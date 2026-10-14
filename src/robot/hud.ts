@@ -1,6 +1,9 @@
 // Robot Mode's HUD: live-policy badge, the active mode, measured rates, joint telemetry, the
 // bundle's own controls as buttons, and the provenance notice the bundle asks a host to show.
 import './hud.css';
+import type { ClassId, CrabSpec, RaceId } from '../crab/types';
+import { CLASSES, CLASS_ORDER } from '../data/classes';
+import { RACES, RACE_ORDER } from '../data/races';
 import { h } from '../ui/dom';
 import type { Binding, FrameMsg, ReadyInfo } from './protocol';
 
@@ -25,12 +28,34 @@ const KEY_LABEL: Record<string, string> = {
 };
 const keyLabel = (k: string): string => KEY_LABEL[k] ?? k.replace(/^key(pad)?_/, '').toUpperCase();
 
+/** A choice from the crab picker (shown when the player has no saved crab). */
+export interface CrabPick {
+  race?: RaceId;
+  classId?: ClassId;
+  random?: boolean;
+}
+
+/** What the appearance card shows. */
+export interface AppearanceState {
+  kind: 'bare' | 'crab';
+  /** The crab the crab layer wears (or is being dressed in). */
+  spec: CrabSpec | null;
+  /** `spec` is the player's own crab from character creation. */
+  own: boolean;
+  loading: boolean;
+  xray: boolean;
+}
+
 export interface HudActions {
   request(mode: string): void;
   release(): void;
   reset(): void;
   toggleFollow(): boolean;
   toggleSlow(): boolean;
+  /** Appearance card: bare robot or crab, the picker, and the x-ray overlay. */
+  appearance?(kind: 'bare' | 'crab'): void;
+  pickCrab?(pick: CrabPick): void;
+  toggleXray?(): boolean;
   back?: () => void;
 }
 
@@ -65,6 +90,16 @@ export class Hud {
   private tAcc = 0;
   private followBtn: HTMLElement | null = null;
   private digestLine: HTMLElement | null = null;
+  private look: {
+    root: HTMLElement;
+    seg: Record<'bare' | 'crab', HTMLButtonElement>;
+    who: HTMLElement;
+    pick: HTMLElement;
+    races: Map<RaceId, HTMLButtonElement>;
+    classes: Map<ClassId, HTMLButtonElement>;
+    xray: HTMLButtonElement;
+  } | null = null;
+  private lookState: AppearanceState | null = null;
 
   constructor(parent: HTMLElement, private readonly actions: HudActions) {
     this.loadBar = h('div');
@@ -260,6 +295,7 @@ export class Hud {
         kbd('N M', 'body height'),
         kbd('Ctrl', 'end a motion'),
         kbd('Esc', 'let go'),
+        ...(this.actions.appearance ? [kbd('T', 'robot or crab')] : []),
         kbd('Drag', 'orbit'),
       ),
     );
@@ -267,6 +303,8 @@ export class Hud {
     // Log.
     this.log = h('div', { class: 'rm-log' });
     r.append(this.log);
+
+    if (this.actions.appearance) r.append(this.buildLook());
 
     // Provenance notice. The bundle asks a consumer running its controller to say so where the
     // person can see it (bundle.json runtimes.web.unverifiedByTheConsumer).
@@ -388,6 +426,85 @@ export class Hud {
   /** A fault reported by the simulation after start. */
   fault(message: string): void {
     this.log.append(h('div', null, h('b', null, 'fault '), h('span', null, message)));
+  }
+
+  /** The appearance card: a two-way switch, the point it makes, and a picker without a saved crab. */
+  private buildLook(): HTMLElement {
+    const a = this.actions;
+    const segBtn = (kind: 'bare' | 'crab', label: string) => {
+      const b = h('button', { class: 'rm-seg-b', tabindex: '-1', 'data-kind': kind }, label);
+      b.addEventListener('mousedown', (e) => e.preventDefault());
+      b.onclick = () => a.appearance?.(kind);
+      return b;
+    };
+    const seg = { bare: segBtn('bare', 'Bare robot'), crab: segBtn('crab', 'Your crab') };
+    const chip = (label: string, title: string, on: () => void) => {
+      const b = h('button', { class: 'rm-chip', tabindex: '-1', title }, label);
+      b.addEventListener('mousedown', (e) => e.preventDefault());
+      b.onclick = on;
+      return b;
+    };
+    const races = new Map<RaceId, HTMLButtonElement>();
+    for (const id of RACE_ORDER) races.set(id, chip(RACES[id].name, RACES[id].tagline, () => a.pickCrab?.({ race: id })));
+    const classes = new Map<ClassId, HTMLButtonElement>();
+    for (const id of CLASS_ORDER) classes.set(id, chip(CLASSES[id].name, CLASSES[id].weapon, () => a.pickCrab?.({ classId: id })));
+    const rnd = chip('Random crab', 'Roll a race, class, paint, crest and LED colour', () => a.pickCrab?.({ random: true }));
+    rnd.classList.add('rnd');
+    const xray = h('button', { class: 'rm-xray', tabindex: '-1', title: 'Draw the physics robot over the crab' }, 'X-ray');
+    xray.addEventListener('mousedown', (e) => e.preventDefault());
+    xray.onclick = () => xray.classList.toggle('on', !!a.toggleXray?.());
+    const who = h('div', { class: 'who' });
+    const pick = h(
+      'div',
+      { class: 'rm-pick' },
+      h('div', { class: 'row' }, ...races.values()),
+      h('div', { class: 'row' }, ...classes.values(), rnd),
+    );
+    const root = h(
+      'div',
+      { class: 'rm-look rm-panel' },
+      h('div', { class: 'rm-look-head' }, h('span', { class: 'k' }, 'Appearance'), xray, h('kbd', { title: 'Keyboard: T' }, 'T')),
+      h('div', { class: 'rm-seg' }, h('i', { class: 'thumb' }), seg.bare, seg.crab),
+      h('div', { class: 'rm-look-cap' }, h('b', null, 'Same live policy, any appearance.'), who),
+      pick,
+    );
+    this.look = { root, seg, who, pick, races, classes, xray };
+    if (this.lookState) this.setAppearance(this.lookState);
+    return root;
+  }
+
+  /** Reflects the appearance (from the card, the T key or the page). */
+  setAppearance(st: AppearanceState): void {
+    this.lookState = st;
+    const l = this.look;
+    if (!l) return;
+    l.root.classList.toggle('crab', st.kind === 'crab');
+    l.seg.bare.classList.toggle('on', st.kind === 'bare');
+    l.seg.crab.classList.toggle('on', st.kind === 'crab');
+    l.seg.crab.classList.toggle('loading', st.loading);
+    l.xray.disabled = st.kind !== 'crab' || st.loading;
+    l.xray.classList.toggle('on', st.xray);
+    const s = st.spec;
+    if (st.kind === 'crab' && s) {
+      const race = RACES[s.race];
+      const paint = race.shellColors[Math.max(0, Math.min(race.shellColors.length - 1, s.shell))]?.hex ?? '#d2202f';
+      const led = race.ledColors[Math.max(0, Math.min(race.ledColors.length - 1, s.led))]?.hex ?? '#53f2e4';
+      l.who.replaceChildren(
+        h('i', { class: 'sw', style: `background:${paint};box-shadow:0 0 0 2px rgba(0,0,0,0.35), 0 0 10px ${led}` }),
+        h('span', { class: 'name' }, s.name),
+        h('span', null, `, ${race.name} ${CLASSES[s.classId].name}. `),
+        st.loading ? 'Dressing the robot.' : "Posed every frame from the robot's 22 simulated joints.",
+      );
+    } else {
+      l.who.replaceChildren(
+        st.loading ? 'Dressing the robot.' : "Jumper's own meshes, posed by the physics. Press T to dress it.",
+      );
+    }
+    // Without a saved crab, the picker stands in for character creation.
+    l.pick.style.display = st.own ? 'none' : '';
+    this.root.classList.toggle('rm-picking', !st.own);
+    for (const [id, b] of l.races) b.classList.toggle('on', !st.own && st.kind === 'crab' && s?.race === id);
+    for (const [id, b] of l.classes) b.classList.toggle('on', !st.own && st.kind === 'crab' && s?.classId === id);
   }
 
   /** Reflects a camera toggle made from the keyboard. */
