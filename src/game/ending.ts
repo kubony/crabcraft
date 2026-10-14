@@ -13,6 +13,19 @@ const DANCES: MotionId[] = ['dance_crab', 'dance_brazilian', 'dance_dream_wings'
 const FIREWORK_COLORS = [C.gold, C.redHot, C.water, C.purple, C.green, C.holy];
 const LENGTH = 30;
 
+/** Two staggered rings so the whole town fits around the hero in a small square. */
+function ringSlots(n: number): { a: number; r: number }[] {
+  const inner = Math.ceil(n / 2);
+  const out: { a: number; r: number }[] = [];
+  for (let i = 0; i < n; i++) {
+    const ring = i < inner ? 0 : 1;
+    const k = ring === 0 ? i : i - inner;
+    const m = ring === 0 ? inner : n - inner;
+    out.push({ a: ((k + (ring ? 0.5 : 0)) / m) * Math.PI * 2, r: ring ? 6.4 : 4.2 });
+  }
+  return out;
+}
+
 export class EndingSequence {
   active = false;
   private t = 0;
@@ -47,18 +60,19 @@ export class EndingSequence {
 
     const spawn = g.world.pois.spawn;
     const p = g.player.unit;
-    p.motion.stop(undefined, 0);
-    p.teleport(g.world, spawn.position.x, spawn.position.z, spawn.yaw);
-    this.centre.copy(p.pos);
-
     // Everyone in town, every race.
     const crowd = [...g.npcs.map((n) => n.unit), ...g.townsfolk.map((t) => t.unit)];
     const n = crowd.length;
-    const radius = Math.max(5.5, n * 0.5);
+    const slots = ringSlots(n);
+    const c = this.openSquare(spawn.position, spawn.yaw, slots);
+    p.motion.stop(undefined, 0);
+    p.teleport(g.world, c.x, c.z, spawn.yaw);
+    this.centre.copy(p.pos);
+
     crowd.forEach((u, i) => {
-      const a = (i / n) * Math.PI * 2 + spawn.yaw;
-      const x = this.centre.x + Math.sin(a) * radius;
-      const z = this.centre.z + Math.cos(a) * radius;
+      const s = slots[i];
+      const x = this.centre.x + Math.sin(s.a + spawn.yaw) * s.r;
+      const z = this.centre.z + Math.cos(s.a + spawn.yaw) * s.r;
       u.hidden = false;
       u.motion.stop(undefined, 0);
       u.teleport(g.world, x, z, yawTo(x, z, this.centre.x, this.centre.z));
@@ -83,12 +97,43 @@ export class EndingSequence {
     await g.app.blackout(false, 1400);
   }
 
+  /** A spot near the square where the whole ring fits on open, level ground (fountains get in the way). */
+  private openSquare(base: THREE.Vector3, yaw: number, slots: { a: number; r: number }[]): THREE.Vector3 {
+    const w = this.game.world;
+    const tmp = new THREE.Vector2();
+    let best = base.clone();
+    let bestScore = -Infinity;
+    for (const dist of [0, 4, 8, 12]) {
+      for (let k = 0; k < (dist === 0 ? 1 : 8); k++) {
+        const a = yaw + (k / 8) * Math.PI * 2;
+        const cx = base.x + Math.sin(a) * dist;
+        const cz = base.z + Math.cos(a) * dist;
+        const y0 = w.heightAt(cx, cz);
+        let score = -dist * 0.6;
+        for (const s of slots) {
+          const x = cx + Math.sin(s.a + yaw) * s.r;
+          const z = cz + Math.cos(s.a + yaw) * s.r;
+          const r = w.resolveCollision(x, z, 0.6, tmp);
+          const blocked = Math.hypot(r.x - x, r.y - z) > 0.05 || Math.abs(w.heightAt(x, z) - y0) > 0.6;
+          score += blocked ? -1 : 1;
+        }
+        const own = w.resolveCollision(cx, cz, 0.6, tmp);
+        if (Math.hypot(own.x - cx, own.y - cz) > 0.05) score -= slots.length;
+        if (score > bestScore) {
+          bestScore = score;
+          best = new THREE.Vector3(cx, y0, cz);
+        }
+      }
+    }
+    return best;
+  }
+
   private placeCamera(t: number): void {
     const g = this.game;
     // Start high and wide over the ring, then settle inside it at crab height.
     const k = easeInOut(Math.min(1, t / 12));
-    const r = 11 - 6.6 * k;
-    const hgt = 6.5 - 5.1 * k;
+    const r = 11 - 7 * k;
+    const hgt = 6.5 - 4 * k;
     const a = this.orbit0 + t * 0.16;
     const cam = g.camera;
     cam.position.set(this.centre.x + Math.sin(a) * r, this.centre.y + hgt, this.centre.z + Math.cos(a) * r);

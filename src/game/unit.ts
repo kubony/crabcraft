@@ -277,6 +277,23 @@ export class Unit {
     this.pendingHit = null;
   }
 
+  private shadowMeshes: THREE.Mesh[] | null = null;
+  private shadows = true;
+
+  /** Crabs far from the camera stop casting shadows; the sun's shadow map is the costliest pass. */
+  setShadows(on: boolean): void {
+    if (on === this.shadows) return;
+    this.shadows = on;
+    if (!this.shadowMeshes) {
+      this.shadowMeshes = [];
+      this.rig.root.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (m.isMesh && m.castShadow) this.shadowMeshes!.push(m);
+      });
+    }
+    for (const m of this.shadowMeshes) m.castShadow = on;
+  }
+
   dispose(): void {
     this.motion.dispose();
     this.rig.dispose();

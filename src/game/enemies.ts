@@ -26,6 +26,9 @@ export const ENEMY_STATS: Record<EnemyKind, Stats> = {
   scavenger: { name: 'Rustclaw Scavenger', level: 2, hp: 105, speed: 4.3, aggro: 11, dmg: [7, 10], swing: 2.2, xp: 50, leash: 32, respawn: 45 },
 };
 
+/** LED eye colours (design: Scraplings have one red eye; Scavengers glow amber). */
+const LED: Record<EnemyKind, string> = { scrapling: '#ff2a1a', scavenger: '#ffb020' };
+
 const v1 = new THREE.Vector3();
 const frustum = new THREE.Frustum();
 const projScreen = new THREE.Matrix4();
@@ -60,7 +63,7 @@ export class Enemy {
     unit.ctrl = this;
     unit.level = this.stats.level;
     unit.maxHp = unit.hp = this.stats.hp;
-    unit.setBaseTint('#ff2a1a');
+    unit.setBaseTint(LED[kind]);
     this.wanderAt = game.time + rand(1, 6);
     this.leapCd = game.time + 2;
   }
@@ -117,7 +120,7 @@ export class Enemy {
     u.motion.stop(undefined, 0);
     u.express('neutral', 0.1);
     u.teleport(this.game.world, x, z, rand(0, TAU));
-    u.setBaseTint('#ff2a1a');
+    u.setBaseTint(LED[this.kind]);
     this.state = 'idle';
     this.rise = 0.6;
     this.game.vfx.burrow(u.pos);

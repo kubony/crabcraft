@@ -72,10 +72,21 @@ export class DebugTools {
     const p = g.player.unit;
     const cur = g.quests.current();
     let back = 3.2;
-    if (cur?.objective?.kind === 'boss') back = g.world.pois.bossArena.radius * 0.6;
+    if (cur?.objective?.kind === 'boss') back = Math.min(4.5, g.world.pois.bossArena.radius * 0.6);
+    // The beacon spot is the walkable gallery tile itself; stepping back could drop us off the tower.
+    if (cur?.objective?.kind === 'beacon') back = 0;
     if (cur?.objective?.kind === 'kill-scrapling' || cur?.objective?.kind === 'kill-scavenger' || cur?.objective?.kind === 'collect-cog') back = 9;
     let dx = p.pos.x - target.x;
     let dz = p.pos.z - target.z;
+    // For hunting objectives come in from the open middle of the area, not from behind a hut.
+    const k = cur?.objective?.kind;
+    if (k === 'kill-scrapling' || k === 'kill-scavenger' || k === 'collect-cog') {
+      const area = g.world.pois[cur!.objective!.poi].position;
+      if (Math.hypot(area.x - target.x, area.z - target.z) > 2) {
+        dx = area.x - target.x;
+        dz = area.z - target.z;
+      }
+    }
     const len = Math.hypot(dx, dz);
     if (len < 0.01) {
       dx = 1;

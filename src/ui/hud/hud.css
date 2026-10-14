@@ -381,7 +381,7 @@
 .credits-bg { position: absolute; inset: -4%; background: center / cover no-repeat; animation: credits-pan 70s ease-in-out infinite alternate; }
 .credits-bg.fallback { background-image: radial-gradient(90% 70% at 50% 35%, #4a2a5a 0%, #1a1030 45%, #05050c 100%) !important; }
 @keyframes credits-pan { from { transform: scale(1.02); } to { transform: scale(1.12) translate(-2%, -1%); } }
-.credits-shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.2) 30%, rgba(0, 0, 0, 0.78) 55%, rgba(0, 0, 0, 0.86) 100%); }
+.credits-shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0.18) 28%, rgba(0, 0, 0, 0.12) 40%, rgba(0, 0, 0, 0.8) 58%, rgba(0, 0, 0, 0.88) 100%), linear-gradient(180deg, rgba(0, 0, 0, 0.35), transparent 30%, transparent 70%, rgba(0, 0, 0, 0.5)); }
 .credits-roll { position: absolute; right: 6vw; top: 0; bottom: 0; width: min(640px, 46vw); overflow: hidden; mask-image: linear-gradient(180deg, transparent 0, #000 12%, #000 86%, transparent 100%); }
 .credits-track { position: absolute; left: 0; right: 0; top: 100%; text-align: center; will-change: transform; }
 .credits-track section { margin-bottom: 64px; }

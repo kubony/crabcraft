@@ -44,7 +44,8 @@ const createCrabX = createCrab as unknown as CreateCrabWithExtras;
 
 export const DEFAULT_SPEC: CrabSpec = { race: 'human', sex: 'male', classId: 'warrior', shell: 0, crest: 0, led: 0, name: 'Pinchwick' };
 
-const CULL_DIST = 95;
+const CULL_DIST = 80;
+const SHADOW_DIST = 30;
 
 const ZONES: { name: string; anchors: PoiId[] }[] = [
   { name: 'Clawhaven', anchors: ['spawn', 'forge', 'chapel', 'tavern'] },
@@ -218,13 +219,15 @@ export class Game {
 
     // Enemies
     progress(0.76, 'Rusting the Scraplings');
-    const packSizes = [3, 2, 3, 2, 3];
+    const packSizes = [3, 2, 2, 3, 2, 2];
+    const MAX_SCRAPLINGS = 12;
     const enemyJobs: { kind: EnemyKind; home: THREE.Vector3; radius: number; pack: number }[] = [];
     const scrap = this.world.spawns.find((s) => s.id === 'scraplings');
     if (scrap) {
       let total = 0;
       scrap.points.forEach((pt, i) => {
-        const n = packSizes[i % packSizes.length];
+        const n = Math.min(packSizes[i % packSizes.length], MAX_SCRAPLINGS - total);
+        if (n <= 0) return;
         total += n;
         for (let k = 0; k < n; k++) enemyJobs.push({ kind: 'scrapling', home: pt, radius: Math.min(scrap.radius, 6), pack: i });
       });
@@ -274,9 +277,7 @@ export class Game {
 
     // Player start
     const spawn = pois.spawn;
-    const brine = pois['npc:brinebeard'];
-    pu.teleport(this.world, spawn.position.x, spawn.position.z, yawTo(spawn.position.x, spawn.position.z, brine.position.x, brine.position.z));
-    pu.teleport(this.world, spawn.position.x - Math.sin(pu.yaw) * 2.5, spawn.position.z - Math.cos(pu.yaw) * 2.5, pu.yaw);
+    pu.teleport(this.world, spawn.position.x, spawn.position.z, spawn.yaw);
 
     this.follow = new FollowCamera(this.camera, {
       distance: this.userDistance,
@@ -453,8 +454,10 @@ export class Game {
     // Visual updates (culled when far away)
     const cam = this.camera.position;
     for (const u of this.units) {
-      const culled = cam.distanceTo(u.pos) > CULL_DIST;
+      const d = cam.distanceTo(u.pos);
+      const culled = d > CULL_DIST * (u.kind === 'boss' ? 1.6 : 1);
       u.culled = culled;
+      u.setShadows(d < SHADOW_DIST * (u.kind === 'boss' ? 2 : 1));
       u.rig.root.visible = !culled && !u.hidden;
       if (!paused) u.updateVisual(dt);
     }
@@ -641,14 +644,22 @@ export class Game {
     if (best) return { kind: 'unit', unit: best };
     const b = this.world.pois.beacon;
     const o = QUESTS.q3.objectives[1];
-    if (this.quests.status.q3 === 'active' && !this.quests.objectiveDone(o) && Math.hypot(p.pos.x - b.position.x, p.pos.z - b.position.z) < b.radius + 3.5) {
+    // The flame is up on the gallery: you have to climb, standing under it does not count.
+    const gy = this.world.heightAt(b.position.x, b.position.z);
+    const flameY = Math.max(b.position.y, gy);
+    if (
+      this.quests.status.q3 === 'active' &&
+      !this.quests.objectiveDone(o) &&
+      Math.hypot(p.pos.x - b.position.x, p.pos.z - b.position.z) < b.radius + 3.5 &&
+      Math.abs(p.pos.y - flameY) < 3
+    ) {
       return { kind: 'beacon' };
     }
     return null;
   }
 
   private updateInteractPrompt(): void {
-    if (this.ending.active || !this.player.unit.alive || this.hud.dialogue.isOpen || this.player.channel) {
+    if (this.ending.active || !this.player.unit.alive || this.hud.dialogue.isOpen || this.player.channel || this.hud.menu.open) {
       this.hud.prompt.hide();
       return;
     }

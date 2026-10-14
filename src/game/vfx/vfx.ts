@@ -1045,7 +1045,7 @@ export class Vfx {
 
   /** Big light-up flash at the beacon. */
   beaconBlaze(at: THREE.Vector3): void {
-    this.glow(at, C.white, 14, 0.8, 4);
+    this.glow(at, C.white, 8, 0.7, 3);
     this.sparks(at, C.gold, 80, 14, { life: 1.2, gravity: 6 });
     for (let i = 0; i < this.n(40); i++) {
       const th = Math.random() * TAU;
