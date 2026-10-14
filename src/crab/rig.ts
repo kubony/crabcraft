@@ -10,6 +10,16 @@ import { CRAB_HEIGHT, JOINT_NAMES, type CrabRig, type CrabSpec, type Expression,
 
 const JOINT_INDEX = new Map<JointName, number>(JOINT_NAMES.map((n, i) => [n, i]));
 
+let proxyMat: THREE.MeshBasicMaterial | null = null;
+/** Draws nothing in the camera's view; the shadow pass uses its own depth material. */
+function shadowProxyMaterial(): THREE.MeshBasicMaterial {
+  if (!proxyMat) {
+    proxyMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
+    proxyMat.name = 'crab-shadow-proxy';
+  }
+  return proxyMat;
+}
+
 /** Everything that decides how one crab looks. Built from a CrabSpec (or an enemy kind). */
 export interface CrabLook {
   shell: ShellLook;
@@ -66,6 +76,8 @@ export class JumperRig implements CrabRig {
   /** Far LOD meshes (same skeleton and materials), shown instead of parts at lod 1. */
   private lodMeshes = new Map<PartClass, THREE.SkinnedMesh>();
   private lod = 0;
+  /** Casts the crab's shadow from the LOD body when on (see useShadowProxy). */
+  private shadowProxy: THREE.SkinnedMesh | null = null;
   private m2u = 1;
   private nameplateBase = 0;
   /** Gear and weapons owned by the current spec; removed on applySpec. */
@@ -141,6 +153,8 @@ export class JumperRig implements CrabRig {
     // Skinned parts, full detail and the far LOD.
     this.syncParts(this.parts, t.parts(look.without), look, '', this.lod === 0);
     if (t.lodParts) this.syncParts(this.lodMeshes, t.lodParts(look.without), look, '-lod', this.lod === 1);
+    if (this.shadowProxy && t.lodShadow) this.shadowProxy.geometry = t.lodShadow(look.without);
+    this.applyShadowCasting();
 
     // Per-link scale (enemy claws); reset others.
     for (const [i, node] of this.links.entries()) {
@@ -202,6 +216,36 @@ export class JumperRig implements CrabRig {
 
   get lodLevel(): number {
     return this.lod;
+  }
+
+  /**
+   * Shadows from the LOD body: a single invisible mesh (no colour, no depth in the camera's view)
+   * casts the crab's shadow with 11.6k triangles in one draw instead of the six full-detail
+   * meshes' 70k. At the sun shadow map's 29 texels per unit nobody can tell the difference.
+   * Close-up screens (character creation) leave it off.
+   */
+  useShadowProxy(on: boolean): void {
+    const t = this.template;
+    if (on && !this.shadowProxy && t.lodShadow) {
+      const m = new THREE.SkinnedMesh(t.lodShadow(this.look.without), shadowProxyMaterial());
+      m.name = 'crab-shadow-proxy';
+      m.castShadow = true;
+      m.receiveShadow = false;
+      m.bind(this.skeleton, new THREE.Matrix4());
+      m.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.02, 0), 0.55);
+      this.model.add(m);
+      this.shadowProxy = m;
+    } else if (!on && this.shadowProxy) {
+      this.shadowProxy.removeFromParent();
+      this.shadowProxy = null;
+    }
+    this.applyShadowCasting();
+  }
+
+  private applyShadowCasting(): void {
+    const proxy = !!this.shadowProxy;
+    for (const [cls, m] of this.parts) m.castShadow = !proxy && cls !== 'visor';
+    for (const [cls, m] of this.lodMeshes) m.castShadow = !proxy && cls !== 'visor';
   }
 
   /** Gear pieces hidden at the far LOD (small next to the crab); filled by the gear dresser. */

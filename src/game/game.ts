@@ -374,6 +374,8 @@ export class Game {
   }
 
   private addUnit(name: string, kind: UnitKind, reaction: Reaction, rig: CrabRig): Unit {
+    // Shadows from the simplified body (the real crab rig offers it; see JumperRig.useShadowProxy).
+    (rig as CrabRig & { useShadowProxy?: (on: boolean) => void }).useShadowProxy?.(true);
     const u = new Unit(name, kind, reaction, rig, createMotionController(rig));
     this.scene.add(rig.root);
     this.units.push(u);

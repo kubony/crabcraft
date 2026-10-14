@@ -52,6 +52,8 @@ export interface CrabTemplate {
    * skinning as parts(); null when the file is missing.
    */
   lodParts: ((without?: readonly string[]) => Map<PartClass, THREE.BufferGeometry>) | null;
+  /** Every LOD class merged into one geometry: the crab's shadow caster (one draw, 11.6k tris). */
+  lodShadow: ((without?: readonly string[]) => THREE.BufferGeometry) | null;
 }
 
 const URL = 'models/crab/jumper.glb';
@@ -157,6 +159,7 @@ async function build(): Promise<CrabTemplate> {
 
   // Far LOD: the same link tree, simplified; pieces go to the main template's bones by link name.
   let lodParts: CrabTemplate['lodParts'] = null;
+  let lodShadow: CrabTemplate['lodShadow'] = null;
   const lod = await lodGltf;
   if (lod) {
     lod.scene.updateMatrixWorld(true);
@@ -177,7 +180,27 @@ async function build(): Promise<CrabTemplate> {
       list.push(g);
       byCls.set(cls, list);
     });
-    if (lodPieces.size) lodParts = mergedParts(lodPieces, '-lod');
+    if (lodPieces.size) {
+      const lp = mergedParts(lodPieces, '-lod');
+      lodParts = lp;
+      const shadowCache = new Map<string, THREE.BufferGeometry>();
+      lodShadow = (without: readonly string[] = []) => {
+        const key = [...without].sort().join(',');
+        let g = shadowCache.get(key);
+        if (!g) {
+          const list = [...lp(without).values()].map((geo) => {
+            const c = new THREE.BufferGeometry();
+            for (const name of ['position', 'skinIndex', 'skinWeight']) c.setAttribute(name, geo.getAttribute(name));
+            return c;
+          });
+          g = mergeGeometries(list, false) ?? new THREE.BufferGeometry();
+          g.name = `crab-shadow${key ? `-without-${key}` : ''}`;
+          g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 0.45);
+          shadowCache.set(key, g);
+        }
+        return g;
+      };
+    }
   }
 
   return {
@@ -191,6 +214,7 @@ async function build(): Promise<CrabTemplate> {
     face,
     restMatrix,
     lodParts,
+    lodShadow,
   };
 }
 
