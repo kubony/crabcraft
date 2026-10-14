@@ -109,7 +109,9 @@
 .rm-legend i { display: inline-block; width: 10px; height: 4px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
 
 /* ---------- Dock, bottom ---------- */
-.rm-dock { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); padding: 9px; display: flex; gap: 8px; align-items: stretch; }
+/* Clear of the side panels (300 + 28 px left, 330 + 24 px right); wraps to a second row when the
+   skills are there, and --rm-dock-h (set from its measured height) lifts what sits above it. */
+.rm-dock { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); padding: 9px; display: flex; flex-wrap: wrap; justify-content: center; row-gap: 10px; gap: 8px; align-items: stretch; max-width: calc(100vw - 744px); }
 .rm-group { display: flex; flex-direction: column; gap: 6px; padding: 0 4px; }
 .rm-group + .rm-group { border-left: 1px solid var(--rm-line); padding-left: 10px; }
 .rm-group .gl { font: 600 9.5px/1 var(--rm-sans); letter-spacing: 0.2em; text-transform: uppercase; color: var(--rm-faint); padding-left: 2px; }
@@ -146,7 +148,7 @@
 @keyframes rm-load { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 .rm-btn.failed { opacity: 0.3; text-decoration: line-through; }
 .rm-btn.pending { border-color: rgba(255, 211, 107, 0.7); box-shadow: 0 0 0 1px rgba(255, 211, 107, 0.4), 0 0 18px rgba(255, 211, 107, 0.25); }
-.rm-help { position: absolute; left: 50%; bottom: 108px; transform: translateX(-50%); font: 500 12px/1 var(--rm-sans); color: var(--rm-dim); white-space: nowrap; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8); display: flex; gap: 16px; }
+.rm-help { position: absolute; left: 50%; bottom: calc(var(--rm-dock-h, 84px) + 30px); transform: translateX(-50%); font: 500 12px/1 var(--rm-sans); color: var(--rm-dim); white-space: nowrap; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8); display: flex; gap: 16px; }
 .rm-help kbd { font: 600 10.5px/1 var(--rm-mono); padding: 3px 6px; border-radius: 5px; background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(255, 255, 255, 0.16); color: var(--rm-text); margin-right: 5px; }
 
 /* ---------- Top right tools ---------- */
@@ -307,6 +309,9 @@
 
 @media (max-width: 1560px) {
   .rm-dock, .rm-help { left: 28px; transform: none; }
+  .rm-dock { justify-content: flex-start; max-width: calc(100vw - 398px); }
+  /* the dock is under the appearance card here: lift the card by the dock's height */
+  .rm-look { bottom: calc(var(--rm-dock-h, 84px) + 56px); }
   .rm-notice { width: 300px; }
   .rm-tele { width: 300px; }
 }
@@ -320,6 +325,13 @@
   .rm-look { bottom: 134px; padding: 11px 12px; }
   .rm-look-cap .who { display: none; }
   .rm-picking .rm-log { display: none; }
+}
+@media (max-width: 1560px) and (max-height: 860px) {
+  .rm-look { bottom: calc(var(--rm-dock-h, 84px) + 50px); }
+  /* two rows of the dock under the card: shorter buttons keep the card clear of the mode panel */
+  .rm-dock { row-gap: 6px; }
+  .rm-btn { height: 40px; padding: 5px 9px 4px; }
+  .rm-btn .kb { margin-top: 3px; }
 }
 @media (max-height: 700px) {
   .rm-notice q { display: none; }

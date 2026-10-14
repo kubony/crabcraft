@@ -8,42 +8,26 @@
       "tool": "scripts/deploy.py",
       "cargo": "build --release --target wasm32-unknown-unknown --no-default-features --features web",
       "wasmBindgen": "wasm-bindgen 0.2.128",
-      "commit": "ce71f79b191766f0208dca34516564a37816c729",
+      "commit": "84b610c01abb8bae77624670196c293f43280dcd",
       "unverifiedByTheConsumer": "A consumer's own controller is held against its own implementation by a parity test. This one is not held against anything: it arrived with the upload. A consumer that runs it should say so where the person can see it."
     },
     "mjlab": {
       "model": "onnx",
       "extensions": {
-        "linux-x86_64": {
-          "file": "runtime/mjlab/linux-x86_64/controller.so",
-          "abi": "abi3-py310"
-        },
-        "win-amd64": {
-          "file": "runtime/mjlab/win-amd64/controller.pyd",
-          "abi": "abi3-py310"
-        },
-        "macosx-universal2": {
-          "file": "runtime/mjlab/macosx-universal2/controller.so",
+        "macosx-11.0-arm64": {
+          "file": "runtime/mjlab/macosx-11.0-arm64/controller.so",
           "abi": "abi3-py310"
         }
       },
-      "commit": "ce71f79b191766f0208dca34516564a37816c729",
+      "commit": "84b610c01abb8bae77624670196c293f43280dcd",
       "note": "The same source as the wasm, built for a host that imports it. Platform-specific: `abi3` frees it from the Python version, not from the machine, so it is keyed by platform: the build machine's, and win-amd64 and macosx-universal2, cross-built. macOS is keyed without a version and the one file carries arm64 and x86_64."
-    },
-    "board": {
-      "model": "rknn",
-      "file": "runtime/board/controller",
-      "platform": "aarch64-unknown-linux-gnu",
-      "commit": "ce71f79b191766f0208dca34516564a37816c729",
-      "note": "The robot's whole program: this crate, cross-compiled. From the bundle's directory: `./runtime/board/controller --bundle . --machine <toml>`."
     }
   },
   "fsm": "controller.toml",
   "modes": {
     "claw_left": {
       "models": {
-        "onnx": "models/claw_left.onnx",
-        "rknn": "models/claw_left.rknn"
+        "onnx": "models/claw_left.onnx"
       },
       "contract": "claw_left.json",
       "observation": 407,
@@ -51,8 +35,7 @@
     },
     "claw_right": {
       "models": {
-        "onnx": "models/claw_left.onnx",
-        "rknn": "models/claw_left.rknn"
+        "onnx": "models/claw_left.onnx"
       },
       "contract": "claw_right.json",
       "observation": 407,
@@ -60,8 +43,7 @@
     },
     "dance_brazilian": {
       "models": {
-        "onnx": "models/dance_brazilian.onnx",
-        "rknn": "models/dance_brazilian.rknn"
+        "onnx": "models/dance_brazilian.onnx"
       },
       "contract": "dance_brazilian.json",
       "observation": 209,
@@ -70,8 +52,7 @@
     },
     "dance_crab": {
       "models": {
-        "onnx": "models/dance_crab.onnx",
-        "rknn": "models/dance_crab.rknn"
+        "onnx": "models/dance_crab.onnx"
       },
       "contract": "dance_crab.json",
       "observation": 209,
@@ -80,8 +61,7 @@
     },
     "dance_dream_wings": {
       "models": {
-        "onnx": "models/dance_dream_wings.onnx",
-        "rknn": "models/dance_dream_wings.rknn"
+        "onnx": "models/dance_dream_wings.onnx"
       },
       "contract": "dance_dream_wings.json",
       "observation": 209,
@@ -90,8 +70,7 @@
     },
     "dance_maze": {
       "models": {
-        "onnx": "models/dance_maze.onnx",
-        "rknn": "models/dance_maze.rknn"
+        "onnx": "models/dance_maze.onnx"
       },
       "contract": "dance_maze.json",
       "observation": 209,
@@ -100,8 +79,7 @@
     },
     "gesture_bow": {
       "models": {
-        "onnx": "models/gesture_bow.onnx",
-        "rknn": "models/gesture_bow.rknn"
+        "onnx": "models/gesture_bow.onnx"
       },
       "contract": "gesture_bow.json",
       "observation": 209,
@@ -110,8 +88,7 @@
     },
     "gesture_hello": {
       "models": {
-        "onnx": "models/gesture_hello.onnx",
-        "rknn": "models/gesture_hello.rknn"
+        "onnx": "models/gesture_hello.onnx"
       },
       "contract": "gesture_hello.json",
       "observation": 209,
@@ -120,8 +97,7 @@
     },
     "gesture_paw": {
       "models": {
-        "onnx": "models/gesture_paw.onnx",
-        "rknn": "models/gesture_paw.rknn"
+        "onnx": "models/gesture_paw.onnx"
       },
       "contract": "gesture_paw.json",
       "observation": 209,
@@ -130,8 +106,7 @@
     },
     "gesture_salute": {
       "models": {
-        "onnx": "models/gesture_salute.onnx",
-        "rknn": "models/gesture_salute.rknn"
+        "onnx": "models/gesture_salute.onnx"
       },
       "contract": "gesture_salute.json",
       "observation": 209,
@@ -140,8 +115,7 @@
     },
     "jump": {
       "models": {
-        "onnx": "models/jump.onnx",
-        "rknn": "models/jump.rknn"
+        "onnx": "models/jump.onnx"
       },
       "contract": "jump.json",
       "observation": 167,
@@ -150,15 +124,71 @@
     },
     "locomotion": {
       "models": {
-        "onnx": "models/locomotion.onnx",
-        "rknn": "models/locomotion.rknn"
+        "onnx": "models/locomotion.onnx"
       },
       "contract": "locomotion.json",
       "observation": 415,
       "action": 20
+    },
+    "skill_cast": {
+      "models": {
+        "onnx": "models/skill_cast.onnx"
+      },
+      "contract": "skill_cast.json",
+      "observation": 209,
+      "action": 22,
+      "trajectory": "cast.motion.trajectory.json"
+    },
+    "skill_flinch": {
+      "models": {
+        "onnx": "models/skill_flinch.onnx"
+      },
+      "contract": "skill_flinch.json",
+      "observation": 209,
+      "action": 22,
+      "trajectory": "flinch.motion.trajectory.json"
+    },
+    "skill_powerdown": {
+      "models": {
+        "onnx": "models/skill_powerdown.onnx"
+      },
+      "contract": "skill_powerdown.json",
+      "observation": 209,
+      "action": 22,
+      "trajectory": "powerdown.motion.trajectory.json"
+    },
+    "skill_sit": {
+      "models": {
+        "onnx": "models/skill_sit.onnx"
+      },
+      "contract": "skill_sit.json",
+      "observation": 209,
+      "action": 22,
+      "trajectory": "sit.motion.trajectory.json"
+    },
+    "skill_slam": {
+      "models": {
+        "onnx": "models/skill_slam.onnx"
+      },
+      "contract": "skill_slam.json",
+      "observation": 209,
+      "action": 22,
+      "trajectory": "slam.motion.trajectory.json"
+    },
+    "skill_swipe": {
+      "models": {
+        "onnx": "models/skill_swipe.onnx"
+      },
+      "contract": "skill_swipe.json",
+      "observation": 209,
+      "action": 22,
+      "trajectory": "swipe.motion.trajectory.json"
     }
   },
   "notes": [
+    "no Windows runtime for play: nothing has cross-built controller-win-amd64.pyd. bash deploy/fsm/docker-build.sh build --release --target x86_64-pc-windows-gnu --no-default-features --features py -- then build this bundle again.",
+    "no macOS runtime for play: nothing has cross-built controller-macosx-universal2.so. bash deploy/fsm/docker-build.sh zigbuild --release --target universal2-apple-darwin --no-default-features --features py -- then build this bundle again.",
+    "no board runtime: nothing has cross-built controller. bash deploy/fsm/docker-build.sh -- then build this bundle again.",
     "dance_brazilian: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
     "dance_crab: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
     "dance_dream_wings: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
@@ -168,12 +198,19 @@
     "gesture_paw: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
     "gesture_salute: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
     "jump: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
+    "skill_cast: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
+    "skill_flinch: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
+    "skill_powerdown: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
+    "skill_sit: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
+    "skill_slam: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
+    "skill_swipe: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
+    "not ready for the board: claw_left, claw_right, dance_brazilian, dance_crab, dance_dream_wings, dance_maze, gesture_bow, gesture_hello, gesture_paw, gesture_salute, jump, locomotion, skill_cast, skill_flinch, skill_powerdown, skill_sit, skill_slam, skill_swipe carry no .rknn, and the board runs them on a stub. deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/five_foot/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/five_foot/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/dance_brazilian/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/dance/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/dance_dream_wings/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/dance_maze/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/gesture_bow/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/gesture_hello/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/gesture_paw/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/gesture_salute/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/jump/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/posture/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/skill_cast/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/skill_flinch/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/skill_powerdown/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/skill_sit/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/skill_slam/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/skill_swipe/out/crabcraft -- then build this bundle again.",
     "reference: 24 frames, 18 of them inferences (6 in warm start or ramp)"
   ],
   "files": {
     "README.md": {
-      "bytes": 23959,
-      "sha256": "a2998c343cea54811e209711093985a98ded9509b1fa46b544375733fdcde323"
+      "bytes": 24461,
+      "sha256": "aaec1c6665d5efd64b2f19065fb9bd90501ff81d10912d5dc74bb397ecc72672"
     },
     "bow.motion.trajectory.json": {
       "bytes": 143332,
@@ -182,6 +219,10 @@
     "brazilian.motion.trajectory.json": {
       "bytes": 1184406,
       "sha256": "dd87589419a2928232cecb6f4378f3280285ace18886cea8079e91d448dedef9"
+    },
+    "cast.motion.trajectory.json": {
+      "bytes": 89832,
+      "sha256": "c16eeca711f54ed4d286726952abc4240d15a130995b8386545f6d62d2eb4447"
     },
     "claw_left.json": {
       "bytes": 13627,
@@ -192,8 +233,8 @@
       "sha256": "c51e495e1511c2ec0ce6f016b42aaaf65b532434e79fb24bc78b0f036e06ceb8"
     },
     "controller.toml": {
-      "bytes": 13780,
-      "sha256": "fb8c7e7734f19e918d9fe67cc36b170ffe6ba9cc7c97d93693f874781ac1ce16"
+      "bytes": 17802,
+      "sha256": "4a8ae176b54ea520dc58aae6e4ec99c60883910e7fd73187987a29232a01f07e"
     },
     "dance_brazilian.json": {
       "bytes": 7107,
@@ -218,6 +259,10 @@
     "dream_wings.motion.trajectory.json": {
       "bytes": 1067250,
       "sha256": "eeaa5d4bc6b6f05dad22a53eb20af6b8b8e894cd8486d71e11bd3d014c281b3c"
+    },
+    "flinch.motion.trajectory.json": {
+      "bytes": 22064,
+      "sha256": "711fb441fabd32cf9531da74aa9c6795fb70f068da11f9b8a4e0afaed9528c89"
     },
     "gesture_bow.json": {
       "bytes": 7089,
@@ -252,12 +297,12 @@
       "sha256": "6204effa319eba88e16b3d23bc1a8d005c59c3e0d074cac80f2ba233aab0e5d2"
     },
     "manual.en.json": {
-      "bytes": 30940,
-      "sha256": "a8638168b4cd4666be8d05b59d5818b956d6f9fca719dc5911e9aec23bd941c6"
+      "bytes": 40329,
+      "sha256": "b76039c272ff814ad081c4632648707118f5a53c6f6e411a69ca5d668dc6b120"
     },
     "manual.zh.json": {
-      "bytes": 30477,
-      "sha256": "5a5bcf61e5c82ec53024814d613e7c82cba89588134a5e03fe97c8cae8c4d121"
+      "bytes": 39632,
+      "sha256": "373647e4bcf1ea4cc7a6107afff001fecdbf82abfd49106a8c787d2ab4b92881"
     },
     "maze.motion.trajectory.json": {
       "bytes": 165743,
@@ -267,125 +312,133 @@
       "bytes": 1534640,
       "sha256": "69e4b98a6e25b5f86d17d4ffdf9996df806b901217cecba96e43993ce61020b0"
     },
-    "models/claw_left.rknn": {
-      "bytes": 931368,
-      "sha256": "1f03c2007423280cc091c0537b589b7a73d0e57de7018554a1a9df1c3b041e02"
-    },
     "models/dance_brazilian.onnx": {
       "bytes": 1129112,
       "sha256": "a8d0c471560cf3aabffab38e5750b20c99d569717d2b46df08e91bbc16553398"
-    },
-    "models/dance_brazilian.rknn": {
-      "bytes": 731304,
-      "sha256": "d50d4b04907a5582dc405d7175711fae10a05985249b340bbc1768cc380582a1"
     },
     "models/dance_crab.onnx": {
       "bytes": 1129112,
       "sha256": "2723a684d471cd377e781aff5d777a4e65ea48317bc39951ac2e5bf5fb56b011"
     },
-    "models/dance_crab.rknn": {
-      "bytes": 731304,
-      "sha256": "3357191984c516f14d7ba11854bbcceed4744590b44815aeb590f1082f0ea8d3"
-    },
     "models/dance_dream_wings.onnx": {
       "bytes": 1129112,
       "sha256": "11fdca3c4ae57aa8638608f3b70dd3a51d4d6435d68602b8a298562befb03690"
-    },
-    "models/dance_dream_wings.rknn": {
-      "bytes": 731304,
-      "sha256": "68d54080e87183efa28404a54f8d6545a041bb515b9c86595fa3b27555810642"
     },
     "models/dance_maze.onnx": {
       "bytes": 1129112,
       "sha256": "c5cd38038ee7ccf408cd9a76e55f624d393666fb743db35609e6ea114aaeae4a"
     },
-    "models/dance_maze.rknn": {
-      "bytes": 731304,
-      "sha256": "e7ac95270d5094fa7bf40e51d59c45c723c3b8cd216bd708d21249129ff27163"
-    },
     "models/gesture_bow.onnx": {
       "bytes": 1129112,
       "sha256": "14e5168ff39179f8539b600721375bcc2d3c049d60a38060044144ef871b55dd"
-    },
-    "models/gesture_bow.rknn": {
-      "bytes": 731304,
-      "sha256": "c8a90db8376b43a3e055db2026fd96ae1990709ca3f4fa61138ddfdf57b98fa9"
     },
     "models/gesture_hello.onnx": {
       "bytes": 1129112,
       "sha256": "64d17cd88f86063692a2276dbbf977c399f2ea018558b7b4d34b8f0bb1cecda8"
     },
-    "models/gesture_hello.rknn": {
-      "bytes": 731304,
-      "sha256": "5e50b34e109466298532b13664aeccf9e46d85af3e95b8b7c64dbf1bfe132f1a"
-    },
     "models/gesture_paw.onnx": {
       "bytes": 1129112,
       "sha256": "bde0871a418ac2735fd320390be50a2a97b1cb4df5929ef46176d0763b1dae21"
-    },
-    "models/gesture_paw.rknn": {
-      "bytes": 731304,
-      "sha256": "500386dc433d83ea88c03a348f5fd0db2ba3161fc5e8dba9aa50765c88d3a498"
     },
     "models/gesture_salute.onnx": {
       "bytes": 1129112,
       "sha256": "20fac8e4ee9d51fb8daa7d44e90fbed6c4e88aff907a13e7bfbae51fa7423f16"
     },
-    "models/gesture_salute.rknn": {
-      "bytes": 731304,
-      "sha256": "2acf0fe6e0bd72efed65045252b8d143542b08c8e53a438eae7018f78e22b7f8"
-    },
     "models/jump.onnx": {
       "bytes": 1014038,
       "sha256": "1822601bd4c3696633d1bd7faf59c21988906ad75cc2c41f595375611313d79d"
-    },
-    "models/jump.rknn": {
-      "bytes": 633704,
-      "sha256": "ac8d75611b4f783c6f7e2828301600e3b4e5f0558ba79f8c97097ef751a24f32"
     },
     "models/locomotion.onnx": {
       "bytes": 1552128,
       "sha256": "a6e0864c425d0604dfa6f11a82ac9e17d5396858dbed3b7dfe70188dba1b02ef"
     },
-    "models/locomotion.rknn": {
-      "bytes": 932136,
-      "sha256": "8043aacbbec7fbf97f17d3ed447e91eb2e32027de5600cb728b76378f90e662c"
+    "models/skill_cast.onnx": {
+      "bytes": 1129112,
+      "sha256": "3b0b6635fc46c47a03898f7a421520c68a1340718a86827acd7c18381868a377"
+    },
+    "models/skill_flinch.onnx": {
+      "bytes": 1129112,
+      "sha256": "0eee965322060b5ba74b8916d35ea82fb17db4112bd7c562c110674d9f8d4798"
+    },
+    "models/skill_powerdown.onnx": {
+      "bytes": 1129112,
+      "sha256": "670dd6a6f0ed409c1c76fba524922ed3601d809393f93130c5b9aa5e7a89f14d"
+    },
+    "models/skill_sit.onnx": {
+      "bytes": 1129112,
+      "sha256": "be9e88c0b748859e88a850a935936720802c4d2f3d79920232ce11b649b43a80"
+    },
+    "models/skill_slam.onnx": {
+      "bytes": 1129112,
+      "sha256": "90985c41beec1ba57b3ba022f69aa10199e032d9075481038ca47f11d89a5a77"
+    },
+    "models/skill_swipe.onnx": {
+      "bytes": 1129112,
+      "sha256": "33b866ae779a65b1c8b00f182f09d285d16e272d8720a07b19b2767275615032"
     },
     "paw.motion.trajectory.json": {
       "bytes": 102094,
       "sha256": "4e4ac350a6b6ff33749c385d3a963552e1565ef8ecfd3ad0405c3aacfca66295"
     },
+    "powerdown.motion.trajectory.json": {
+      "bytes": 103432,
+      "sha256": "1ae2e179195ae01efe9a8b6c150c811008afaa0c76d778e5d8344ab9e4052b0c"
+    },
     "reference.json": {
-      "bytes": 183530,
-      "sha256": "3715ef8bd98e702954fda2492d93091a7600fb1ecae6d45ddf5ab8044597fd36"
+      "bytes": 183501,
+      "sha256": "bb548cf446eaef96f99c5e0a8217dff20f51990f03978f9278cbe9eca82683e3"
     },
-    "runtime/board/controller": {
-      "bytes": 1634288,
-      "sha256": "0bda9776013435bec54739c144303fd03c8f301e216e44b88bfd99c5807d0a39"
-    },
-    "runtime/mjlab/linux-x86_64/controller.so": {
-      "bytes": 2099984,
-      "sha256": "df4b4a73be054955f25d005a32e0abb807baf734c7699ce55a6b429675781e28"
-    },
-    "runtime/mjlab/macosx-universal2/controller.so": {
-      "bytes": 6467280,
-      "sha256": "e079122ae93e48c19606c4155aba6f3adae25eaa9ab85e69fb4bb2feb16e62f7"
-    },
-    "runtime/mjlab/win-amd64/controller.pyd": {
-      "bytes": 3297549,
-      "sha256": "a1103975f1f710ed467694e2333cfc9c7ab00b51317922fa284d4c315b5e2906"
+    "runtime/mjlab/macosx-11.0-arm64/controller.so": {
+      "bytes": 1652832,
+      "sha256": "77d8ed819422ea20bd496a55ba0280cb0543d7cf0694eeb9a64177fc3e370549"
     },
     "runtime/web/controller.js": {
       "bytes": 29783,
       "sha256": "dde2baa0c7ed5fa5de30e6d53128721959853929c29fa131f64de8100380e59e"
     },
     "runtime/web/controller.wasm": {
-      "bytes": 1357577,
-      "sha256": "5ca0cf7a917cecbe95f5e2ff0b4392ae7564c3c758958a7742c06c5214d73982"
+      "bytes": 1359841,
+      "sha256": "8acbebb42b2d000ec2cd4ccae02291f55b9b8ed9af31ca0a5ec5170562e22a11"
     },
     "salute.motion.trajectory.json": {
       "bytes": 98320,
       "sha256": "f880c52b9a8250ab84031cf12305631ace17afe0b3ae40d07adb4f684e386985"
+    },
+    "sit.motion.trajectory.json": {
+      "bytes": 99505,
+      "sha256": "9fcfa3821621f340ef05330f9aabc215487efff9054eceb39ad38828a6131ec9"
+    },
+    "skill_cast.json": {
+      "bytes": 7090,
+      "sha256": "2c41e9fad0a14fa3b87b5a33cbd1b40f33fe7e7d5a5d6794ad98262438970c93"
+    },
+    "skill_flinch.json": {
+      "bytes": 7095,
+      "sha256": "953303934f6f1c61c9f5ed4304f149eb5f8e24e3c56944d57d9a97cc368fbdd3"
+    },
+    "skill_powerdown.json": {
+      "bytes": 7105,
+      "sha256": "748ae7d03fe002093417f8ec3f3aff6cfce1240896cf3f34cbeacc18ec0b7241"
+    },
+    "skill_sit.json": {
+      "bytes": 7087,
+      "sha256": "e53c593d0a351bab9be6439127a63b486c1a72bd12320a3d98208f7870303256"
+    },
+    "skill_slam.json": {
+      "bytes": 7090,
+      "sha256": "25f29041de4f0fe330672ac1c3bcddfd923874000832f590a683c2c780c4f975"
+    },
+    "skill_swipe.json": {
+      "bytes": 7093,
+      "sha256": "f2278abc9c12ee3b8e95cbc9cd7c1191a115b41756ebcab9e3dfa6e2abdfbc1c"
+    },
+    "slam.motion.trajectory.json": {
+      "bytes": 61901,
+      "sha256": "f422149dd343385cdbc8bff6e76885d8dd7dd5bf901e865d3ee03bec9fe181ac"
+    },
+    "swipe.motion.trajectory.json": {
+      "bytes": 38751,
+      "sha256": "d27fbe05af89ba14003fb85d4687064a036b98bd6fdd903f9a7c18d1dc51c61f"
     }
   },
   "reference": "reference.json",
@@ -721,6 +774,144 @@
         "key": [
           "key_4",
           "keypad_4"
+        ],
+        "on": "toggle",
+        "from": [
+          "locomotion"
+        ]
+      }
+    },
+    "skill_swipe": {
+      "task": "jumper.skill_swipe",
+      "from": "logs/jumper/jumper.skill_swipe/2026-10-14_13-32-45/model_1999.pt",
+      "export": "tasks/jumper/skill_swipe/out/crabcraft",
+      "pad": {
+        "button": "A",
+        "on": "toggle",
+        "with": "menu",
+        "from": [
+          "locomotion"
+        ]
+      },
+      "keys": {
+        "key": [
+          "key_5",
+          "keypad_5"
+        ],
+        "on": "toggle",
+        "from": [
+          "locomotion"
+        ]
+      }
+    },
+    "skill_slam": {
+      "task": "jumper.skill_slam",
+      "from": "logs/jumper/jumper.skill_slam/2026-10-14_13-32-45/model_2999.pt",
+      "export": "tasks/jumper/skill_slam/out/crabcraft",
+      "pad": {
+        "button": "X",
+        "on": "toggle",
+        "with": "menu",
+        "from": [
+          "locomotion"
+        ]
+      },
+      "keys": {
+        "key": [
+          "key_6",
+          "keypad_6"
+        ],
+        "on": "toggle",
+        "from": [
+          "locomotion"
+        ]
+      }
+    },
+    "skill_cast": {
+      "task": "jumper.skill_cast",
+      "from": "logs/jumper/jumper.skill_cast/2026-10-14_13-32-45/model_1999.pt",
+      "export": "tasks/jumper/skill_cast/out/crabcraft",
+      "pad": {
+        "button": "Y",
+        "on": "toggle",
+        "with": "menu",
+        "from": [
+          "locomotion"
+        ]
+      },
+      "keys": {
+        "key": [
+          "key_7",
+          "keypad_7"
+        ],
+        "on": "toggle",
+        "from": [
+          "locomotion"
+        ]
+      }
+    },
+    "skill_flinch": {
+      "task": "jumper.skill_flinch",
+      "from": "logs/jumper/jumper.skill_flinch/2026-10-14_13-32-45/model_1999.pt",
+      "export": "tasks/jumper/skill_flinch/out/crabcraft",
+      "pad": {
+        "button": "LB",
+        "on": "toggle",
+        "with": "menu",
+        "from": [
+          "locomotion"
+        ]
+      },
+      "keys": {
+        "key": [
+          "key_8",
+          "keypad_8"
+        ],
+        "on": "toggle",
+        "from": [
+          "locomotion"
+        ]
+      }
+    },
+    "skill_powerdown": {
+      "task": "jumper.skill_powerdown",
+      "from": "logs/jumper/jumper.skill_powerdown/2026-10-14_13-32-37/model_2999.pt",
+      "export": "tasks/jumper/skill_powerdown/out/crabcraft",
+      "pad": {
+        "button": "RB",
+        "on": "toggle",
+        "with": "menu",
+        "from": [
+          "locomotion"
+        ]
+      },
+      "keys": {
+        "key": [
+          "key_9",
+          "keypad_9"
+        ],
+        "on": "toggle",
+        "from": [
+          "locomotion"
+        ]
+      }
+    },
+    "skill_sit": {
+      "task": "jumper.skill_sit",
+      "from": "logs/jumper/jumper.skill_sit/2026-10-14_13-32-37/model_2999.pt",
+      "export": "tasks/jumper/skill_sit/out/crabcraft",
+      "pad": {
+        "button": "L3",
+        "on": "toggle",
+        "with": "menu",
+        "from": [
+          "locomotion"
+        ]
+      },
+      "keys": {
+        "key": [
+          "key_0",
+          "keypad_0"
         ],
         "on": "toggle",
         "from": [

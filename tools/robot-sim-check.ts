@@ -1,7 +1,8 @@
 // Headless check of Robot Mode's simulation core under Node: the same src/robot/sim/core.ts the
 // browser worker runs, the bundle's controller wasm, onnxruntime-web (wasm backend) and MuJoCo
-// WASM, loaded from public/. Drives the robot through standing, 30 s of walking, dances, a gesture
-// and the jump, and prints what happened.
+// WASM, loaded from public/. Drives the robot through standing, 30 s of walking, dances, a gesture,
+// the jump and each of the six skills, and prints what happened (exit 1 when a skill fails to
+// enter, finish or hand back).
 //
 //   node tools/robot-sim-check.ts [--quick]
 import { readFileSync, readdirSync } from 'node:fs';
@@ -126,6 +127,32 @@ await run(9, 'gesture_hello');
 await tap('Space');
 const jump = await run(4, 'jump');
 await run(2, 'settle');
+
+// The six skills (jumper.skill_*), when the bundle carries them: each switched into live on its
+// key from walking, played to its end, and handed back to the walking policy.
+const SKILLS: [string, string, number][] = [
+  ['skill_swipe', 'Digit5', 2.12], ['skill_slam', 'Digit6', 3.38], ['skill_cast', 'Digit7', 4.86],
+  ['skill_flinch', 'Digit8', 1.38], ['skill_powerdown', 'Digit9', 5.68], ['skill_sit', 'Digit0', 5.32],
+];
+const skills: Record<string, { entered: boolean; back: boolean; minZ: number; maxTiltDeg: number }> = {};
+let skillsFailed = 0;
+for (const [mode, code, clip] of SKILLS) {
+  if (!bundle.modes[mode]) continue;
+  const before = sim.log.length;
+  await tap(code);
+  const r = await run(clip + 3.2, mode);
+  const moves = sim.log.slice(before).map((l) => `${l.from}->${l.to}`);
+  const entered = moves.includes(`locomotion->${mode}`);
+  const back = moves.includes(`${mode}->locomotion`) && sim.mode === 'locomotion' && sim.runningPolicy;
+  skills[mode] = { entered, back, minZ: +r.minZ.toFixed(3), maxTiltDeg: +(r.maxTilt * 57.3).toFixed(1) };
+  if (!entered || !back || r.maxTilt * 57.3 > 45) skillsFailed++;
+  await run(1, 'settle');
+}
 console.log(JSON.stringify({ walkMinZ: walk.minZ, walkMaxTiltDeg: walk.maxTilt * 57.3, walkDist: walk.d, jumpApex: jump.maxZ }));
+if (Object.keys(skills).length) console.log('skills', JSON.stringify(skills));
 console.log('log', sim.log.map((l) => `${l.from}->${l.to}`).join(' '));
 sim.dispose();
+if (skillsFailed) {
+  console.error(`${skillsFailed} skill(s) did not enter, finish and hand back to locomotion`);
+  process.exit(1);
+}

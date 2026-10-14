@@ -20,6 +20,12 @@ export const MODE_LABEL: Record<string, string> = {
   gesture_salute: 'Salute',
   claw_left: 'Left Claw',
   claw_right: 'Right Claw',
+  skill_swipe: 'Swipe',
+  skill_slam: 'Slam',
+  skill_cast: 'Cast',
+  skill_flinch: 'Flinch',
+  skill_powerdown: 'Power Down',
+  skill_sit: 'Sit',
   safe: 'Safe Hold',
 };
 
@@ -82,6 +88,7 @@ export class Hud {
   private log!: HTMLElement;
   private dock: DockButton[] = [];
   private stopBtn!: HTMLButtonElement;
+  private dockFit: ResizeObserver | null = null;
   private info: ReadyInfo | null = null;
   private lastMode = '';
   private lastRunning = false;
@@ -282,9 +289,16 @@ export class Hud {
     if (dances.length) dock.append(group('Dances', ...dances.map((m) => btn(m, MODE_LABEL[m]))));
     const gestures = ['gesture_hello', 'gesture_bow', 'gesture_paw', 'gesture_salute'].filter(has);
     if (gestures.length) dock.append(group('Gestures', ...gestures.map((m) => btn(m, MODE_LABEL[m]))));
+    // The six skills trained for this game (jumper.skill_*), the same moves the RPG plays.
+    const skills = ['skill_swipe', 'skill_slam', 'skill_cast', 'skill_flinch', 'skill_powerdown', 'skill_sit'].filter(has);
+    if (skills.length) dock.append(group('Skills', ...skills.map((m) => btn(m, MODE_LABEL[m]))));
     const claws = ['claw_left', 'claw_right'].filter(has);
     if (claws.length) dock.append(group('Claw', ...claws.map((m) => btn(m, m === 'claw_left' ? 'Left' : 'Right'))));
     r.append(dock);
+    // With the skills the dock takes two rows; the help line and the appearance card sit above
+    // whatever height it has (hud.css, --rm-dock-h).
+    this.dockFit = new ResizeObserver(() => r.style.setProperty('--rm-dock-h', `${dock.offsetHeight}px`));
+    this.dockFit.observe(dock);
     const kbd = (k: string, t: string) => h('span', null, h('kbd', null, k), t);
     r.append(
       h(
@@ -525,6 +539,7 @@ export class Hud {
   }
 
   dispose(): void {
+    this.dockFit?.disconnect();
     this.root.remove();
   }
 }
