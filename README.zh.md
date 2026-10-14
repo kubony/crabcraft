@@ -20,15 +20,15 @@
 
 ## 真实策略，而不是手工动画
 
-- 游戏里 37 段动作中有 31 段，是用 Jumper 示例 bundle 自带的 ONNX 策略，通过 bundle 自带的控制器扩展，在 MuJoCo 3.11 中闭环运行后录制下来的：8 个方向的行走、转身、快速步态、跳跃、左右钳子模式、4 个手势和 4 支舞蹈，其中 `dance_crab` 保留了完整的 238.6 秒。
-- 机器人没有对应策略的 6 段战斗动作（`attack_swipe`、`attack_slam`、`cast`、`hit_react`、`death`、`sit`）是在同一个 MuJoCo 模型上、在关节限位以内制作的关键帧动画。
-- 一致性检查 `tools/motion/check_bundle.py`：控制器回放 `reference.json`，观测差 0，目标差 0；ONNX 输出与录制动作的最大差为 9.5e-07。
+- 游戏里全部 37 段动作，都是 Jumper 策略通过 bundle 自带的控制器扩展，在 MuJoCo 3.11 中闭环运行后录制下来的。其中 31 段来自 Jumper 示例 bundle：8 个方向的行走、转身、快速步态、跳跃、左右钳子模式、4 个手势和 4 支舞蹈，`dance_crab` 保留了完整的 238.6 秒。
+- 机器人原本没有策略的 6 段战斗动作（`attack_swipe`、`attack_slam`、`cast`、`hit_react`、`death`、`sit`），来自随本项目一同发布的 **6 个新 Jumper 任务**：`jumper.skill_swipe`、`skill_slam`、`skill_cast`、`skill_flinch`、`skill_powerdown`、`skill_sit`。参考动作在机器人自己的模型上制作，再训练成模仿策略（每个在一张 H100 上训练 2000 到 3000 次 PPO 迭代）。在任务自己的环境中从站立姿态出发，84 次运行（每个动作 10 次带训练时的域随机化，4 次不带）没有一次摔倒；动作区间内的关节 RMS 误差为 0.26 到 1.54 度，而原地不动会差 11 到 39 度。死亡现在就是 power-down 策略：腿一条条软下去，外壳落到地上，尸体一直保持这个姿态。
+- 一致性检查 `tools/motion/check_bundle.py`：控制器回放 `reference.json`，观测差 0，目标差 0；ONNX 输出与录制动作的最大差为 9.5e-07（示例 bundle）和 0（crabcraft bundle）。
 - 螃蟹模型由 Jumper 的 URDF 和外观网格生成（`tools/build_crab.py`）。与 MuJoCo 对比 41 个刚体 x 13 个姿态，最大位置误差 0.000534 mm。
 - 游戏中的螃蟹播放的是录制好的策略轨迹，并不做物理仿真；实时运行物理和策略的是 Robot Mode。
 
 ## Robot Mode：真实的控制栈，在浏览器里实时运行
 
-官方 MuJoCo 3.11.0 WebAssembly 版本（`@mujoco/mujoco`）、onnxruntime-web 1.30.0 和 bundle 自带的 `controller.wasm`，加载与实体机器人相同的 11 个 ONNX 策略（12 种模式），按机器人的控制频率运行（行走时实测 199 Hz）。机器人启动前，页面先做自检：用控制器回放 `reference.json`（24 帧，差值 0），比较策略输出与录制动作（最大差 4.8e-7），并用 SHA-256 校验 35 个 bundle 文件。
+官方 MuJoCo 3.11.0 WebAssembly 版本（`@mujoco/mujoco`）、onnxruntime-web 1.30.0 和 bundle 自带的 `controller.wasm`，加载 17 个 ONNX 策略（18 种模式）：示例 bundle 的 11 个加上 6 个新技能，由 Jumper 自己的 `scripts/deploy.py` 打包成一个 bundle，按机器人的控制频率运行（行走时实测 199 Hz）。按 5 6 7 8 9 0 可以实时做出挥砍、重砸、施法、受击、断电倒地和坐下，结束后自动交回行走策略。机器人启动前，页面先做自检：用控制器回放 `reference.json`（24 帧，差值 0），比较策略输出与录制动作（最大差 8.3e-7），并用 SHA-256 校验 53 个 bundle 文件。
 
 按 <kbd>T</kbd> 可以在裸机器人和你创建的螃蟹之间切换。装备、武器和 LED 面部都会跟随同一个实时仿真逐帧摆姿，螃蟹的各个连杆与物理刚体的偏差在 0.0013 mm 以内。同一个策略，任意外观。
 
@@ -36,7 +36,7 @@
   <img src="docs/media/robot-switch.webp" alt="Robot Mode：同一次 dance_crab 策略运行，先显示为玩家的螃蟹，再切换成裸 Jumper 机器人，再切换回来" width="100%">
 </p>
 
-无头检查 `node tools/robot-sim-check.ts`：行走 30 秒前进 21.65 m，没有摔倒，最大倾角 1.88 度，跳跃最高 0.228 m。
+无头检查 `node tools/robot-sim-check.ts`：行走 30 秒前进 21.65 m，没有摔倒，最大倾角 1.88 度，跳跃最高 0.228 m；6 个技能都能按键进入、播放完毕并交回行走（最大倾角 11.3 度，坐下）。
 
 ## 功能一览
 

@@ -26,19 +26,28 @@ policies, live, in MuJoCo, in the same tab.
 
 ## What makes it different
 
-**The motion is the robot's, not an animator's.** 31 of the game's 37 motion clips are closed-loop
-rollouts of the Jumper example bundle's own ONNX policies, driven through the bundle's own controller
-extension in MuJoCo 3.11: walking in 8 directions, turning, the fast gait, the jump, both claw modes,
-4 gestures and 4 dances, with `dance_crab` at its full 238.6 s. The 6 clips the robot has no policy
-for (`attack_swipe`, `attack_slam`, `cast`, `hit_react`, `death`, `sit`) are keyframed on the same
-MuJoCo model, inside its joint limits.
+**The motion is the robot's, not an animator's.** All 37 of the game's motion clips are closed-loop
+rollouts of Jumper policies, driven through a bundle's own controller extension in MuJoCo 3.11.
+31 come from the Jumper example bundle: walking in 8 directions, turning, the fast gait, the jump,
+both claw modes, 4 gestures and 4 dances, with `dance_crab` at its full 238.6 s. The 6 combat moves
+the robot had no policy for (`attack_swipe`, `attack_slam`, `cast`, `hit_react`, `death`, `sit`)
+come from **six new Jumper tasks, published with this project**: `jumper.skill_swipe`, `skill_slam`,
+`skill_cast`, `skill_flinch`, `skill_powerdown` and `skill_sit`, reference clips authored on the
+robot's own model and trained as imitation policies (2,000 to 3,000 PPO iterations each on one
+H100). Started from the standing pose in the task's own environment, the six policies did not fall
+in 84 rollouts (10 per move with the training's domain randomisation, 4 without), and track their
+reference within 0.26 to 1.54 degrees joint RMS over the move, where standing still would be 11 to
+39 degrees off. Death is now the power-down policy: the legs give way and the shell settles on the
+ground, where the corpse stays.
 
 **Robot Mode runs the real stack in your browser.** The official MuJoCo 3.11.0 WebAssembly build
-(`@mujoco/mujoco`), onnxruntime-web 1.30.0 and the bundle's own `controller.wasm` load the same
-11 ONNX policies (12 modes) the robot loads, at the robot's control rate (199 Hz measured while
-walking). Before the robot wakes, the page proves it agrees with the bundle: it replays `reference.json`
-through the controller (24 frames, diff 0), compares the policy outputs with the recorded actions
-(max diff 4.8e-7) and checks 35 bundle files against their SHA-256.
+(`@mujoco/mujoco`), onnxruntime-web 1.30.0 and the bundle's own `controller.wasm` load 17 ONNX
+policies (18 modes): the example bundle's 11 and the six skills, built into one bundle by Jumper's
+own `scripts/deploy.py`, at the robot's control rate (199 Hz measured while walking). Keys 5 6 7 8 9 0
+swipe, slam, cast, flinch, power down and sit, live, and hand back to walking. Before the robot
+wakes, the page proves it agrees with the bundle: it replays `reference.json` through the controller
+(24 frames, diff 0), compares the policy outputs with the recorded actions (max diff 8.3e-7) and
+checks 53 bundle files against their SHA-256.
 
 **Same policy, any appearance.** Press <kbd>T</kbd> in Robot Mode to switch between the bare robot and
 the crab you created, gear, weapon and LED face included, posed every frame from the same live
@@ -199,12 +208,13 @@ flowchart LR
     URDF["URDF + visual meshes"]
     MJCF["jumper.xml (MJCF)"]
     BUNDLE["Example policy bundle<br/>11 ONNX policies, controller,<br/>contracts, reference.json"]
+    SKILL["Six new tasks, jumper.skill_*<br/>trained for this game<br/>crabcraft bundle = example + 6"]
   end
   subgraph T["Offline pipelines (tools/)"]
     BC["build_crab.py<br/>Blender"]
     BG["build_gear.py<br/>gear, weapons, enemies"]
     REC["motion/record_clips.py<br/>MuJoCo 3.11 + controller + ONNX"]
-    EXP["motion/export_clips.py<br/>motion/keyframes.py"]
+    EXP["motion/export_clips.py"]
     ER["export_robot.py<br/>build_robot_visual.py"]
     WB["world/build-assets.mjs<br/>Quaternius CC0 kits"]
   end
@@ -226,8 +236,10 @@ flowchart LR
   URDF --> BG --> GEAR --> CRAB
   MJCF --> REC
   BUNDLE --> REC --> EXP --> MOT --> MOTION
+  SKILL --> REC
   MJCF --> ER --> RB
   BUNDLE --> RB --> ROBOT
+  SKILL --> RB
   WB --> WG --> WORLD
   CRAB --> GAME
   MOTION --> GAME
@@ -242,14 +254,17 @@ flowchart LR
   sleepy, surprised, focused, blink, talk) and dresses it with gear from `tools/build_gear.py`:
   6 races x 4 crests, 3 class weapons, NPC extras and 3 enemies (Scrapling, Rustclaw Scavenger,
   Corrodius).
-- **Motion.** `tools/motion/jumper_sim.py` is a headless host for the bundle: MuJoCo, onnxruntime and
+- **Motion.** `tools/motion/jumper_sim.py` is a headless host for a bundle: MuJoCo, onnxruntime and
   the bundle's own controller extension, with the contact, solver and servo settings taken from the
   upstream training configuration. `record_clips.py` drives it the way `play --app` does (velocity
-  commands for walking, the bundle's own pad bindings for jump, gestures, dances and claws).
-  `export_clips.py` cuts seamless loops and quantises them into `public/motions/`; `keyframes.py`
-  authors the 6 combat clips with inverse kinematics so planted feet do not slide. In the game,
-  `src/motion/` blends the clips (phase-synchronised walking underneath, actions layered on top).
-  Gameplay crabs play recorded rollouts; physics runs live only in Robot Mode.
+  commands for walking, the bundle's own pad bindings for jump, gestures, dances, claws and, through
+  the crabcraft bundle, the six skills). `export_clips.py` cuts seamless loops and quantises them into
+  `public/motions/`; for the skills it also moves each reference moment (the swipe's hit, the slam's
+  impact, read off the claw pads' contact, the cast's release, the shell settling) to where the policy
+  played it and writes the game's windows to `src/motion/skillClips.ts`. In the game, `src/motion/`
+  blends the clips (phase-synchronised walking underneath, actions layered on top) and
+  `src/motion/skills.ts` plays each skill's move, not its whole rollout, with gameplay timed by the
+  clip's own moments. Gameplay crabs play recorded rollouts; physics runs live only in Robot Mode.
 - **Robot Mode.** `tools/export_robot.py` exports Jumper's physics model with the training contact
   and solver settings; `tools/build_robot_visual.py` decimates the visual meshes. In the browser a Web
   Worker (`src/robot/sim/`) loads the bundle the way its README asks a host to, builds MuJoCo, the
@@ -264,16 +279,20 @@ flowchart LR
 
 | Check | Command | Result |
 |---|---|---|
-| Motion host agrees with the bundle | `tools/motion/check_bundle.py` | Controller replay of `reference.json`: observation diff 0, target diff 0. ONNX vs recorded actions: max diff 9.5e-07 |
+| Motion host agrees with the bundle | `tools/motion/check_bundle.py [--bundle <crabcraft bundle>]` | Controller replay of `reference.json`: observation diff 0, target diff 0. ONNX vs recorded actions: max diff 9.5e-07 (example bundle), 0 (crabcraft bundle) |
+| The six skill policies track their moves | evaluation in each task's own environment, from the standing pose | 0 falls in 84 rollouts; joint RMS over the move 0.26 to 1.54 deg without domain randomisation, 0.42 to 1.68 deg with it (standing still: 11.2 to 39.4 deg) |
 | Crab model is kinematically Jumper | `tools/check_crab_fk.py` | 41 bodies x 13 poses vs MuJoCo: max position error 0.000534 mm |
-| Robot Mode simulation, headless | `node tools/robot-sim-check.ts` | 21.65 m in 30 s of walking without a fall, max tilt 1.88 deg, jump apex 0.228 m |
-| Robot Mode start-up checks, in the page | open `/?screen=robot` | `reference.json` replay 24 frames, diff 0; policy outputs vs recorded actions 4.8e-7; 35 bundle files match their SHA-256 |
+| Robot Mode simulation, headless | `node tools/robot-sim-check.ts` | 21.65 m in 30 s of walking without a fall, max tilt 1.88 deg, jump apex 0.228 m; each of the six skills entered on its key, played out and handed back to walking (max tilt 11.3 deg, the sit) |
+| Robot Mode start-up checks, in the page | open `/?screen=robot` | `reference.json` replay 24 frames, diff 0; policy outputs vs recorded actions 8.3e-7; 53 bundle files match their SHA-256 |
 | Crab drawn on the live simulation | `node tools/robot-skin-shots.mjs <app url> <out dir>` | All 41 crab links within 0.0013 mm of the physics bodies while standing, walking and dancing |
 | Whole game, end to end | `pnpm dev --port 5206` in one terminal, `node tools/playtest.mjs` in another | Warrior, Mage and Priest each play every quest, the boss and the ending with 0 console errors |
 
 The Python tools need a Jumper checkout (`JUMPER_ROOT`, with the example bundle built at
-`out/bundle_example/jumper`) and an interpreter with `mujoco` and `onnxruntime`; the Blender scripts
-need Blender. See the docstring at the top of each script.
+`out/bundle_example/jumper`; the skills need the branch with the six `jumper.skill_*` tasks and its
+crabcraft bundle, `python scripts/deploy.py --manifests deploy/crabcraft.manifests.json
+--allow-incomplete`) and an
+interpreter with `mujoco` and `onnxruntime`; the Blender scripts need Blender. See the docstring at
+the top of each script.
 
 ## Project layout
 

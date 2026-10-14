@@ -7,9 +7,15 @@ Single source for lore, races, classes, quest, art direction and asset names. Co
 
 A browser fantasy RPG in the spirit of World of OLDcraft where every living thing is a
 Jumper crab robot. Six races, three classes, one seaside starting zone, one quest chain that ends
-in a boss fight and a town-wide dance party. Every walk cycle, gesture and dance the crabs perform
-was recorded from Jumper's real trained policies, and Robot Mode runs those policies live in the
-browser on the same MuJoCo model the physical robot is trained on.
+in a boss fight and a town-wide dance party. Every walk cycle, gesture, dance and combat move the
+crabs perform was recorded from Jumper's real trained policies, and Robot Mode runs those policies
+live in the browser on the same MuJoCo model the physical robot is trained on. The six combat moves
+(swipe, slam, cast, hit reaction, death, sit) had no policy, so they are six new Jumper tasks,
+`jumper.skill_*`, published with this project and trained for it: in each task's own environment,
+from the standing pose, 0 falls in 84 rollouts and 0.26 to 1.54 degrees joint RMS over the move,
+where standing still is 11 to 39 degrees off. Gameplay plays each move's window of the recorded
+rollout (`src/motion/skills.ts`) and times hits, the cast release and the corpse settling by the
+clip's own moments.
 
 Tagline: **Six shells. One tide.**
 
@@ -148,7 +154,8 @@ Boss fight (about 90 s for a decent player):
   big hit. **Rust Spray** - cone, applies Rust (stacking slow). Auto-attacks with the claw.
 - Phase 2 (60 to 25 %): summons 3 Scraplings, **Undertow** - pulls the player in then slams.
 - Phase 3 (below 25 %): enrage, visor turns from red to white-hot, faster attacks.
-- Death: collapses with `death` clip, rust peels off, a small ordinary red Jumper crab steps out
+- Death: powers down with the `death` clip (the `skill_powerdown` policy: the legs give way and the
+  shell settles on the deck), rust peels off, a small ordinary red Jumper crab steps out
   of the hull, does `gesture_bow`, and scuttles into the sea (the tyrant was a crab trapped in
   rusted armour).
 
@@ -167,8 +174,9 @@ A separate scene (opened from the title screen or with R): a sunny tabletop aren
 TVC (warm light, shallow depth of field). The chosen crab runs live: MuJoCo WASM physics plus the
 bundle's ONNX policies and controller wasm, the same files the physical robot loads. Keyboard /
 on-screen buttons switch modes exactly like the robot's controller (walk with WASD, jump, dances,
-gestures, claw). A HUD shows the live mode, its control rate from the contract (200 Hz for locomotion and jump,
-50 Hz for dances, gestures and claw) and the joint telemetry. A toggle
+gestures, the six skills on 5 6 7 8 9 0, claw). A HUD shows the live mode, its control rate from the
+contract (200 Hz for locomotion and jump, 50 Hz for dances, gestures, skills and claw) and the joint
+telemetry. A toggle
 shows the bare robot vs. the race appearance.
 
 ## Art direction
