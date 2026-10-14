@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Crabcraft trailer cards</title>
+<!-- Trailer title cards and burned-in captions, rendered frame by frame by tools/trailer/cards.mjs.
+     Served by the dev server: /tools/trailer/cards.html?mode=logo|end|caption&layout=land|port -->
+<link rel="stylesheet" href="/src/ui/fonts.css" />
+<style>
+  :root { --gold: #d9b45a; --gold-bright: #ffd97a; --cream: #f6ead0; --parch: #e9d9b4; }
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; }
+  body { font-family: 'Alegreya', 'Songti SC', serif; color: var(--cream); }
+  .card { position: absolute; inset: 0; overflow: hidden; background: #05060a; }
+  .bg { position: absolute; inset: -4%; background: center / cover no-repeat; will-change: transform; }
+  .shade { position: absolute; inset: 0; }
+  .rays {
+    position: absolute; inset: -30%;
+    background: repeating-conic-gradient(from 200deg at 70% 10%, rgba(255, 220, 150, 0.07) 0deg 4deg, transparent 4deg 11deg);
+    mix-blend-mode: screen;
+  }
+  .logo-wrap { position: absolute; left: 50%; transform-origin: 50% 50%; }
+  .logo { display: block; width: 100%; filter: drop-shadow(0 12px 34px rgba(0, 0, 0, 0.85)); }
+  .shine {
+    position: absolute; inset: 0;
+    -webkit-mask: url('/art/logo.webp') center / 100% 100% no-repeat; mask: url('/art/logo.webp') center / 100% 100% no-repeat;
+    background: linear-gradient(105deg, transparent 0%, transparent 42%, rgba(255, 246, 214, 0.95) 50%, transparent 58%, transparent 100%);
+    background-size: 320% 100%; mix-blend-mode: screen;
+  }
+  .glow { position: absolute; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 214, 140, 0.55), rgba(255, 170, 80, 0.12) 60%, transparent); mix-blend-mode: screen; }
+  .ember { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: radial-gradient(circle, #fff3c4 0, #ffc45a 40%, rgba(255, 140, 40, 0) 70%); mix-blend-mode: screen; }
+  .line { position: absolute; left: 0; right: 0; text-align: center; }
+  .en { font-family: 'Cinzel', serif; font-weight: 700; letter-spacing: 0.06em; color: var(--cream);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95), 0 0 24px rgba(0, 0, 0, 0.75), 0 0 2px rgba(0, 0, 0, 1); }
+  .en.gold { background: linear-gradient(180deg, #fff1c2 0%, #f3cf72 45%, #c8932f 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 18px rgba(0, 0, 0, 0.7)); }
+  .zh { font-family: 'Songti SC', 'STSong', 'Alegreya', serif; font-weight: 600; letter-spacing: 0.12em; color: var(--parch);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95), 0 0 18px rgba(0, 0, 0, 0.8); }
+  .mono { font-family: 'Alegreya', serif; font-weight: 700; letter-spacing: 0.03em; }
+  .rule { position: absolute; left: 50%; height: 2px; transform: translateX(-50%);
+    background: linear-gradient(90deg, transparent, rgba(217, 180, 90, 0.95), transparent); }
+  .cap { position: absolute; left: 0; right: 0; text-align: center; text-wrap: balance; }
+  .cap-shade { position: absolute; left: 50%; transform: translateX(-50%); border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.25) 60%, transparent); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="module">
+  const q = new URLSearchParams(location.search);
+  const mode = q.get('mode') ?? 'logo';
+  const port = q.get('layout') === 'port';
+  const W = innerWidth;
+  const H = innerHeight;
+  const root = document.getElementById('root');
+  const el = (tag, cls, parent = root, text = '') => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text) e.textContent = text;
+    parent.append(e);
+    return e;
+  };
+  const clamp01 = (x) => Math.max(0, Math.min(1, x));
+  const ease = (x) => { x = clamp01(x); return 1 - (1 - x) ** 3; };
+  const inout = (x) => { x = clamp01(x); return x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2; };
+  const back = (x) => { x = clamp01(x); const c1 = 1.4; const c3 = c1 + 1; return 1 + c3 * (x - 1) ** 3 + c1 * (x - 1) ** 2; };
+  const fade = (t, a, d) => ease((t - a) / d);
+  // Deterministic pseudo-random for embers.
+  let seed = 11;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+  const u = port ? W / 1080 : H / 1080;
+
+  /** Text line: English (Cinzel) or Chinese, centred, at y (px from top). */
+  const line = (cls, text, y, size, extra = '') => {
+    const e = el('div', `line ${cls}`, card, text);
+    e.style.cssText += `top:${y}px;font-size:${size}px;${extra}`;
+    return e;
+  };
+
+  let card;
+  let render = () => {};
+  let afterFonts = () => {};
+
+  if (mode === 'logo') {
+    card = el('div', 'card');
+    const bg = el('div', 'bg', card);
+    bg.style.backgroundImage = 'url("/art/title-bg.webp")';
+    const rays = el('div', 'rays', card);
+    const shade = el('div', 'shade', card);
+    shade.style.background = 'radial-gradient(80% 70% at 50% 45%, rgba(0,0,0,0.05) 30%, rgba(0,0,0,0.6) 100%), linear-gradient(180deg, rgba(0,0,0,0.35), transparent 30%, transparent 60%, rgba(0,0,0,0.7))';
+    const black = el('div', 'shade', card);
+    black.style.background = '#000';
+    const lw = port ? W * 0.9 : Math.min(W * 0.56, 1100);
+    const lh = lw * 700 / 1600;
+    const ly = port ? H * 0.36 : H * 0.42;
+    const glow = el('div', 'glow', card);
+    glow.style.cssText += `left:${W / 2 - lw * 0.7}px;top:${ly - lw * 0.45}px;width:${lw * 1.4}px;height:${lw * 0.9}px;`;
+    const wrap = el('div', 'logo-wrap', card);
+    wrap.style.cssText += `width:${lw}px;height:${lh}px;top:${ly - lh / 2}px;margin-left:${-lw / 2}px;`;
+    const img = el('img', 'logo', wrap);
+    img.src = '/art/logo.webp';
+    const shine = el('div', 'shine', wrap);
+    const tag = line('en gold', 'Six shells. One tide.', ly + lh / 2 + 18 * u, Math.round(46 * u));
+    const tagZh = line('zh', '六种甲壳，同一片潮汐', ly + lh / 2 + 84 * u, Math.round(28 * u));
+    const embers = [];
+    for (let i = 0; i < 46; i++) {
+      const e = el('div', 'ember', card);
+      embers.push({ e, x: rnd() * W, y0: H * (0.55 + rnd() * 0.55), sp: 40 + rnd() * 90, sz: 2 + rnd() * 5, ph: rnd() * 6.28, sw: 10 + rnd() * 30 });
+    }
+    render = (t) => {
+      const D = 4.6;
+      const k = t / D;
+      bg.style.transform = `scale(${1.03 + 0.07 * inout(k)}) translate(${-1.2 * k}%, ${-0.8 * k}%)`;
+      rays.style.transform = `rotate(${t * 1.6}deg)`;
+      rays.style.opacity = String(0.4 + 0.5 * fade(t, 0.6, 1.5));
+      black.style.opacity = String(1 - fade(t, 0, 0.9));
+      const lk = clamp01((t - 0.3) / 1.0);
+      const s = 0.8 + 0.2 * back(lk) + 0.025 * inout((t - 1.3) / 2.9);
+      wrap.style.opacity = String(ease(lk * 1.6));
+      wrap.style.transform = `scale(${s})`;
+      wrap.style.filter = `blur(${(1 - ease(lk)) * 10}px) brightness(${1 + 0.6 * Math.max(0, 1 - Math.abs(t - 0.95) / 0.45)})`;
+      shine.style.backgroundPosition = `${100 - 100 * inout((t - 1.25) / 0.85)}% 0`;
+      shine.style.opacity = t > 1.2 && t < 2.2 ? '1' : '0';
+      const g = Math.max(0, 1 - Math.abs(t - 0.85) / 0.6);
+      glow.style.opacity = String(0.25 + 0.75 * g);
+      tag.style.opacity = String(fade(t, 1.75, 0.6));
+      tag.style.transform = `translateY(${(1 - fade(t, 1.75, 0.6)) * 14}px)`;
+      tagZh.style.opacity = String(fade(t, 2.0, 0.6));
+      for (const m of embers) {
+        const y = m.y0 - m.sp * t;
+        const yy = ((y % (H * 1.1)) + H * 1.1) % (H * 1.1);
+        m.e.style.transform = `translate(${m.x + Math.sin(t * 1.3 + m.ph) * m.sw}px, ${yy}px) scale(${m.sz / 4})`;
+        m.e.style.opacity = String(0.85 * fade(t, 0.4, 1.0) * (0.5 + 0.5 * Math.sin(t * 3 + m.ph)));
+      }
+    };
+  } else if (mode === 'end') {
+    card = el('div', 'card');
+    const bg = el('div', 'bg', card);
+    bg.style.backgroundImage = 'url("/art/ending.webp")';
+    if (port) bg.style.backgroundPosition = '46% 50%';
+    const shade = el('div', 'shade', card);
+    shade.style.background = port
+      ? 'linear-gradient(180deg, rgba(4,6,14,0.55) 0%, rgba(4,6,14,0.35) 30%, rgba(4,6,14,0.78) 52%, rgba(4,6,14,0.92) 100%)'
+      : 'linear-gradient(180deg, rgba(4,6,14,0.45) 0%, rgba(4,6,14,0.55) 40%, rgba(4,6,14,0.86) 100%), radial-gradient(60% 60% at 50% 40%, transparent, rgba(0,0,0,0.4))';
+    const black = el('div', 'shade', card);
+    black.style.background = '#000';
+    const lw = port ? W * 0.8 : 760 * u;
+    const lh = lw * 700 / 1600;
+    const ly = port ? H * 0.2 : 70 * u;
+    const wrap = el('div', 'logo-wrap', card);
+    wrap.style.cssText += `width:${lw}px;height:${lh}px;top:${ly}px;margin-left:${-lw / 2}px;`;
+    const img = el('img', 'logo', wrap);
+    img.src = '/art/logo.webp';
+    let y = ly + lh + (port ? 60 : 36) * u;
+    const rows = [];
+    const add = (cls, text, size, gap, extra = '') => {
+      rows.push(line(cls, text, y, Math.round(size * u), extra));
+      y += gap * u;
+    };
+    add('en gold', 'Play in your browser', 52, 66);
+    add('zh', '在浏览器里直接玩', 30, port ? 86 : 70);
+    add('en mono', 'github.com/kubony/crabcraft', 40, port ? 84 : 66, 'font-family:Alegreya,serif;letter-spacing:0.04em;');
+    add('en', '#Jumper  #CrabRobot  #OpenSourceRobot', port ? 30 : 30, 48, 'font-weight:600;color:#ffd97a;');
+    add('en', '@KingKong Robotics', 30, port ? 96 : 74, 'font-weight:600;color:#53f2e4;');
+    add('zh', 'Built on Jumper by KingKong Robotics (Apache-2.0)', 24, 40, 'font-family:Alegreya,serif;letter-spacing:0.04em;font-weight:500;');
+    add('zh', '基于 KingKong Robotics 的 Jumper 开发（Apache-2.0）', 22, 40, 'letter-spacing:0.06em;');
+    const rule = el('div', 'rule', card);
+    rule.style.cssText += `top:${ly + lh + (port ? 30 : 18) * u}px;width:${lw * 0.7}px;`;
+    render = (t) => {
+      bg.style.transform = `scale(${1.04 + 0.05 * inout(t / 7)})`;
+      black.style.opacity = String(1 - fade(t, 0, 0.5));
+      wrap.style.opacity = String(fade(t, 0.15, 0.7));
+      wrap.style.transform = `scale(${0.94 + 0.06 * ease((t - 0.15) / 0.9)})`;
+      rule.style.opacity = String(fade(t, 0.6, 0.6));
+      rows.forEach((r, i) => {
+        const a = 0.75 + i * 0.22;
+        r.style.opacity = String(fade(t, a, 0.55));
+        r.style.transform = `translateY(${(1 - fade(t, a, 0.55)) * 12}px)`;
+      });
+    };
+  } else if (mode === 'caption') {
+    // Transparent frame with one caption (English over Chinese), placed for the layout.
+    card = el('div', 'cap-root');
+    card.style.cssText = 'position:absolute;inset:0;';
+    const en = q.get('en') ?? '';
+    const zh = q.get('zh') ?? '';
+    const enSize = Math.round((port ? 54 : 46) * u);
+    const zhSize = Math.round((port ? 36 : 30) * u);
+    // Lower third by default; 'band' lays a dark gradient band under it for shots whose bottom is
+    // busy with the game's own UI, 'top' puts it at the top.
+    const pos = q.get('pos');
+    const base = pos === 'top' ? H * 0.06 : port ? H * 0.665 : H * (pos === 'band' ? 0.845 : 0.835);
+    if (pos === 'band') {
+      const band = el('div', '', card);
+      band.style.cssText = `position:absolute;left:0;right:0;top:${H * 0.7}px;bottom:0;` +
+        'background:linear-gradient(180deg, rgba(5,6,10,0) 0%, rgba(5,6,10,0.78) 38%, rgba(5,6,10,0.9) 100%);';
+    }
+    const shadeEl = el('div', 'cap-shade', card);
+    const w = port ? W * 1.1 : W * 0.62;
+    shadeEl.style.cssText += `top:${base - enSize * 1.1}px;width:${w}px;height:${enSize * 4.2}px;margin-left:0;`;
+    const e = el('div', 'cap en', card, en);
+    e.style.cssText += `top:${base}px;font-size:${enSize}px;line-height:1.2;padding:0 ${port ? 60 : 120}px;`;
+    const z = el('div', 'cap zh', card, zh);
+    // Measure the English block once the fonts are in, so a wrapped line pushes the Chinese down.
+    afterFonts = () => {
+      const r = e.getBoundingClientRect();
+      z.style.cssText += `top:${r.bottom + 12 * u}px;font-size:${zhSize}px;line-height:1.3;padding:0 ${port ? 60 : 120}px;`;
+      requestAnimationFrame(() => (document.body.dataset.ready = '1'));
+    };
+  }
+  window.render = render;
+  const preload = ['/art/title-bg.webp', '/art/ending.webp', '/art/logo.webp'].map((src) => {
+    const i = new Image();
+    i.src = src;
+    return i.decode().catch(() => undefined);
+  });
+  Promise.all([
+    ...preload,
+    document.fonts.load('700 40px Cinzel'),
+    document.fonts.load('600 30px "Songti SC"'),
+    document.fonts.load('700 40px Alegreya'),
+    ...[...document.images].map((i) => i.decode().catch(() => undefined)),
+  ]).then(() => document.fonts.ready).then(() => {
+    afterFonts();
+    render(0);
+    window.__cardsReady = true;
+  });
+</script>
+</body>
+</html>

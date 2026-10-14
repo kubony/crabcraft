@@ -1,0 +1,10 @@
+[
+  { "id": "jumper", "en": "This is Jumper. A real crab robot.", "zh": "这是 Jumper，一只真实的螃蟹机器人。" },
+  { "id": "policy", "en": "Every move in this game is its real trained policy.", "zh": "游戏里的每一个动作，都来自它真实训练出的策略。" },
+  { "id": "same", "en": "Same policy. Any appearance.", "zh": "同一个策略，任意外观。" },
+  { "id": "races", "en": "Six races. Three classes. One robot body.", "zh": "六个种族，三种职业，同一副机器人身体。", "landPos": "band" },
+  { "id": "town", "en": "A harbour town where everyone walks sideways.", "zh": "一座人人都横着走的港口小镇。" },
+  { "id": "combat", "en": "Warrior. Mage. Priest. Real-time combat.", "zh": "战士、法师、牧师，即时战斗。" },
+  { "id": "boss", "en": "Light the beacon. Face Corrodius, the Rust Tyrant.", "zh": "点亮灯塔，迎战锈蚀暴君 Corrodius。" },
+  { "id": "dance", "en": "Then the whole town dances. Real Jumper dance policies.", "zh": "然后全镇一起跳舞，跳的是 Jumper 真实的舞蹈策略。" }
+]
