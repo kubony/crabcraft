@@ -31,9 +31,9 @@ rollouts of Jumper policies, driven through a bundle's own controller extension 
 31 come from the Jumper example bundle: walking in 8 directions, turning, the fast gait, the jump,
 both claw modes, 4 gestures and 4 dances, with `dance_crab` at its full 238.6 s. The 6 combat moves
 the robot had no policy for (`attack_swipe`, `attack_slam`, `cast`, `hit_react`, `death`, `sit`)
-come from **six new Jumper tasks, published with this project**: `jumper.skill_swipe`, `skill_slam`,
+come from **six new Jumper tasks, published with this project in [`jumper/`](jumper/)**: `jumper.skill_swipe`, `skill_slam`,
 `skill_cast`, `skill_flinch`, `skill_powerdown` and `skill_sit`, reference clips authored on the
-robot's own model and trained as imitation policies (2,000 to 3,000 PPO iterations each on one
+robot's own model and trained with motion-imitation reinforcement learning (2,000 to 3,000 PPO iterations each on one
 H100). Started from the standing pose in the task's own environment, the six policies did not fall
 in 84 rollouts (10 per move with the training's domain randomisation, 4 without), and track their
 reference within 0.26 to 1.54 degrees joint RMS over the move, where standing still would be 11 to
@@ -288,7 +288,7 @@ flowchart LR
 | Whole game, end to end | `pnpm dev --port 5206` in one terminal, `node tools/playtest.mjs` in another | Warrior, Mage and Priest each play every quest, the boss and the ending with 0 console errors |
 
 The Python tools need a Jumper checkout (`JUMPER_ROOT`, with the example bundle built at
-`out/bundle_example/jumper`; the skills need the branch with the six `jumper.skill_*` tasks and its
+`out/bundle_example/jumper`; the skills need the six `jumper.skill_*` tasks applied from [`jumper/`](jumper/) and the
 crabcraft bundle, `python scripts/deploy.py --manifests deploy/crabcraft.manifests.json
 --allow-incomplete`) and an
 interpreter with `mujoco` and `onnxruntime`; the Blender scripts need Blender. See the docstring at

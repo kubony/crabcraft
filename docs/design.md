@@ -11,7 +11,7 @@ in a boss fight and a town-wide dance party. Every walk cycle, gesture, dance an
 crabs perform was recorded from Jumper's real trained policies, and Robot Mode runs those policies
 live in the browser on the same MuJoCo model the physical robot is trained on. The six combat moves
 (swipe, slam, cast, hit reaction, death, sit) had no policy, so they are six new Jumper tasks,
-`jumper.skill_*`, published with this project and trained for it: in each task's own environment,
+`jumper.skill_*`, published with this project in `jumper/` and trained for it: in each task's own environment,
 from the standing pose, 0 falls in 84 rollouts and 0.26 to 1.54 degrees joint RMS over the move,
 where standing still is 11 to 39 degrees off. Gameplay plays each move's window of the recorded
 rollout (`src/motion/skills.ts`) and times hits, the cast release and the corpse settling by the
