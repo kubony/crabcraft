@@ -1,7 +1,7 @@
 // Heightfield terrain: shaped from the layout (coast, headland, hills, plazas, lots, roads),
 // rendered as one mesh with a splat-painted stylised material (grass, sand, dirt, cobble, rock).
 import * as THREE from 'three';
-import { clamp, GLSL_NOISE, lerp, Simplex, smoothstep } from './noise';
+import { clamp, lerp, Simplex, smoothstep } from './noise';
 import {
   COAST,
   GRID,
@@ -396,6 +396,48 @@ export interface TerrainTextures {
   rock: THREE.Texture | null;
 }
 
+/** Tiling RGBA noise (seamless by sampling 4D-style wraps of simplex on a torus). */
+export function noiseTexture(size = 256): THREE.DataTexture {
+  const S = new Simplex(11);
+  const data = new Uint8Array(size * size * 4);
+  const tau = Math.PI * 2;
+  // Seamless: sample 2D simplex on two circles (torus mapping), summing octaves of different radii.
+  const torus = (u: number, v: number, freq: number, off: number) => {
+    const a = u * tau;
+    const b = v * tau;
+    const r = freq / tau;
+    return (S.noise(Math.cos(a) * r + off, Math.sin(a) * r) + S.noise(Math.cos(b) * r, Math.sin(b) * r + off)) * 0.5;
+  };
+  for (let j = 0; j < size; j++)
+    for (let i = 0; i < size; i++) {
+      const u = i / size;
+      const v = j / size;
+      const f = (fr: number, oct: number, off: number) => {
+        let s = 0;
+        let a = 0.5;
+        let n = 0;
+        for (let o = 0; o < oct; o++) {
+          s += a * torus(u, v, fr * Math.pow(2, o), off + o * 13.1);
+          n += a;
+          a *= 0.5;
+        }
+        return s / n;
+      };
+      const k = (j * size + i) * 4;
+      data[k] = Math.round(clamp(f(3, 4, 1) * 0.5 + 0.5, 0, 1) * 255);
+      data[k + 1] = Math.round(clamp(f(9, 3, 7) * 0.5 + 0.5, 0, 1) * 255);
+      data[k + 2] = Math.round(clamp(f(40, 2, 19) * 0.5 + 0.5, 0, 1) * 255);
+      data[k + 3] = Math.round(clamp(f(5, 3, 29) * 0.5 + 0.5, 0, 1) * 255);
+    }
+  const t = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.magFilter = THREE.LinearFilter;
+  t.minFilter = THREE.LinearMipmapLinearFilter;
+  t.generateMipmaps = true;
+  t.needsUpdate = true;
+  return t;
+}
+
 /** Stylised splat material on top of MeshStandardMaterial (keeps lights, shadows and fog). */
 export function createTerrainMaterial(terrain: Terrain, tex: TerrainTextures, uniforms: { uTime: { value: number } }): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ roughness: 0.92, metalness: 0 });
@@ -417,6 +459,7 @@ export function createTerrainMaterial(terrain: Terrain, tex: TerrainTextures, un
     uCobbleN: { value: tex.cobbleNormal ?? flat },
     uRock: { value: tex.rock ?? white },
     uTime: uniforms.uTime,
+    uNoise: { value: noiseTexture() },
   };
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, u);
@@ -436,7 +479,7 @@ uniform sampler2D uRock;
 uniform vec2 uOrigin;
 uniform vec2 uSize;
 uniform float uTime;
-${GLSL_NOISE}
+uniform sampler2D uNoise;
 vec3 cc_srgb(vec3 c) { return pow(c, vec3(2.2)); }
 vec3 cc_tri(sampler2D t, vec3 p, vec3 n, float s) {
   vec3 w = pow(abs(n), vec3(4.0));
@@ -452,9 +495,12 @@ float ccSandWet;`,
         `
 vec2 ccXZ = vCcWorld.xz;
 vec4 sp = texture2D(uSplat, (ccXZ - uOrigin) / uSize);
-float n1 = cc_fbm(ccXZ * 0.11);
-float n2 = cc_vnoise(ccXZ * 1.7);
-float n3 = cc_fbm(ccXZ * 0.023 + 7.0);
+// One tiling noise texture replaces procedural fbm: r = broad fbm, g = medium, b = fine, a = patches.
+vec4 nzA = texture2D(uNoise, ccXZ * (0.11 / 9.0));
+vec4 nzB = texture2D(uNoise, ccXZ * (1.7 / 40.0) + 0.37);
+float n1 = nzA.g;
+float n2 = nzB.b;
+float n3 = texture2D(uNoise, ccXZ * (0.023 / 3.0) + 0.71).r;
 vec3 nW = normalize(vCcNormalW);
 float slope = 1.0 - nW.y;
 float sand = smoothstep(0.32, 0.62, sp.r + (n1 - 0.5) * 0.55);
@@ -462,10 +508,10 @@ ccCob = smoothstep(0.42, 0.58, sp.g + (n2 - 0.5) * 0.28 + (n1 - 0.5) * 0.2);
 float dirt = smoothstep(0.3, 0.6, sp.b + (n1 - 0.5) * 0.6);
 ccRock = max(smoothstep(0.30, 0.42, slope + (n1 - 0.5) * 0.18), smoothstep(0.35, 0.6, sp.a + (n2 - 0.5) * 0.3));
 // Grass: warm painterly greens with dry patches.
-vec3 gA = cc_srgb(vec3(0.27, 0.47, 0.13));
-vec3 gB = cc_srgb(vec3(0.47, 0.62, 0.18));
+vec3 gA = cc_srgb(vec3(0.24, 0.47, 0.11));
+vec3 gB = cc_srgb(vec3(0.46, 0.64, 0.16));
 vec3 gDry = cc_srgb(vec3(0.66, 0.60, 0.28));
-vec3 grass = mix(gA, gB, smoothstep(0.25, 0.75, cc_fbm(ccXZ * 0.045)));
+vec3 grass = mix(gA, gB, smoothstep(0.25, 0.75, nzA.r));
 grass = mix(grass, gDry, smoothstep(0.5, 0.78, n3) * 0.65);
 grass *= 0.82 + 0.32 * n2;
 // Sand: pale warm, darker and glossier when wet.
@@ -474,15 +520,19 @@ sandC *= 0.92 + 0.1 * sin(dot(ccXZ, vec2(0.9, 0.35)) * 3.0 + n1 * 6.0);
 ccSandWet = 1.0 - smoothstep(0.05, 0.75, vCcWorld.y);
 sandC = mix(sandC, sandC * vec3(0.62, 0.58, 0.55), ccSandWet);
 vec3 dirtC = cc_srgb(vec3(0.55, 0.40, 0.25)) * (0.82 + 0.3 * n2);
-vec3 cobC = texture2D(uCobble, ccXZ * 0.22).rgb * cc_srgb(vec3(1.08, 0.94, 0.80));
-vec3 rockC = cc_tri(uRock, vCcWorld, nW, 0.16) * 0.8 + cc_tri(uRock, vCcWorld, nW, 0.045) * 0.35;
-float strata = 0.85 + 0.15 * sin(vCcWorld.y * 2.3 + n1 * 3.0);
-rockC = mix(rockC, cc_srgb(vec3(0.58, 0.50, 0.44)) * strata, 0.4);
 vec3 col = grass;
 col = mix(col, dirtC, dirt);
 col = mix(col, sandC, sand);
-col = mix(col, cobC, ccCob);
-col = mix(col, rockC, ccRock);
+if (ccCob > 0.003) {
+  vec3 cobC = texture2D(uCobble, ccXZ * 0.22).rgb * cc_srgb(vec3(1.08, 0.94, 0.80));
+  col = mix(col, cobC, ccCob);
+}
+if (ccRock > 0.003) {
+  vec3 rockC = cc_tri(uRock, vCcWorld, nW, 0.16) * 0.8 + texture2D(uRock, vCcWorld.xz * 0.045 + vCcWorld.y * 0.03).rgb * 0.35;
+  float strata = 0.85 + 0.15 * sin(vCcWorld.y * 2.3 + n1 * 3.0);
+  rockC = mix(rockC, cc_srgb(vec3(0.58, 0.50, 0.44)) * strata, 0.4);
+  col = mix(col, rockC, ccRock);
+}
 // Underwater: darker and greener seabed.
 col = mix(col, col * cc_srgb(vec3(0.55, 0.7, 0.62)), smoothstep(-0.2, -3.0, vCcWorld.y));
 diffuseColor.rgb *= col;

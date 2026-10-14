@@ -99,8 +99,9 @@ export class TownBuilder {
         [W / 2, -D / 2, Math.PI],
         [-W / 2, -D / 2, -Math.PI / 2],
       ]) {
-        const piece = set === 'stone' ? 'Corner_Exterior_Brick' : 'Corner_Exterior_Wood';
-        this.put(base, piece, cx, y, cz, cy);
+        // Stone corners use the light wooden post scaled up (the brick corner piece is 3k triangles).
+        if (set === 'stone') this.put(base, 'Corner_ExteriorWide_Wood', cx, y, cz, cy, new THREE.Vector3(1.5, 1, 1.5));
+        else this.put(base, 'Corner_Exterior_Wood', cx, y, cz, cy);
       }
       // Beam trim between storeys.
       if (f > 0) {

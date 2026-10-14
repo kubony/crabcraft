@@ -7,6 +7,7 @@ import { lathe, worldBox } from './geom';
 import { type Kit, type StaticBatch, trs } from './kit';
 import { DOCK, GROVE, LOTS, type Lot, ROADS, TOWN_H } from './layout';
 import { GLSL_NOISE, rng } from './noise';
+import { plankMaterial } from './materials';
 import { CC_SKY, CC_SKY_UNIFORMS, type SkyUniforms } from './sky';
 import type { Terrain } from './terrain';
 
@@ -26,6 +27,8 @@ export interface Dressing {
   forgeSparks: THREE.Vector3;
   chimneys: THREE.Vector3[];
   groveWater: THREE.Mesh;
+  /** Shaft of moonlight over the pool; uStrength follows the mood. */
+  moonbeam: THREE.ShaderMaterial;
 }
 
 const lotById = (id: string) => LOTS.find((l) => l.id === id)!;
@@ -51,6 +54,9 @@ export function buildDressing(
   const lights: Dressing['lights'] = [];
   const R = rng(99);
   const H = (x: number, z: number) => terrain.heightAt(x, z);
+  // Low props block movement but not line of sight above about crab height.
+  const lowCircle = (x: number, z: number, r: number) => col.addCircle(x, z, r, H(x, z) - 1, H(x, z) + 1.1);
+  const lowBox = (x: number, z: number, hx: number, hz: number, yaw: number) => col.addBox(x, z, hx, hz, yaw, H(x, z) - 1, H(x, z) + 1.1);
   const put = (name: string, x: number, z: number, yaw = 0, s = 1, dy = 0, pitch = 0, roll = 0) => {
     propBatch.add(name, trs(x, H(x, z) + dy, z, yaw, s, pitch, roll));
   };
@@ -67,7 +73,7 @@ export function buildDressing(
     const s = Math.sin(yaw);
     const lp = new THREE.Vector3(x + s * 1.0, y + 2.75, z + c * 1.0);
     glows.push({ pos: lp, color: warm, size: 1.6, kind: 'lamp' });
-    col.addCircle(x, z, 0.3);
+    lowCircle(x, z, 0.3);
     return lp;
   };
   for (let i = 0; i < 8; i++) {
@@ -117,7 +123,7 @@ export function buildDressing(
       put(R() < 0.5 ? 'FarmCrate_Apple' : 'FarmCrate_Carrot', px, pz, yaw + (R() - 0.5) * 0.4, 1, 0.82);
     }
     put('Barrel_Apples', x + s * -0.2 + c * 1.5, z + c * -0.2 - s * 1.5, R() * 6);
-    col.addBox(x, z, 1.2, 0.7, yaw);
+    lowBox(x, z, 1.2, 0.7, yaw);
   }
   for (let i = 0; i < 4; i++) {
     const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
@@ -125,7 +131,7 @@ export function buildDressing(
     const z = Math.sin(a) * 7.4;
     const yaw = Math.atan2(x, z) + Math.PI / 2;
     put('Bench', x, z, yaw);
-    col.addBox(x, z, 1.4, 0.3, yaw);
+    lowBox(x, z, 1.4, 0.3, yaw);
   }
 
   // Barnacle Forge: anvil, workbench, weapon stand, grindstone, quench barrel, a glowing hearth.
@@ -134,24 +140,24 @@ export function buildDressing(
   const fy = forge.yaw;
   let [x, z] = fw(1.2, 1.6);
   put('Anvil_Log', x, z, fy + 0.4);
-  col.addCircle(x, z, 0.55);
+  lowCircle(x, z, 0.55);
   const forgeSparks = new THREE.Vector3(x, H(x, z) + 1.15, z);
   [x, z] = fw(-2.6, -1.4);
   put('Workbench', x, z, fy);
-  col.addBox(x, z, 1.05, 0.55, fy);
+  lowBox(x, z, 1.05, 0.55, fy);
   [x, z] = fw(4.2, 0.2);
   put('WeaponStand', x, z, fy - 0.5);
   [x, z] = fw(3.6, 3.6);
   put('Whetstone', x, z, fy + 2.2);
-  col.addCircle(x, z, 0.6);
+  lowCircle(x, z, 0.6);
   [x, z] = fw(-0.6, 3.4);
   put('Barrel', x, z, 0);
   put('Bucket_Metal', x + 0.7, z + 0.2, 1);
-  col.addCircle(x, z, 0.45);
+  lowCircle(x, z, 0.45);
   [x, z] = fw(-4.8, 4.2);
   put('Crate_Wooden', x, z, fy + 0.3);
   put('Crate_Wooden', x, z, fy + 0.9, 0.8, 0.88);
-  col.addCircle(x, z, 0.6);
+  lowCircle(x, z, 0.6);
   // Hearth: a stone block with a glowing coal bed under the chimney.
   const hx = forge.sx - 2.5;
   const hz = -forge.sz + 1.4;
@@ -183,7 +189,7 @@ export function buildDressing(
   ] as [number, number, number][]) {
     [x, z] = tw(lx, lz);
     put('Table_Large', x, z, tav.yaw + r);
-    col.addBox(x, z, 1.45, 0.6, tav.yaw + r);
+    lowBox(x, z, 1.45, 0.6, tav.yaw + r);
     for (const sx of [-0.9, 0, 0.9])
       for (const sz of [-1.0, 1.0]) {
         const [px, pz] = atLot({ ...tav, x, z, yaw: tav.yaw + r }, sx, sz);
@@ -199,13 +205,13 @@ export function buildDressing(
   ] as [number, number][]) {
     [x, z] = tw(lx, lz);
     put('Barrel', x, z, R() * 6);
-    col.addCircle(x, z, 0.45);
+    lowCircle(x, z, 0.45);
   }
   [x, z] = tw(-6.9, 5.1);
   put('Barrel', x, z, R() * 6, 1, 0.9);
   [x, z] = tw(5.9, 6.4);
   put('Barrel_Holder', x, z, tav.yaw);
-  col.addBox(x, z, 0.7, 0.4, tav.yaw);
+  lowBox(x, z, 0.7, 0.4, tav.yaw);
   // Lanterns on the facade either side of the door.
   for (const lx of [-1.6, 1.6]) {
     [x, z] = tw(lx + 2.0 * 0, tav.sz * 2 + 0.05);
@@ -224,7 +230,7 @@ export function buildDressing(
   for (const lx of [-2.6, 2.6]) {
     [x, z] = cw(lx, ch.sz * 2 + 1.2);
     put('CandleStick_Stand', x, z, ch.yaw);
-    col.addCircle(x, z, 0.4);
+    lowCircle(x, z, 0.4);
     glows.push({ pos: new THREE.Vector3(x, H(x, z) + 1.45, z), color: new THREE.Color('#ffc070'), size: 0.9, kind: 'candle' });
   }
   for (let i = 0; i < 14; i++) {
@@ -249,7 +255,7 @@ export function buildDressing(
     const side = R() < 0.5 ? -1 : 1;
     [x, z] = atLot(lot, doorX + side * 2.1, front);
     put(R() < 0.5 ? 'Barrel' : 'Crate_Wooden', x, z, R() * 6);
-    col.addCircle(x, z, 0.45);
+    lowCircle(x, z, 0.45);
     if (R() < 0.7) {
       [x, z] = atLot(lot, doorX - side * 1.7, front - 0.2);
       put(R() < 0.5 ? 'Vase_2' : 'Bucket_Wooden_1', x, z, R() * 6, 1.1);
@@ -258,7 +264,7 @@ export function buildDressing(
       [x, z] = atLot(lot, lot.sx + 1.2, (R() - 0.5) * lot.sz);
       put('Crate_Wooden', x, z, R() * 6);
       put('Crate_Wooden', x + 0.2, z - 0.1, R() * 6, 0.85, 0.87);
-      col.addCircle(x, z, 0.6);
+      lowCircle(x, z, 0.6);
     }
   }
   // Fenced kitchen gardens behind two houses.
@@ -283,7 +289,8 @@ export function buildDressing(
     worldBox(1.0, 0.8, archLen + 1.2, 0.5).translate(gn.x, gy + 5.6, (gn.z + gs.z) / 2),
     worldBox(1.3, 0.35, archLen + 1.6, 0.5).translate(gn.x, gy + 6.15, (gn.z + gs.z) / 2),
   ]);
-  const archMesh = new THREE.Mesh(arch, village.material('MI_WoodTrim')!);
+  const planks = plankMaterial();
+  const archMesh = new THREE.Mesh(arch, planks);
   archMesh.castShadow = archMesh.receiveShadow = true;
   group.add(archMesh);
   for (const zz of [gn.z + 2.3, gs.z - 2.3]) {
@@ -297,7 +304,7 @@ export function buildDressing(
   }
 
   // The pier: plank deck on posts, mooring bollards, crates, a rowboat.
-  const dockWood = village.material('MI_WoodTrim')!;
+  const dockWood = planks;
   const dockParts: THREE.BufferGeometry[] = [];
   const { x0, x1, z: dz, width, y: dy, headZ0, headZ1, headX0 } = DOCK;
   for (let xx = x0; xx < x1; xx += 2) for (let zz = dz - width / 2 + 1; zz < dz + width / 2; zz += 2) villageBatch.add('Floor_WoodDark', trs(xx + 1, dy, zz, 0));
@@ -315,6 +322,15 @@ export function buildDressing(
   dockMesh.castShadow = dockMesh.receiveShadow = true;
   group.add(dockMesh);
   col.addSurface(rectSurface((x0 + x1) / 2, dz, (x1 - x0) / 2 + 0.3, width / 2, 0, dy));
+  // Plank ramp from the sand up onto the pier.
+  const rampLen = 5;
+  const rampFoot = H(x0 - rampLen, dz);
+  col.addSurface(rectSurface(x0 - rampLen / 2, dz, rampLen / 2, width / 2, 0, (rampFoot + dy) / 2, (dy - rampFoot) / rampLen, 0));
+  for (let i = 0; i < 6; i++) {
+    const t = (i + 0.5) / 6;
+    const px = x0 - rampLen + rampLen * t;
+    dockParts.push(worldBox(rampLen / 6 + 0.04, 0.12, width - 0.2, 1).translate(px, rampFoot + (dy - rampFoot) * t - 0.08, dz));
+  }
   col.addSurface(rectSurface((headX0 + x1) / 2, (headZ0 + headZ1) / 2, (x1 - headX0) / 2, (headZ1 - headZ0) / 2, 0, dy));
   // Dock railings as walls along the open sides (keep the beach end open).
   col.addWall(x0 + 6, dz - width / 2, headX0, dz - width / 2, 0.2);
@@ -398,10 +414,10 @@ export function buildDressing(
         vec3 deep = vec3(0.02, 0.18, 0.30);
         vec3 glow = vec3(0.25, 0.95, 1.1);
         float centre = exp(-r * 0.35);
-        vec3 col = deep + glow * (0.35 + 0.9 * centre + caust * 0.8 + ripple * 0.1 * centre) * uPoolGlow;
+        vec3 col = deep + glow * (0.18 + 0.55 * centre + caust * 0.45 + ripple * 0.08 * centre) * uPoolGlow;
         col = mix(col, ccSky(rf, 0.0) + vec3(1.0, 0.97, 0.88) * pow(max(dot(rf, uMoonDir), 0.0), 400.0) * 8.0 * uMoon, fres * 0.6);
         float rim = smoothstep(${(GROVE.poolR - 0.6).toFixed(2)}, ${(GROVE.poolR + 0.6).toFixed(2)}, r);
-        col += vec3(0.6, 1.0, 0.95) * rim * 0.6 * uPoolGlow;
+        col += vec3(0.6, 1.0, 0.95) * rim * 0.35 * uPoolGlow;
         gl_FragColor = vec4(col, 0.92);
       }`,
     transparent: true,
@@ -424,9 +440,10 @@ export function buildDressing(
     const yaw = -a + Math.PI / 2;
     stoneParts.push(new THREE.CylinderGeometry(0.42, 0.62, h, 6, 1).scale(1.3, 1, 0.75).rotateY(yaw).translate(sx, g + h / 2 - 0.3, sz));
     stoneParts.push(new THREE.ConeGeometry(0.55, 0.7, 6).scale(1.2, 1, 0.7).rotateY(yaw).translate(sx, g + h - 0.3 + 0.3, sz));
-    runeParts.push(new THREE.PlaneGeometry(0.28, h * 0.55).translate(0, 0, 0.47).rotateY(-a - Math.PI / 2 + Math.PI).translate(sx, g + h * 0.45, sz));
+    const facing = Math.atan2(-Math.cos(a), -Math.sin(a));
+    runeParts.push(new THREE.PlaneGeometry(0.22, h * 0.5).rotateY(facing).translate(sx - Math.cos(a) * 0.5, g + h * 0.45, sz - Math.sin(a) * 0.5));
     col.addCircle(sx, sz, 0.7);
-    glows.push({ pos: new THREE.Vector3(sx - Math.cos(a) * 0.6, g + h * 0.5, sz - Math.sin(a) * 0.6), color: new THREE.Color('#5ff6ff'), size: 1.4, kind: 'magic' });
+    glows.push({ pos: new THREE.Vector3(sx - Math.cos(a) * 0.62, g + h * 0.45, sz - Math.sin(a) * 0.62), color: new THREE.Color('#5ff6ff'), size: 0.7, kind: 'magic' });
   }
   const stones = new THREE.Mesh(mergeAll(stoneParts), new THREE.MeshStandardMaterial({ color: '#8a8fa4', roughness: 0.8, flatShading: true }));
   stones.castShadow = stones.receiveShadow = true;
@@ -435,6 +452,48 @@ export function buildDressing(
   runes.userData.rune = true;
   group.add(runes);
   lights.push({ pos: new THREE.Vector3(GROVE.x, GROVE.h + 1.2, GROVE.z), color: '#59e8ff', intensity: 14, distance: 22, kind: 'magic' });
+  // A soft shaft of moonlight falling on the pool.
+  const moonbeam = new THREE.ShaderMaterial({
+    uniforms: { uTime: sky.uTime, uStrength: { value: 0.12 } },
+    vertexShader: /* glsl */ `
+      varying float vH;
+      varying vec3 vN;
+      varying vec3 vVP;
+      varying vec2 vUv;
+      void main() {
+        vH = uv.y;
+        vUv = uv;
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vVP = mv.xyz;
+        vN = normalize(normalMatrix * normal);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: /* glsl */ `
+      ${GLSL_NOISE}
+      uniform float uTime;
+      uniform float uStrength;
+      varying float vH;
+      varying vec3 vN;
+      varying vec3 vVP;
+      varying vec2 vUv;
+      void main() {
+        float facing = pow(abs(dot(normalize(vN), normalize(-vVP))), 3.0);
+        float fall = (1.0 - vH) * smoothstep(0.0, 0.08, vH) + 0.15 * (1.0 - vH);
+        float motes = 0.75 + 0.25 * cc_vnoise(vec2(vUv.x * 20.0, vH * 6.0 - uTime * 0.15));
+        float a = facing * fall * motes * uStrength;
+        gl_FragColor = vec4(vec3(0.55, 0.85, 1.0) * a, 1.0);
+      }`,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+    fog: false,
+  });
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(4.2, GROVE.poolR - 0.5, 40, 32, 1, true).translate(0, 20, 0), moonbeam);
+  shaft.position.set(GROVE.x + 2.5, poolY, GROVE.z - 1.5);
+  shaft.rotation.z = -0.12;
+  shaft.renderOrder = 6;
+  group.add(shaft);
   glows.push({ pos: new THREE.Vector3(GROVE.x, poolY + 0.3, GROVE.z), color: new THREE.Color('#58f0ff'), size: 9, kind: 'magic' });
 
   const ironMesh = new THREE.Mesh(mergeAll(ironParts), iron);
@@ -444,5 +503,5 @@ export function buildDressing(
   void TOWN_H;
   void GLSL_NOISE;
   void props;
-  return { group, glows, lights, forgeSparks, chimneys, groveWater: pool };
+  return { group, glows, lights, forgeSparks, chimneys, groveWater: pool, moonbeam };
 }

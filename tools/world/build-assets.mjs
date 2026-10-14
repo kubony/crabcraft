@@ -46,6 +46,8 @@ const KITS = {
   },
   props: {
     dir: arg('--props'),
+    // Small props are dense meshes (lanterns ~2.8k triangles); simplify the heavy ones.
+    simplify: { match: /^(Lantern_Wall|CandleStick_Stand|CandleStick_Triple|FarmCrate_|Chain_Coil|Barrel_Apples|Barrel_Holder|Anvil_Log|Chest_Wood|Crate_Metal|Cage_Small|Dummy|WeaponStand|Stall_Cart_Empty|Rope_|Coin_Pile|Chandelier|Cauldron)/, ratio: 0.35, error: 0.004 },
     keep: /^(Anvil|Anvil_Log|Barrel|Barrel_Apples|Barrel_Holder|Bench|Bucket_Metal|Bucket_Wooden_1|Cauldron|CandleStick_Stand|CandleStick_Triple|Candle_1|Candle_2|Chest_Wood|Crate_Wooden|Crate_Metal|Dummy|FarmCrate_Apple|FarmCrate_Carrot|Lantern_Wall|Rope_1|Rope_2|Rope_3|Stall_Cart_Empty|Stall_Empty|Stool|Table_Large|Torch_Metal|Vase_2|Vase_4|Vase_Rubble_Medium|WeaponStand|Whetstone|Workbench|Chain_Coil|Banner_1|Banner_2|Bag|Shield_Wooden|Sword_Bronze|Axe_Bronze|Pickaxe_Bronze|Mug|Pot_1|Coin_Pile|Cage_Small|Chandelier|Peg_Rack|Shelf_Simple)$/,
   },
 };

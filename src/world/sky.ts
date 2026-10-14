@@ -72,7 +72,7 @@ vec3 ccSkyGradient(vec3 d) {
   // Sun-side horizon glows gold; the opposite side shows a rosy band over a bluer sky.
   float side = dot(normalize(d.xz + 1e-5), normalize(uSunDir.xz + 1e-5)) * 0.5 + 0.5;
   vec3 hor = mix(uMid, uHorizon, smoothstep(0.15, 0.85, side));
-  vec3 midc = mix(mix(uMid, uZenith, 0.6), mix(uMid, uHorizon, 0.35), smoothstep(0.3, 0.95, side));
+  vec3 midc = mix(mix(uMid, uZenith, 0.82), mix(uMid, uHorizon, 0.35), smoothstep(0.3, 0.95, side));
   vec3 col = mix(hor, midc, smoothstep(0.0, 0.16, y));
   col = mix(col, uZenith, smoothstep(0.12, 0.7, y));
   col = mix(col, uGround, smoothstep(0.0, -0.1, y));
@@ -90,7 +90,7 @@ vec3 ccSky(vec3 d, float detail) {
   float y = d.y;
   float sd = max(dot(d, uSunDir), 0.0);
   // Sun disk (HDR so bloom catches it).
-  col += uSunColor * smoothstep(0.99935, 0.99965, sd) * 24.0 * uSunVis;
+  col += uSunColor * smoothstep(0.99975, 0.99988, sd) * 30.0 * uSunVis;
   // Stars.
   if (uStars > 0.0 && y > -0.02) {
     vec3 p = d * 260.0;

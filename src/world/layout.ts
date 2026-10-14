@@ -194,7 +194,7 @@ const lhDir = (() => {
 })();
 
 export const POI_DEFS: Record<PoiId, PoiDef> = {
-  spawn: { x: 0, z: 9.5, yaw: faceTo(0, 9.5, 6, 4), radius: 6 },
+  spawn: { x: -0.5, z: 12.5, yaw: faceTo(-0.5, 12.5, 4.2, 10.2), radius: 6 },
   forge: { x: -28, z: -10, yaw: Math.PI, radius: 5 },
   chapel: { x: 0, z: -35, yaw: Math.PI, radius: 5 },
   tavern: { x: -1, z: 30, yaw: 0, radius: 5 },
@@ -210,7 +210,7 @@ export const POI_DEFS: Record<PoiId, PoiDef> = {
   },
   wreck: { x: 128, z: 99, yaw: faceTo(128, 99, WRECK.x, WRECK.z), radius: 8 },
   bossArena: { x: WRECK.x, z: WRECK.z, yaw: faceTo(WRECK.x, WRECK.z, WRECK.bow[0], WRECK.bow[1]), radius: 12, y: WRECK.deckY },
-  'npc:brinebeard': { x: 5.5, z: 6.5, yaw: faceTo(5.5, 6.5, 0, 10), radius: 1 },
+  'npc:brinebeard': { x: 4.2, z: 10.2, yaw: faceTo(4.2, 10.2, 0, 13), radius: 1 },
   'npc:silvermoon': { x: GROVE.x + 4.5, z: GROVE.z - 6.5, yaw: faceTo(GROVE.x + 4.5, GROVE.z - 6.5, GROVE.x + 12, GROVE.z - 4), radius: 1 },
   'npc:coralline': { x: 2.5, z: -37.5, yaw: 0, radius: 1 },
   'npc:grukk': { x: 62, z: 4.2, yaw: -Math.PI / 2, radius: 1 },
@@ -247,5 +247,5 @@ export const SPAWN_POINTS = {
 };
 
 /** Sun direction for each mood (toward the light). Low south-east sun over the bay at dusk. */
-export const SUN_DIR_DUSK = [0.58, 0.15, 0.8] as const;
+export const SUN_DIR_DUSK = [0.56, 0.29, 0.78] as const;
 export const MOON_DIR = [-0.35, 0.55, 0.76] as const;

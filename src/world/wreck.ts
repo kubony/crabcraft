@@ -6,9 +6,9 @@ import * as THREE from 'three';
 import { type Collision, polySurface, rectSurface } from './collision';
 import { mergeAll } from './fountain';
 import { tube, worldBox } from './geom';
-import { type Kit, type StaticBatch, trs } from './kit';
+import { type StaticBatch, trs } from './kit';
 import { WRECK } from './layout';
-import { rustMaterial } from './materials';
+import { plankMaterial, rustMaterial } from './materials';
 import { rng } from './noise';
 
 const HALF_L = 27;
@@ -113,7 +113,7 @@ function deckGeometry(x0: number, x1: number): THREE.BufferGeometry {
   return g;
 }
 
-export function buildWreck(kit: Kit, col: Collision, batch: StaticBatch, propBatch: StaticBatch): Wreck {
+export function buildWreck(col: Collision, batch: StaticBatch, propBatch: StaticBatch): Wreck {
   const group = new THREE.Group();
   group.name = 'wreck';
   const ship = new THREE.Group();
@@ -267,7 +267,7 @@ export function buildWreck(kit: Kit, col: Collision, batch: StaticBatch, propBat
   gmid.y = (topY + foot.y) / 2;
   const gslope = (foot.y - topY) / glen;
   col.addSurface(rectSurface(gmid.x, gmid.z, glen / 2 + 0.5, 2.0, gyaw, gmid.y, gslope, 0));
-  const wood = kit.material('MI_WoodTrim')!;
+  const wood = plankMaterial();
   const plankParts: THREE.BufferGeometry[] = [];
   const nplank = Math.ceil(glen / 0.55);
   const slopeAng = Math.atan(gslope);

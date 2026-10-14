@@ -15,29 +15,33 @@ export interface Fountain {
   radius: number;
 }
 
-/** Verdigris bronze: teal patina in hollows, warm bronze on raised, worn faces. */
-export function bronzeMaterial(): THREE.MeshStandardMaterial {
-  const m = new THREE.MeshStandardMaterial({ color: '#ffffff', metalness: 0.35, roughness: 0.55, envMapIntensity: 0.5 });
-  addPatch(m, 'bronze', (shader) => {
+/**
+ * The claw statue wears Jumper's own finish: glossy red lacquer over a darker base, worn to warm
+ * bronze on raised edges, with clearcoat highlights like the robot's shell.
+ */
+export function bronzeMaterial(): THREE.MeshPhysicalMaterial {
+  const m = new THREE.MeshPhysicalMaterial({ color: '#ffffff', metalness: 0.15, roughness: 0.38, clearcoat: 1, clearcoatRoughness: 0.18, envMapIntensity: 0.7 });
+  addPatch(m, 'claw-lacquer', (shader) => {
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vBW;\nvarying vec3 vBN;')
       .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvBW = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvBN = normalize(mat3(modelMatrix) * objectNormal);');
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', `#include <common>\nvarying vec3 vBW;\nvarying vec3 vBN;\n${GLSL_NOISE}\nfloat ccPat;`)
+      .replace('#include <common>', `#include <common>\nvarying vec3 vBW;\nvarying vec3 vBN;\n${GLSL_NOISE}\nfloat ccWear;`)
       .replace(
         '#include <map_fragment>',
         `#include <map_fragment>
         {
-          float n = cc_fbm(vBW.xy * 1.7 + vBW.z * 1.3);
-          float up = vBN.y * 0.5 + 0.5;
-          ccPat = smoothstep(0.7, 0.95, n + (1.0 - up) * 0.2) * 0.7;
-          vec3 bronze = vec3(0.42, 0.22, 0.08) * (0.85 + 0.3 * cc_fbm(vBW.xz * 3.0 + vBW.y * 2.0));
-          vec3 patina = vec3(0.18, 0.55, 0.45);
-          diffuseColor.rgb *= mix(bronze, patina, ccPat);
+          float n = cc_fbm(vBW.xy * 2.1 + vBW.z * 1.7);
+          // Wear shows on edges (normals near horizontal-sideways) and in noisy patches.
+          float edge = 1.0 - abs(vBN.z);
+          ccWear = smoothstep(0.62, 0.9, n * 0.7 + edge * 0.45);
+          vec3 lacquer = vec3(0.62, 0.05, 0.05);
+          vec3 bronze = vec3(0.55, 0.32, 0.12);
+          diffuseColor.rgb *= mix(lacquer, bronze, ccWear);
         }`,
       )
-      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(0.45, 0.8, ccPat);')
-      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = mix(0.55, 0.1, ccPat);');
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(0.3, 0.5, ccWear);')
+      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = mix(0.05, 0.8, ccWear);');
   });
   return m;
 }

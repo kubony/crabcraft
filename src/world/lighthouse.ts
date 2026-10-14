@@ -17,6 +17,8 @@ export interface Lighthouse {
   beamDir: THREE.Vector2;
   /** 0..1 eased lit amount. */
   lit: number;
+  /** Extra beam angle (radians), for cinematics and screenshots. */
+  phase: number;
   setLit(lit: boolean): void;
   update(dt: number, elapsed: number, camera: THREE.Camera, lamps: number): void;
 }
@@ -346,9 +348,6 @@ export function buildLighthouse(kit: Kit, col: Collision, glass: THREE.Material)
   glow.renderOrder = 7;
   glow.visible = false;
   group.add(glow);
-  const lamp = new THREE.PointLight('#ffcf80', 0, 70, 1.2);
-  lamp.position.copy(beamPivot.position);
-  group.add(lamp);
   const spot = new THREE.SpotLight('#ffe2a8', 0, 320, 0.11, 0.55, 0.6);
   spot.position.copy(beamPivot.position);
   group.add(spot, spot.target);
@@ -361,6 +360,7 @@ export function buildLighthouse(kit: Kit, col: Collision, glass: THREE.Material)
     lens,
     beamDir: new THREE.Vector2(1, 0),
     lit: 0,
+    phase: 0,
     setLit(on) {
       target = on ? 1 : 0;
     },
@@ -370,7 +370,7 @@ export function buildLighthouse(kit: Kit, col: Collision, glass: THREE.Material)
       lh.lit = THREE.MathUtils.clamp(lh.lit + Math.sign(target - lh.lit) * k, 0, 1);
       const flicker = lh.lit < 1 && target === 1 ? 0.75 + 0.25 * Math.sin(elapsed * 37) * Math.sin(elapsed * 11) : 1;
       const lit = lh.lit * flicker;
-      const ang = elapsed * 0.42;
+      const ang = elapsed * 0.42 + lh.phase;
       beamPivot.rotation.y = ang;
       lensMesh.rotation.y = ang;
       lh.beamDir.set(Math.cos(ang), -Math.sin(ang));
@@ -379,7 +379,6 @@ export function buildLighthouse(kit: Kit, col: Collision, glass: THREE.Material)
       beamA.visible = beamB.visible = lit > 0.01;
       lensMat.emissiveIntensity = lit * 9;
       lanternGlass.emissiveIntensity = lit * 1.6;
-      lamp.intensity = lit * 30;
       spot.intensity = lit * 60;
       spot.target.position.set(lens.x + lh.beamDir.x * 120, 0, lens.z + lh.beamDir.y * 120);
       spot.target.updateMatrixWorld();

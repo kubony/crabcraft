@@ -140,3 +140,27 @@ export function rustMaterial(opts: { axis: THREE.Vector3; deck?: boolean; base?:
 export function std(color: THREE.ColorRepresentation, roughness = 0.8, metalness = 0, extra: THREE.MeshStandardMaterialParameters = {}): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({ color, roughness, metalness, ...extra });
 }
+
+/** Weathered planks for procedural boxes (gangway, pier posts, gate beam): grain along local x. */
+export function plankMaterial(): THREE.MeshStandardMaterial {
+  const m = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.85 });
+  addPatch(m, 'planks', (shader) => {
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vPW;')
+      .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvPW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>\nvarying vec3 vPW;\n${GLSL_NOISE}`)
+      .replace(
+        '#include <map_fragment>',
+        `#include <map_fragment>
+        {
+          float grain = cc_vnoise(vec2((vPW.x + vPW.z) * 0.6, vPW.y * 9.0 + (vPW.x - vPW.z) * 2.0));
+          float knot = smoothstep(0.82, 0.95, cc_vnoise(vPW.xz * 1.3 + vPW.y));
+          vec3 c = mix(vec3(0.42, 0.27, 0.15), vec3(0.58, 0.40, 0.24), grain);
+          c = mix(c, vec3(0.25, 0.15, 0.08), knot * 0.6);
+          diffuseColor.rgb *= c;
+        }`,
+      );
+  });
+  return m;
+}

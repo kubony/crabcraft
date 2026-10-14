@@ -36,6 +36,7 @@ interface P {
   vel?: THREE.Vector3;
   seed?: number;
   param?: number;
+  lag?: number;
 }
 
 const VERT = /* glsl */ `
@@ -114,31 +115,38 @@ const VERT = /* glsl */ `
       size *= 0.8 + h1(seed + 3.0) * 0.6;
       col = mix(vec3(0.75, 0.95, 1.1), vec3(1.4), h1(seed + 9.0));
     } else if (k == 5) {
-      // Fireworks: rocket climbs, bursts into a shell of sparks that droop and fade.
-      float period = 3.4 + param * 0.9;
-      float off = param * 0.73;
-      float cycle = floor((t + off) / period);
-      float lt = mod(t + off, period);
+      // Fireworks: a rocket climbs, bursts into a shell of streaking sparks that droop and crackle.
+      // aData.w is the streak index (0 head, 1-2 trailing copies).
+      float lag = aData.w;
+      float period = 3.1 + mod(param * 0.77, 1.3);
+      float off = param * 0.91;
+      float tt = t - lag * 0.03;
+      float cycle = floor((tt + off) / period);
+      float lt = mod(tt + off, period);
       vec3 rc = h3(param * 13.0 + cycle * 7.7);
-      vec3 centre = position + vec3((rc.x - 0.5) * 60.0, rc.y * 22.0, (rc.z - 0.5) * 70.0);
-      vec3 hueA = vec3(0.5 + 0.5 * cos(6.2831 * (rc.x + vec3(0.0, 0.33, 0.67))));
+      vec3 centre = position + vec3((rc.x - 0.5) * 70.0, rc.y * 24.0, (rc.z - 0.5) * 80.0);
+      // Palette per shell: gold, crimson, teal, violet, lime, silver.
+      float pi = floor(h1(param * 3.3 + cycle * 1.91) * 6.0);
+      vec3 hueA = pi < 1.0 ? vec3(1.0, 0.62, 0.15) : pi < 2.0 ? vec3(1.0, 0.18, 0.22) : pi < 3.0 ? vec3(0.2, 0.95, 0.9) : pi < 4.0 ? vec3(0.75, 0.35, 1.0) : pi < 5.0 ? vec3(0.55, 1.0, 0.25) : vec3(0.9, 0.92, 1.0);
+      vec3 hueB = mix(hueA, vec3(1.0, 0.9, 0.6), 0.5);
       vec3 dir = normalize(aVel);
-      float isTrail = step(0.9, h1(seed + 5.0));
-      if (lt < 0.9) {
-        // Rising rocket: trail particles strung below the head.
-        float f = lt / 0.9;
-        vec3 start = vec3(centre.x, 2.0, centre.z);
-        p = mix(start, centre, f * (2.0 - f)) - vec3(0.0, h1(seed) * 3.0 * f, 0.0);
-        a = isTrail * 1.2;
-        col = vec3(3.0, 2.2, 1.2);
-        size *= 0.8;
+      float rocket = 0.85;
+      if (lt < rocket) {
+        float f = lt / rocket;
+        vec3 start = vec3(centre.x - 6.0, 1.0, centre.z);
+        p = mix(start, centre, f * (2.0 - f)) - vec3(0.0, h1(seed) * 4.0 * f, 0.0);
+        a = step(0.86, h1(seed + 5.0)) * (1.0 - lag * 0.4) * 1.4;
+        col = vec3(3.2, 2.2, 1.0);
+        size *= 0.7;
       } else {
-        float e = lt - 0.9;
-        float sp = 11.0 + rc.z * 5.0;
-        p = centre + dir * sp * (1.0 - exp(-e * 2.2)) / 2.2 * 2.2 + vec3(0.0, -2.2, 0.0) * e * e;
-        a = (1.0 - smoothstep(0.6, 2.3, e)) * (0.65 + 0.35 * sin(e * 30.0 + seed * 50.0));
-        col = mix(hueA * 4.0, vec3(4.0, 3.5, 2.5), exp(-e * 5.0));
-        size *= 1.0 + exp(-e * 4.0);
+        float e = lt - rocket;
+        float sp = (10.0 + rc.z * 8.0) * (0.78 + 0.44 * h1(seed + 2.0));
+        p = centre + dir * sp * (1.0 - exp(-e * 2.6)) / 2.6 * 2.4 + vec3(0.0, -2.6, 0.0) * e * e;
+        float fade = 1.0 - smoothstep(0.7, 2.2, e);
+        float crackle = e > 1.2 ? step(0.5, fract(sin(seed * 91.7 + floor(t * 18.0)) * 43758.5)) : 1.0;
+        a = fade * crackle * (1.0 - lag * 0.24);
+        col = mix(mix(hueA, hueB, h1(seed + 8.0)) * 5.0, vec3(5.0, 4.6, 3.6), exp(-e * 6.0));
+        size *= (1.0 + exp(-e * 4.0)) * (1.0 - lag * 0.18);
       }
       a *= uFireworks;
     } else if (k == 6) {
@@ -209,7 +217,7 @@ function points(list: P[], frag: string, uniforms: FxUniforms, additive: boolean
     pos.set([p.pos.x, p.pos.y, p.pos.z], i * 3);
     kind[i] = p.kind;
     color.set([p.color.r, p.color.g, p.color.b], i * 3);
-    data.set([p.size, p.seed ?? i * 0.618, p.param ?? 0, 0], i * 4);
+    data.set([p.size, p.seed ?? i * 0.618, p.param ?? 0, p.lag ?? 0], i * 4);
     const v = p.vel ?? new THREE.Vector3();
     vel.set([v.x, v.y, v.z], i * 3);
   });
@@ -265,7 +273,7 @@ export function buildFx(src: FxSources, quality: 'low' | 'high', uTime: { value:
   for (const z of src.fireflyZones) {
     for (let i = 0; i < z.count; i++) {
       const p = z.centre.clone().add(new THREE.Vector3((R() - 0.5) * 2 * z.extent.x, R() * z.extent.y, (R() - 0.5) * 2 * z.extent.z));
-      add.push({ pos: p, kind: Kind.Firefly, color: z.color.clone().multiplyScalar(3), size: 0.22, vel: new THREE.Vector3(2.5, 1.0, 2.5), seed: R() * 100 });
+      add.push({ pos: p, kind: Kind.Firefly, color: z.color.clone().multiplyScalar(3.5), size: 0.11, vel: new THREE.Vector3(2.5, 1.0, 2.5), seed: R() * 100 });
     }
   }
   for (let i = 0; i < 90; i++) add.push({ pos: src.forgeSparks, kind: Kind.Spark, color: new THREE.Color(), size: 0.09, seed: R() * 100 });
@@ -278,22 +286,23 @@ export function buildFx(src: FxSources, quality: 'low' | 'high', uTime: { value:
       add.push({ pos: s, kind: Kind.Fountain, color: water, size: 0.14, vel: v, seed: R() * 100, param: src.fountainWaterY });
     }
   }
-  for (const s of src.spray) for (let i = 0; i < 26; i++) add.push({ pos: s.clone().add(new THREE.Vector3((R() - 0.5) * 3, 0, (R() - 0.5) * 3)), kind: Kind.Spray, color: new THREE.Color(1.1, 1.15, 1.2), size: 0.35, seed: R() * 100, param: R() });
+  for (const s of src.spray) for (let i = 0; i < 26; i++) add.push({ pos: s.clone().add(new THREE.Vector3((R() - 0.5) * 3, 0, (R() - 0.5) * 3)), kind: Kind.Spray, color: new THREE.Color(0.8, 0.85, 0.9), size: 0.2, seed: R() * 100, param: R() });
   for (const e of src.embers) for (let i = 0; i < 24; i++) add.push({ pos: e.clone().add(new THREE.Vector3((R() - 0.5) * 2, 0, (R() - 0.5) * 2)), kind: Kind.Ember, color: new THREE.Color(), size: 0.12, seed: R() * 100 });
   for (let i = 0; i < 160; i++) {
     const p = src.dustCentre.clone().add(new THREE.Vector3((R() - 0.5) * 50, 1 + R() * 7, (R() - 0.5) * 50));
     add.push({ pos: p, kind: Kind.Dust, color: new THREE.Color(1.6, 1.25, 0.8), size: 0.07, seed: R() * 100 });
   }
-  const bursts = quality === 'high' ? 8 : 5;
-  const perBurst = quality === 'high' ? 150 : 90;
+  const bursts = quality === 'high' ? 9 : 6;
+  const perBurst = quality === 'high' ? 170 : 100;
   for (let b = 0; b < bursts; b++) {
     for (let i = 0; i < perBurst; i++) {
-      // Even-ish directions on a sphere (Fibonacci).
+      // Even-ish directions on a sphere (Fibonacci), each with two trailing copies for streaks.
       const k = i + 0.5;
       const phi = Math.acos(1 - (2 * k) / perBurst);
       const th = Math.PI * (1 + Math.sqrt(5)) * k;
       const dir = new THREE.Vector3(Math.cos(th) * Math.sin(phi), Math.cos(phi), Math.sin(th) * Math.sin(phi));
-      add.push({ pos: src.fireworksCentre, kind: Kind.Firework, color: new THREE.Color(), size: 0.55, vel: dir, seed: R() * 100, param: b });
+      const seed = R() * 100;
+      for (let lag = 0; lag < 4; lag++) add.push({ pos: src.fireworksCentre, kind: Kind.Firework, color: new THREE.Color(), size: 0.62, vel: dir, seed, param: b, lag });
     }
   }
   const smoke: P[] = [];

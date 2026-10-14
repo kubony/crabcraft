@@ -2,7 +2,8 @@
 // scattered by rules over the terrain and the layout. Trees and big rocks get collision circles.
 import * as THREE from 'three';
 import type { Collision } from './collision';
-import { type Kit, Scatter, trs } from './kit';
+import { type Kit, trs } from './kit';
+import { InstanceField, type LodPart, lowPine } from './instances';
 import { GROVE, LIGHTHOUSE, LOTS, PLAZAS, ROADS, WRECK } from './layout';
 import { windSway, stylise, addPatch } from './materials';
 import { rng, Simplex, smoothstep } from './noise';
@@ -16,8 +17,20 @@ interface Mask {
 export interface FoliageResult {
   group: THREE.Group;
   counts: Record<string, number>;
+  /** Re-pack visible instances (call every frame with the render camera). */
+  update(camera: THREE.Camera): void;
   /** Spots for fireflies and glowing mushrooms in the grove. */
   groveGlow: THREE.Vector3[];
+}
+
+/** Collects placements per kit piece. */
+class Placements {
+  readonly items = new Map<string, THREE.Matrix4[]>();
+  add(piece: string, m: THREE.Matrix4): void {
+    let l = this.items.get(piece);
+    if (!l) this.items.set(piece, (l = []));
+    l.push(m.clone());
+  }
 }
 
 /** Distance-to-feature helpers precomputed on a coarse grid for scattering. */
@@ -111,8 +124,8 @@ export function buildFoliage(nature: Kit, terrain: Terrain, col: Collision, qual
   const F = new Features();
   const N = new Simplex(31);
   const R = rng(1234);
-  const trees = new Scatter(nature, 'trees');
-  const small = new Scatter(nature, 'small');
+  const trees = new Placements();
+  const small = new Placements();
   const counts: Record<string, number> = {};
   const count = (k: string) => (counts[k] = (counts[k] ?? 0) + 1);
   const dense = quality === 'high' ? 1 : 0.6;
@@ -261,7 +274,7 @@ export function buildFoliage(nature: Kit, terrain: Terrain, col: Collision, qual
     const z = GROVE.z + Math.sin(a) * rr;
     const h = terrain.heightAt(x, z);
     if (R() < 0.55) {
-      small.add(R() < 0.5 ? 'Mushroom_Common' : 'Mushroom_Laetiporus', trs(x, h - 0.02, z, R() * 6.3, 0.6 + R() * 0.7));
+      small.add('Mushroom_Common', trs(x, h - 0.02, z, R() * 6.3, 0.45 + R() * 0.45));
       groveGlow.push(new THREE.Vector3(x, h + 0.4, z));
     } else small.add(`Pebble_Round_${1 + Math.floor(R() * 3)}`, trs(x, h - 0.02, z, R() * 6.3, 1 + R() * 2));
   }
@@ -276,7 +289,7 @@ export function buildFoliage(nature: Kit, terrain: Terrain, col: Collision, qual
     if (out) return out;
     out = m.clone();
     if (n === 'Leaves_TwistedTree') {
-      if (variant === 'tree') stylise(out, 1.3, [0.9, 1.05, 1.1], -2.65);
+      if (variant === 'tree') stylise(out, 1.25, [0.85, 1.05, 1.15], -3.1);
       else stylise(out, 1.1, [0.95, 1.05, 0.85], -1.9);
     } else if (n.startsWith('Leaves')) stylise(out, 1.2, [1.0, 1.03, 0.88]);
     else if (n.startsWith('Bark')) stylise(out, 0.7, [0.85, 0.8, 0.78]);
@@ -287,14 +300,51 @@ export function buildFoliage(nature: Kit, terrain: Terrain, col: Collision, qual
     if (n === 'Mushrooms') {
       const mm = out as THREE.MeshStandardMaterial;
       mm.emissive = new THREE.Color('#40ffd0');
-      mm.emissiveIntensity = 0.25;
+      mm.emissiveIntensity = 0.12;
       mm.userData.glow = true;
     }
     variants.set(key, out);
     return out;
   };
-  group.add(trees.build({ castShadow: true, materialFor: (m) => styled(m, 'tree') }));
-  group.add(small.build({ castShadow: quality === 'high', materialFor: (m) => styled(m, 'small') }));
+  const fields: InstanceField[] = [];
+  const partsFor = (piece: string, variant: 'tree' | 'small'): LodPart[] =>
+    nature.get(piece).parts.map((p) => ({ geometry: p.geometry, material: styled(p.material, variant) }));
+  const lowPineMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, flatShading: true });
+  stylise(lowPineMat, 1.1, [1.0, 1.0, 0.95]);
+  windSway(lowPineMat, 0.25, 9, 0.8);
+  const pineFar = new InstanceField(
+    'pine-far',
+    [
+      { parts: [], maxDist: 70 },
+      { parts: partsFor('Pine_5', 'tree'), maxDist: 190 },
+      { parts: [{ geometry: lowPine(), material: lowPineMat }], maxDist: 900 },
+    ],
+    40,
+    8,
+  );
+  for (const [name, mats] of trees.items) {
+    if (name.startsWith('Pine_')) {
+      const near = new InstanceField(`pine-near-${name}`, [{ parts: partsFor(name, 'tree'), maxDist: 70 }], 40, 8);
+      for (const m of mats) {
+        near.add(m);
+        pineFar.add(m);
+      }
+      fields.push(near);
+    } else {
+      const f = new InstanceField(name, [{ parts: partsFor(name, 'tree'), maxDist: 340 }], 50, 12);
+      for (const m of mats) f.add(m);
+      fields.push(f);
+    }
+  }
+  fields.push(pineFar);
+  const smallRange = (n: string) =>
+    n.startsWith('Petal') || n.startsWith('Pebble') ? 45 : n.startsWith('Mushroom') ? 60 : n.startsWith('Flower') || n.startsWith('Clover') ? 75 : n.startsWith('Fern') ? 85 : n.startsWith('Bush') ? 150 : 420;
+  for (const [name, mats] of small.items) {
+    const shadow = quality === 'high' && (name.startsWith('Bush') || name.startsWith('Rock'));
+    const f = new InstanceField(name, [{ parts: partsFor(name, 'small'), maxDist: smallRange(name), castShadow: shadow }], 30, 4);
+    for (const m of mats) f.add(m);
+    fields.push(f);
+  }
 
   // Grass tufts: dense on meadows near paths and buildings, sparser elsewhere.
   const tufts = [tuftGeometry(8, 0.5, 1), tuftGeometry(6, 0.7, 2), tuftGeometry(9, 0.4, 3)];
@@ -304,9 +354,9 @@ export function buildFoliage(nature: Kit, terrain: Terrain, col: Collision, qual
     shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb *= 1.0;');
   });
   const tuftCount = quality === 'high' ? 18000 : 8000;
-  const bm = new THREE.BatchedMesh(tuftCount, 3 * 200, 3 * 400, grassMat);
-  const gids = tufts.map((g) => bm.addGeometry(g));
-  bm.sortObjects = false;
+  const tuftFields = tufts.map(
+    (g, i) => new InstanceField(`grass-${i}`, [{ parts: [{ geometry: g, material: grassMat }], maxDist: quality === 'high' ? 80 : 55, castShadow: false }], 18, 1.2),
+  );
   const m4 = new THREE.Matrix4();
   let placedTufts = 0;
   for (let i = 0; i < tuftCount * 3 && placedTufts < tuftCount; i++) {
@@ -324,15 +374,29 @@ export function buildFoliage(nature: Kit, terrain: Terrain, col: Collision, qual
     if (patch < -0.25 && R() < 0.7) continue;
     const s = 0.8 + R() * 0.7 + Math.max(0, patch) * 0.6;
     m4.copy(trs(x, h - 0.03, z, R() * 6.3, s));
-    bm.setMatrixAt(bm.addInstance(gids[Math.floor(R() * 3)]), m4);
+    tuftFields[Math.floor(R() * 3)].add(m4);
     placedTufts++;
   }
-  bm.computeBoundingBox();
-  bm.computeBoundingSphere();
-  bm.castShadow = false;
-  bm.receiveShadow = true;
-  bm.name = 'grass-tufts';
-  group.add(bm);
+  fields.push(...tuftFields);
+  for (const f of fields) group.add(f.build());
   counts.tufts = placedTufts;
-  return { group, counts, groveGlow };
+
+  const frustum = new THREE.Frustum();
+  const pm = new THREE.Matrix4();
+  const lastPos = new THREE.Vector3(Infinity, 0, 0);
+  const lastQ = new THREE.Quaternion();
+  const camPos = new THREE.Vector3();
+  const camQ = new THREE.Quaternion();
+  const update = (camera: THREE.Camera) => {
+    camera.getWorldPosition(camPos);
+    camera.getWorldQuaternion(camQ);
+    if (camPos.distanceToSquared(lastPos) < 0.25 && camQ.angleTo(lastQ) < 0.015) return;
+    lastPos.copy(camPos);
+    lastQ.copy(camQ);
+    camera.updateMatrixWorld();
+    pm.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    frustum.setFromProjectionMatrix(pm);
+    for (const f of fields) f.update(camPos, frustum, 24);
+  };
+  return { group, counts, groveGlow, update };
 }

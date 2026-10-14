@@ -91,7 +91,7 @@ export const createWorld: CreateWorld = async ({ renderer, scene, quality, onPro
   progress(0.65, 'Sinking the Iron Wreck');
   const propBatch = new StaticBatch(props, 'props');
   const dressBatch = new StaticBatch(village, 'village-dressing');
-  const wreck = buildWreck(village, col, townBatch, propBatch);
+  const wreck = buildWreck(col, townBatch, propBatch);
   root.add(wreck.group);
 
   progress(0.7, 'Setting out the market');
@@ -161,21 +161,62 @@ export const createWorld: CreateWorld = async ({ renderer, scene, quality, onPro
   );
   root.add(fx.group);
 
-  // A handful of real lights: forge, tavern door, square, chapel, gate, grove pool.
-  const lightList = [
-    ...wreck.fires.filter((_, i) => i % 3 === 0).map((p) => ({ pos: p.clone().add(new THREE.Vector3(0, 0.8, 0)), color: '#ff8a3a', intensity: 30, distance: 26, kind: 'fire' as const })),
-    ...dressing.lights,
+  // Real lights: a fixed pool (no shader recompiles) re-assigned each frame to the light spots
+  // nearest the camera's focus: forge, tavern door, square lamps, chapel, gate, grove, braziers,
+  // the lit beacon and firework flashes.
+  interface Spot {
+    pos: THREE.Vector3;
+    color: THREE.Color;
+    intensity: number;
+    distance: number;
+    kind: string;
+    seed: number;
+    live?: () => number;
+  }
+  const spots: Spot[] = [
+    ...wreck.fires.map((p) => ({ pos: p.clone().add(new THREE.Vector3(0, 0.6, 0)), color: new THREE.Color('#ff8a3a'), intensity: 26, distance: 24, kind: 'fire', seed: Math.random() * 10 })),
+    ...dressing.lights.map((l) => ({ pos: l.pos, color: new THREE.Color(l.color), intensity: l.intensity, distance: l.distance, kind: l.kind, seed: Math.random() * 10 })),
   ];
-  const pointLights = lightList.slice(0, quality === 'high' ? 12 : 6).map((l) => {
-    const pl = new THREE.PointLight(l.color, l.intensity, l.distance, 1.6);
-    pl.position.copy(l.pos);
-    pl.userData = { base: l.intensity, kind: l.kind, seed: Math.random() * 10 };
+  const beaconSpot: Spot = { pos: lighthouse.lens.clone(), color: new THREE.Color('#ffcf80'), intensity: 0, distance: 70, kind: 'beacon', seed: 0 };
+  const flashSpot: Spot = { pos: new THREE.Vector3(122, 55, 8), color: new THREE.Color('#fff2e0'), intensity: 0, distance: 280, kind: 'flash', seed: 0 };
+  spots.push(beaconSpot, flashSpot);
+  const pool = Array.from({ length: quality === 'high' ? 4 : 2 }, () => {
+    const pl = new THREE.PointLight('#ffffff', 0, 20, 1.6);
     root.add(pl);
     return pl;
   });
-  const flash = new THREE.PointLight('#ffffff', 0, 260, 1.0);
-  flash.position.set(122, 55, 8);
-  root.add(flash);
+  let moodLamp = 1;
+  let moodMagic = 0.6;
+  const order: Spot[] = [];
+  const lightFocus = new THREE.Vector3();
+  const updateLights = (elapsed: number, cam: THREE.Vector3) => {
+    const scored = spots
+      .map((sp) => {
+        const live = sp.kind === 'beacon' || sp.kind === 'flash' ? sp.intensity : 1;
+        const d = sp.pos.distanceTo(cam) - (sp.kind === 'flash' && live > 0 ? 400 : 0) - (sp.kind === 'beacon' && live > 0 ? 40 : 0);
+        return { sp, d: live > 0 ? d : Infinity };
+      })
+      .sort((a, b) => a.d - b.d);
+    order.length = 0;
+    for (const s of scored) order.push(s.sp);
+    pool.forEach((pl, i) => {
+      const sp = order[i];
+      const d = sp ? sp.pos.distanceTo(cam) : Infinity;
+      if (!sp || !Number.isFinite(d)) {
+        pl.intensity = 0;
+        return;
+      }
+      const k = sp.kind;
+      const f = k === 'fire' ? 0.8 + 0.2 * Math.sin(elapsed * 13 + sp.seed) * Math.sin(elapsed * 7.1) : k === 'candle' ? 0.9 + 0.1 * Math.sin(elapsed * 17 + sp.seed) : 1;
+      const m = k === 'magic' ? moodMagic : k === 'beacon' || k === 'flash' ? 1 : moodLamp;
+      const fade = k === 'flash' || k === 'beacon' ? 1 : 1 - THREE.MathUtils.smoothstep(d, 70, 110);
+      pl.position.copy(sp.pos);
+      pl.color.copy(sp.color);
+      pl.distance = sp.distance;
+      pl.decay = k === 'flash' ? 1.0 : 1.6;
+      pl.intensity = sp.intensity * f * m * fade;
+    });
+  };
   const flickers: THREE.Mesh[] = [];
   const bobbers: THREE.Mesh[] = [];
   const runes: THREE.Mesh[] = [];
@@ -255,7 +296,9 @@ export const createWorld: CreateWorld = async ({ renderer, scene, quality, onPro
     fx.uniforms.uDust.value = mood.sunVis;
     fx.uniforms.uNight.value = 1 - mood.sunVis;
     groveU.uPoolGlow.value = 0.7 + 0.5 * (1 - mood.sunVis);
-    for (const pl of pointLights) pl.userData.mood = pl.userData.kind === 'magic' ? 0.6 + 0.6 * (1 - mood.sunVis) : 0.55 + 0.45 * mood.lamps;
+    dressing.moonbeam.uniforms.uStrength.value = 0.06 + 0.16 * (1 - mood.sunVis);
+    moodMagic = 0.6 + 0.6 * (1 - mood.sunVis);
+    moodLamp = 0.55 + 0.45 * mood.lamps;
   };
   applyMood();
 
@@ -290,25 +333,25 @@ export const createWorld: CreateWorld = async ({ renderer, scene, quality, onPro
         scene.environment = envRT.texture;
       }
       lighthouse.update(dt, elapsed, camera, mood.lamps);
+      foliage.update(camera);
       // Particles: pixel scale for point sizes; fireworks only in the celebration mood.
       const pcam = camera as THREE.PerspectiveCamera;
       const hpx = renderer.domElement.height;
       fx.uniforms.uPixel.value = hpx / (2 * Math.tan(THREE.MathUtils.degToRad((pcam.fov ?? 50) / 2)));
       fx.uniforms.uFireworks.value += ((target === MOODS[2] ? 1 : 0) - fx.uniforms.uFireworks.value) * Math.min(1, dt * 0.8);
-      for (const pl of pointLights) {
-        const k = pl.userData.kind as string;
-        const f = k === 'fire' ? 0.8 + 0.2 * Math.sin(elapsed * 13 + pl.userData.seed) * Math.sin(elapsed * 7.1) : k === 'candle' ? 0.9 + 0.1 * Math.sin(elapsed * 17 + pl.userData.seed) : 1;
-        pl.intensity = pl.userData.base * f * (pl.userData.mood ?? 1);
-      }
       for (const m of flickers) (m.material as THREE.MeshStandardMaterial).emissiveIntensity = 2.6 + 0.8 * Math.sin(elapsed * 9) * Math.sin(elapsed * 5.3);
       for (const b of bobbers) {
         b.position.y = 0.15 + Math.sin(elapsed * 1.1 + b.userData.bob) * 0.08;
         b.rotation.z = Math.sin(elapsed * 0.9 + b.userData.bob) * 0.05;
       }
       for (const r of runes) (r.material as THREE.MeshBasicMaterial).color.setRGB(0.4, 2.2, 2.4).multiplyScalar(0.75 + 0.25 * Math.sin(elapsed * 1.4));
-      // Firework flashes light the bay.
+      // Firework flashes light the bay; the lit beacon lights its gallery.
       const fw = fx.uniforms.uFireworks.value;
-      flash.intensity = fw > 0.01 ? fw * 900 * Math.pow(Math.max(0, Math.sin(elapsed * 2.1) * Math.sin(elapsed * 0.77 + 1)), 6) : 0;
+      flashSpot.intensity = fw > 0.01 ? fw * 900 * Math.pow(Math.max(0, Math.sin(elapsed * 2.1) * Math.sin(elapsed * 0.77 + 1)), 6) + 0.001 * fw : 0;
+      beaconSpot.intensity = lighthouse.lit * 30;
+      camera.getWorldDirection(fwd);
+      lightFocus.copy(camera.position).addScaledVector(fwd, 14);
+      updateLights(elapsed, lightFocus);
       water.uniforms.uBeam.value = lighthouse.lit;
       water.uniforms.uBeamDir.value.copy(lighthouse.beamDir);
       water.uniforms.uBeamPos.value.copy(lighthouse.lens);
@@ -346,7 +389,7 @@ export const createWorld: CreateWorld = async ({ renderer, scene, quality, onPro
   pois.wreck.position.copy(wreck.gangwayFoot);
   pois.bossArena.position.copy(wreck.arena);
   // Debug info for the dev harness (not part of the World contract).
-  (world as World & { debug?: unknown }).debug = { foliage: foliage.counts, collision: col };
+  (world as World & { debug?: unknown }).debug = { foliage: foliage.counts, collision: col, lighthouse, setBeamPhase: (p: number) => (lighthouse.phase = p) };
   return world;
 };
 
