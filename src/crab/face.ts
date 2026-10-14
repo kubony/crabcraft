@@ -148,7 +148,15 @@ void main() {
   vec2 p = (vUv - 0.5) * uSize;        // mm, origin at the window centre, +x = viewer's right
   float H = uSize.y;
   float R = H * 0.4;                   // eye radius
-  vec2 c = vec2(uSize.x * 0.2, H * 0.06);
+  // Readability at game distance: how many screen pixels the eye radius spans. Close up (character
+  // creation, dialogue) nothing changes; once the eyes are a few pixels tall they grow to fill the
+  // window, strokes thicken to at least a pixel and a half, and the glow drops so bloom does not
+  // smear the shapes into blobs.
+  vec2 fw = fwidth(p);
+  float mmPx = max(0.5 * (fw.x + fw.y), 1e-4);
+  float far = 1.0 - smoothstep(5.0, 15.0, R / mmPx);
+  R *= mix(1.0, 1.55, far);
+  vec2 c = vec2(uSize.x * mix(0.2, 0.215, far), H * mix(0.06, 0.02, far));
   float side = sign(p.x);
   vec2 e = vec2(abs(p.x), p.y) - c - vec2(uLook.x * side, uLook.y);
   e.x = -e.x;                          // +x toward the centre for both eyes
@@ -176,9 +184,10 @@ void main() {
     mouth = sdBox(m, vec2(R * 0.38, max(R * 0.07, R * 0.26 * uTalk)), R * 0.07);
   }
   d = min(d, mouth);
+  d -= far * mmPx * 0.75;              // dilate: thin strokes (^ ^, X X) stay solid when tiny
   float px = max(fwidth(d), 1e-3);
   float core = 1.0 - smoothstep(-px, px, d);
-  float halo = exp(-max(d, 0.0) / (R * 0.22 * uHalo)) * 0.35;
+  float halo = exp(-max(d, 0.0) / (R * 0.22 * uHalo)) * 0.35 * mix(1.0, 0.2, far);
   // faint eye wells, like the TVC screen's backlit circles
   float well = (1.0 - smoothstep(R * 0.95, R * 1.05, length(uCyclops > 0.5 ? p - c : vec2(abs(p.x), p.y) - c))) * uWell;
   // LED matrix texture, fading out when pixels get small on screen
@@ -194,7 +203,10 @@ void main() {
     float band = step(0.96, fract(sin(floor(uTime * 7.0) * 17.3) * 9341.1));
     p.x += band * sin(p.y * 2.0 + uTime * 40.0) * 2.0;
   }
-  vec3 led = uColor * uIntensity * (core + halo) * flick;
+  // Hot LED core: the centre of a lit segment runs whiter, like the TVC screen (close up only).
+  float hot = (1.0 - smoothstep(-R * 0.3, -R * 0.08, d)) * (1.0 - far) * 0.35;
+  vec3 tint = mix(uColor, vec3(max(max(uColor.r, uColor.g), uColor.b)), hot);
+  vec3 led = tint * uIntensity * mix(1.0, 0.42, far) * (core + halo) * flick;
   vec3 col = led + vec3(0.55, 0.6, 0.7) * well * 0.06;
   if (uFill > 0.0) {                   // furnace glow filling the whole window (boss)
     float heat = (0.55 + 0.45 * sin(uTime * 3.1 + p.x * 0.15) * sin(uTime * 1.7 - p.y * 0.3)) * (0.6 + 0.4 * (1.0 - vUv.y));
