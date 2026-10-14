@@ -56,6 +56,7 @@
 
   /** Place a three.js camera. */
   T.place = (cam, p, l, fov, roll = 0) => {
+    T.cam = cam;
     cam.position.set(p[0], p[1], p[2]);
     cam.up.set(Math.sin(roll), Math.cos(roll), 0);
     cam.lookAt(l[0], l[1], l[2]);
@@ -83,6 +84,8 @@
       const engine = window.__robotMode?.engine ?? window.app.engine;
       off = engine.onFrame((f) => {
         if (cb) cb((performance.now() - start) / 1000, f.dt);
+        // A re-render of a frame that came out blank turns the camera by a hair (see record()).
+        if (T.nudge && T.cam) T.cam.rotateY(T.nudge);
       });
     }
   };
