@@ -22,6 +22,11 @@ export interface ActionOptions {
   speed?: number;
   loop?: boolean;
   fade?: number;
+  /** Clip window in clip seconds (see MotionPlayOptions.from/to). */
+  from?: number;
+  to?: number;
+  /** Named clip events other than 'hit' ('takeoff', 'land', ...). */
+  onEvent?: (name: string) => void;
 }
 
 export class Unit {
@@ -186,7 +191,10 @@ export class Unit {
       speed: o.speed,
       loop: o.loop,
       fade: o.fade ?? 0.12,
+      from: o.from,
+      to: o.to,
       onEvent: (name) => {
+        o.onEvent?.(name);
         if (name === 'hit' && this.pendingHit) {
           const fn = this.pendingHit.fn;
           this.pendingHit = null;

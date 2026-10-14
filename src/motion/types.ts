@@ -53,6 +53,12 @@ export interface MotionPlayOptions {
   speed?: number;
   /** Only the claws (LF/RF joints) play the clip; the legs keep walking. */
   upperBodyOnly?: boolean;
+  /**
+   * Play only part of the clip, in clip seconds. Recorded policy rollouts carry lead-in and
+   * recovery around the move itself (the jump takes off 1.08 s into its clip).
+   */
+  from?: number;
+  to?: number;
   /** Named clip events ("hit", "grab", "footstep") as they pass. */
   onEvent?: (name: string) => void;
   onEnd?: () => void;

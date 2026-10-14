@@ -269,7 +269,8 @@ export class Enemy {
     };
     this.leapCd = g.time + rand(7, 9);
     u.setYaw(yawTo(u.pos.x, u.pos.z, p.pos.x, p.pos.z));
-    u.act('jump', { fade: 0.06 });
+    // Crouch to landing of the recorded jump, stretched over the 0.75 s leap.
+    u.act('jump', { fade: 0.06, from: 0.95, to: 1.6, speed: 0.87 });
     g.audio.sfx('sfx-servo-whir', { volume: 0.5 });
     g.hud.floats.spawn(u, 'Leap!', 'info');
   }

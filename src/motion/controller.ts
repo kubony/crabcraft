@@ -35,6 +35,9 @@ interface Action {
   id: MotionId;
   clip: LoadedClip | null;
   t: number;
+  /** Clip window in seconds (from/to options); end is clamped to the clip length when sampled. */
+  start: number;
+  end: number;
   speed: number;
   loop: boolean;
   upper: boolean;
@@ -132,10 +135,13 @@ class Controller implements MotionControllerImpl {
       queueMicrotask(() => opts.onEnd?.());
       return;
     }
+    const start = Math.max(0, opts.from ?? 0);
     this.actions.push({
       id,
       clip,
-      t: 0,
+      t: start,
+      start,
+      end: opts.to ?? Infinity,
       speed: opts.speed ?? 1,
       loop: opts.loop ?? false,
       upper: !!opts.upperBodyOnly,
@@ -212,6 +218,7 @@ class Controller implements MotionControllerImpl {
         }
       }
       const c = a.clip;
+      const end = Math.min(c.length, a.end);
       const prev = a.t;
       if (a.target > a.weight) a.weight = Math.min(a.target, a.weight + dt / a.fadeIn);
       else if (a.target < a.weight) a.weight = Math.max(a.target, a.weight - dt / a.fadeOut);
@@ -220,17 +227,19 @@ class Controller implements MotionControllerImpl {
       const loop = a.loop;
       if (!loop && !c.hold) {
         // start fading back to locomotion so the blend completes as the clip does
-        const fadeAt = c.length - a.fadeOut * a.speed;
+        const fadeAt = end - a.fadeOut * a.speed;
         if (a.target > 0 && a.t >= fadeAt) a.target = 0;
       }
       // events from t = 0 inclusive (hit_react's "hit" is its first frame)
-      if (a.opts.onEvent && !a.interrupted) crossedEvents(c, prev === 0 ? -1e-6 : prev, a.t, loop, a.opts.onEvent);
-      if (!loop && !a.ended && a.t >= c.length) {
+      if (a.opts.onEvent && !a.interrupted) {
+        crossedEvents(c, prev === a.start ? prev - 1e-6 : prev, Math.min(a.t, end), loop, a.opts.onEvent);
+      }
+      if (!loop && !a.ended && a.t >= end) {
         a.ended = true;
-        if (c.hold) a.t = c.length;
+        if (c.hold) a.t = end;
         a.opts.onEnd?.();
       }
-      if (c.hold && a.t > c.length) a.t = c.length;
+      if (!loop && a.t > end) a.t = end;
     }
     // drop finished layers
     this.actions = this.actions.filter((a) => !(a.target === 0 && a.weight <= 0 && (a.clip || a.ended)));

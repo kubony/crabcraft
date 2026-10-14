@@ -10,6 +10,11 @@ import { C, N, type WardHandle } from './vfx/vfx';
 import { Sprite } from './vfx/atlas';
 import { angleDiff, damp, dampAngle, rand, turnToward, yawTo } from './util';
 
+/** Window of the recorded jump clip that is played: crouch, take-off (1.08 s), landing (1.37 s). */
+const JUMP_FROM = 0.8;
+const JUMP_TO = 1.56;
+const JUMP_RATE = 1.15;
+
 export const GCD = 1.0;
 export const LEVEL_XP = [0, 300, 900];
 export const MAX_LEVEL = 3;
@@ -155,8 +160,22 @@ export class Player {
 
     // Jump
     if (free && inp.wasPressed('Space') && this.jumpT <= 0 && !stunned && !this.dash) {
-      this.jumpT = 0.85;
-      u.act('jump', { fade: 0.08 });
+      // The recorded jump rollout spends 1.08 s getting ready before take-off and another 2 s
+      // settling after landing. Play only crouch, flight and landing, a little faster, so the
+      // crab leaves the ground at once and walks on as soon as it lands.
+      this.jumpT = (JUMP_TO - JUMP_FROM) / JUMP_RATE;
+      u.act('jump', {
+        fade: 0.06,
+        from: JUMP_FROM,
+        to: JUMP_TO,
+        speed: JUMP_RATE,
+        onEvent: (name) => {
+          if (name === 'land') {
+            const sand = g.zone === 'The Brine Shore' || g.zone === 'The Iron Wreck';
+            g.audio.sfx(sand ? 'sfx-footstep-sand' : 'sfx-footstep-stone', { volume: 0.45, pitch: 0.08 });
+          }
+        },
+      });
       g.audio.sfx('sfx-servo-whir', { volume: 0.35 });
       if (this.cast && this.cast.ability.castTime > 0) this.interruptCast();
       if (this.channel) this.cancelChannel();
