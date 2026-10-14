@@ -457,9 +457,11 @@ export class Engine {
     if (dts.length < 20) return;
 
     const i = this.stepIndex(this.autoPr);
-    // A throttled display (30 Hz low power mode) with an idle GPU is not a slow frame.
-    const throttled = this.gpuMs >= 0 && this.gpuMs < 8 && med > 25;
-    if (med > SLOW_MS && !throttled) {
+    // Only a GPU-bound frame gets faster at a lower resolution. A frame cap (a browser's battery
+    // saver runs pages at 30 Hz) or a busy main thread shows long frames with an idle GPU; leave
+    // the resolution alone then. Without a GPU timer, every long frame counts.
+    const gpuBound = this.gpuMs < 0 || this.gpuMs > Math.min(0.55 * med, 14);
+    if (med > SLOW_MS && gpuBound) {
       this.fastWins = 0;
       this.slowWins++;
       const urgent = med > 28;
