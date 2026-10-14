@@ -13,7 +13,11 @@ export type ToWorker =
   | { type: 'reset' }
   | { type: 'speed'; value: number }
   | { type: 'pause'; paused: boolean }
-  | { type: 'stop' };
+  | { type: 'stop' }
+  /** Capture mode (dev only): stop the real-time loop; the page then steps the sim with `advance`. */
+  | { type: 'capture'; on: boolean }
+  /** Capture mode: tick until sim time reaches `to`, post a frame, then `advanced`. `now` is the page's clock, ms. */
+  | { type: 'advance'; to: number; now: number; id: number };
 
 export interface Binding {
   name: string;
@@ -92,4 +96,5 @@ export type FromWorker =
   | { type: 'ready'; info: ReadyInfo }
   | FrameMsg
   | { type: 'error'; message: string }
+  | { type: 'advanced'; id: number; simTime: number }
   | { type: 'policy'; mode: string; ok: boolean; error?: string; digests: { checked: number; mismatched: string[] } };
