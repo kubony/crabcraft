@@ -167,7 +167,8 @@ A separate scene (opened from the title screen or with R): a sunny tabletop aren
 TVC (warm light, shallow depth of field). The chosen crab runs live: MuJoCo WASM physics plus the
 bundle's ONNX policies and controller wasm, the same files the physical robot loads. Keyboard /
 on-screen buttons switch modes exactly like the robot's controller (walk with WASD, jump, dances,
-gestures, claw). A HUD shows "LIVE POLICY - <mode> - 50 Hz" and the joint telemetry. A toggle
+gestures, claw). A HUD shows the live mode, its control rate from the contract (200 Hz for locomotion and jump,
+50 Hz for dances, gestures and claw) and the joint telemetry. A toggle
 shows the bare robot vs. the race appearance.
 
 ## Art direction
