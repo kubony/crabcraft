@@ -19,6 +19,10 @@ type Mech = 'slam' | 'spray' | 'undertow';
 type State = 'dormant' | 'waking' | 'idle' | 'fight' | 'dying' | 'dead';
 
 const v1 = new THREE.Vector3();
+const g1 = new THREE.Vector3();
+const g2 = new THREE.Vector3();
+const g3 = new THREE.Vector3();
+const gn = new THREE.Vector3();
 
 interface ActiveMech {
   kind: Mech;
@@ -266,24 +270,59 @@ export class Boss {
     if (kind === 'slam') {
       m.dur = 1.5 * speedUp;
       m.at.copy(p.pos);
-      m.fx.push(g.vfx.telegraphCircle(m.at, 3.4, m.dur));
+      m.fx.push(g.vfx.telegraphCircle(m.at, 3.4, m.dur, undefined, this.deckUnder(m.at, 3.4, 0, Math.PI)));
       g.hud.messages.warn('Corrodius raises his anchor!');
     } else if (kind === 'spray') {
       m.dur = 1.1 * speedUp;
       m.at.copy(u.pos);
       m.yaw = yawTo(u.pos.x, u.pos.z, p.pos.x, p.pos.z);
       u.setYaw(m.yaw);
-      m.fx.push(g.vfx.telegraphCone(m.at, m.yaw, 11, 0.55, m.dur));
+      m.fx.push(g.vfx.telegraphCone(m.at, m.yaw, 11, 0.55, m.dur, undefined, this.deckUnder(m.at, 11, m.yaw, 0.55)));
     } else {
       m.dur = 2.6;
       m.at.copy(u.pos);
-      m.fx.push(g.vfx.telegraphCircle(m.at, 5.5, m.dur));
+      m.fx.push(g.vfx.telegraphCircle(m.at, 5.5, m.dur, undefined, this.deckUnder(m.at, 5.5, 0, Math.PI)));
       g.vfx.undertow(m.at, 5.5, m.dur);
       g.say(u, BOSS_YELLS.undertow, true);
       g.hud.messages.warn('The Undertow pulls you in. Run!');
     }
     this.mech = m;
     this.nextMech = g.time + m.dur + (this.phase === 3 ? 4.2 : this.phase === 2 ? 5.5 : 6);
+  }
+
+  /**
+   * The plane of the deck under a telegraph (the wreck's deck tilts by up to half a unit across a
+   * cone, enough to bury a flat mark): fitted through three points inside the mark, the mark's origin
+   * moved onto it. Returns the plane's normal.
+   */
+  private deckUnder(at: THREE.Vector3, reach: number, yaw: number, half: number): THREE.Vector3 {
+    const w = this.game.world;
+    const cone = half < 3;
+    const r = reach * (cone ? 0.85 : 0.7);
+    const put = (out: THREE.Vector3, a: number, d: number) => {
+      out.set(at.x + Math.sin(a) * d, 0, at.z + Math.cos(a) * d);
+      out.y = w.heightAt(out.x, out.z);
+      return out;
+    };
+    if (cone) {
+      put(g1, yaw, 0);
+      put(g2, yaw - half * 0.8, r);
+      put(g3, yaw + half * 0.8, r);
+    } else {
+      put(g1, 0, r);
+      put(g2, (Math.PI * 2) / 3, r);
+      put(g3, (Math.PI * 4) / 3, r);
+    }
+    // Height of the plane at the origin: the apex of a cone, the centroid of a circle's samples.
+    const gy = w.heightAt(at.x, at.z);
+    at.y = cone ? gy : (g1.y + g2.y + g3.y) / 3;
+    if (Math.abs(at.y - gy) > 0.5) at.y = gy;
+    const n = gn.crossVectors(g2.sub(g1), g3.sub(g1)).normalize();
+    if (!Number.isFinite(n.y)) n.set(0, 1, 0);
+    if (n.y < 0) n.negate();
+    // Never more than ~10 degrees: a sample off the deck edge must not stand the mark up.
+    if (!(n.y >= 0.985)) n.set(n.x, 0, n.z).setLength(Math.sqrt(1 - 0.985 * 0.985)).setY(0.985);
+    return n;
   }
 
   private updateMech(dt: number): void {
