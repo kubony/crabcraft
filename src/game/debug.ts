@@ -110,6 +110,8 @@ export class DebugTools {
       loaded: g.loaded,
       time: g.time,
       fps: g.engine.fps,
+      pixelRatio: g.engine.pixelRatio,
+      gpuMs: g.engine.gpuMs,
       drawCalls: g.engine.drawCalls,
       quests: { ...g.quests.status },
       current: cur ? { quest: cur.quest, step: cur.step, label: cur.label, title: QUESTS[cur.quest].title } : null,
@@ -133,7 +135,9 @@ export class DebugTools {
     const g = this.game;
     const s = this.state();
     g.hud.debugEl.classList.toggle('god', g.god);
-    g.hud.debugEl.textContent = `${g.engine.fps.toFixed(0)} fps  ${g.engine.drawCalls} calls\ncrabs ${s.crabs}  particles ${s.particles}${g.god ? '\nGOD MODE' : ''}\nF8 god  F9 objective  F10 teleport`;
+    const e = g.engine;
+    const gpu = e.gpuMs >= 0 ? `  gpu ${e.gpuMs.toFixed(1)} ms` : '';
+    g.hud.debugEl.textContent = `${e.fps.toFixed(0)} fps  ${e.drawCalls} calls\nres ${e.pixelRatio}x ${e.setting}${gpu}\ncrabs ${s.crabs}  particles ${s.particles}${g.god ? '\nGOD MODE' : ''}\nF8 god  F9 objective  F10 teleport`;
   }
 
   dispose(): void {

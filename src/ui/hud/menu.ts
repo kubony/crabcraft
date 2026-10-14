@@ -3,6 +3,7 @@
 import { h } from '../dom';
 import { localStorageSet } from '../../app';
 import type { Game } from '../../game/game';
+import type { QualitySetting } from '../../core/engine';
 
 const CONTROLS: [string, string][] = [
   ['W / S', 'Walk forward / back'],
@@ -26,6 +27,8 @@ const CONTROLS: [string, string][] = [
 export class GameMenu {
   readonly el: HTMLElement;
   private panel: HTMLElement;
+  /** Under the quality buttons: what 'auto' is rendering at right now. */
+  private resNote = h('div', { class: 'res-note' });
   open = false;
 
   constructor(private readonly game: Game) {
@@ -100,12 +103,29 @@ export class GameMenu {
         localStorageSet('cc.sfxVol', String(v));
         audio.sfx('sfx-click', { volume: 0.6 });
       })),
-      h('div', { class: 'row' }, 'Graphics quality', seg([['low', 'Low'], ['high', 'High']], g.engine.quality, (q) => g.setQuality(q as 'low' | 'high'))),
+      h('div', { class: 'row' }, 'Graphics quality', seg([['auto', 'Auto'], ['high', 'High'], ['low', 'Low']], g.engine.setting, (q) => {
+        g.setQuality(q as QualitySetting);
+        this.updateResNote();
+      })),
+      this.resNote,
       h('div', { class: 'row' }, 'Chat bubbles', seg([['on', 'On'], ['off', 'Off']], g.hud.bubbles.enabled ? 'on' : 'off', (v) => {
         g.hud.bubbles.enabled = v === 'on';
       })),
       this.btn('Back', () => this.main()),
     );
+    this.updateResNote();
+  }
+
+  /** Called by the game when dynamic resolution moves, and when the settings page opens. */
+  updateResNote(): void {
+    const e = this.game.engine;
+    const pct = Math.round(e.resolutionFraction * 100);
+    this.resNote.textContent =
+      e.setting === 'auto'
+        ? `Auto keeps the frame rate smooth by adjusting resolution. Rendering at ${pct}% now.`
+        : e.setting === 'high'
+          ? `Full resolution${pct < 100 ? ` (capped at ${pct}% of this screen)` : ''}, every effect on.`
+          : 'Fewer plants and particles, standard resolution. For older laptops.';
   }
 
   controls(): void {

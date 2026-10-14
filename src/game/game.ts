@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import type { App } from '../app';
 import { localStorageGet, localStorageSet } from '../app';
-import type { FrameInfo, Quality } from '../core/engine';
+import type { FrameInfo, QualitySetting } from '../core/engine';
 import { FollowCamera } from '../core/followCamera';
 import { createCrab, createEnemyCrab } from '../crab/provider';
 import type { CrabRig, CrabSpec, RaceId } from '../crab/types';
@@ -303,6 +303,9 @@ export class Game {
       for (const n of this.npcs) n.talking = false;
     };
     this.wireQuestEvents();
+    this.engine.onResolutionChange = () => {
+      if (this.hud.menu.open) this.hud.menu.updateResNote();
+    };
 
     // Pose everyone once, then take portraits and the minimap picture.
     for (const u of this.units) u.updateVisual(0.016);
@@ -626,8 +629,8 @@ export class Game {
     this.hud.messages.info(this.musicOn ? 'Music on' : 'Music off');
   }
 
-  setQuality(q: Quality): void {
-    this.engine.setQuality(q);
+  setQuality(q: QualitySetting): void {
+    this.engine.setQualitySetting(q);
     localStorageSet('cc.quality', q);
     this.vfx.density = q === 'low' ? 0.55 : 1;
   }
@@ -1070,6 +1073,7 @@ export class Game {
     this.alive = false;
     this.offFrame?.();
     this.offAfter?.();
+    this.engine.onResolutionChange = null;
     this.debug?.dispose();
     this.hud?.dispose();
     this.hideLoading();

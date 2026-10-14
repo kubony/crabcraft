@@ -337,7 +337,8 @@
 .menu .row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 12px 0; font: 600 16px var(--font-body); color: #f1e6c8; text-align: left; }
 .menu input[type='range'] { width: 220px; accent-color: #d9b45a; }
 .menu .seg { display: flex; gap: 6px; }
-.menu .seg button { min-width: 90px; padding: 6px 10px; font-size: 13px; }
+.menu .seg button { min-width: 72px; padding: 6px 10px; font-size: 13px; }
+.menu .res-note { margin: -4px 0 10px; font: italic 400 13px var(--font-body); color: #cdbf9c; text-align: right; }
 .menu .seg button.on { filter: brightness(1.3); box-shadow: 0 0 0 2px #ffe08a, 0 0 12px rgba(255, 220, 120, 0.6); }
 .menu table { width: 100%; border-collapse: collapse; font: 15px var(--font-body); color: #f1e6c8; text-align: left; }
 .menu td { padding: 5px 6px; border-bottom: 1px solid rgba(255, 220, 140, 0.12); }
