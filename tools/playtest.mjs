@@ -272,7 +272,7 @@ async function run(cls) {
   console.log(`  console errors: ${errors.length}`);
   for (const e of errors) console.log(`    ${e}`);
   console.log(`  warnings: ${warnings.length}${warnings.length ? ` (first: ${warnings[0]})` : ''}`);
-  console.log(`  missing assets (expected until art lands): ${missing.size}`);
+  console.log(`  missing assets (expected until art lands): ${missing.size}${missing.size ? ` ${[...missing].slice(0, 6).join(', ')}` : ''}`);
   console.log(`  screenshots:\n${shots.map((s) => `    ${s}`).join('\n')}`);
   return pass;
 }
