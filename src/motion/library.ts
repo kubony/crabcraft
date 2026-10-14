@@ -13,7 +13,7 @@ export type ClipId = MotionId | ExtraClipId;
 export interface ClipIndexEntry {
   id: ClipId;
   source: string;
-  kind: 'locomotion' | 'jump' | 'claw' | 'gesture' | 'dance' | 'keyframe';
+  kind: 'locomotion' | 'jump' | 'claw' | 'gesture' | 'dance' | 'skill';
   fps: number;
   frameCount: number;
   duration: number;
@@ -36,7 +36,7 @@ export interface LoadedClip extends Omit<MotionClip, 'id'> {
   /**
    * 'inplace': gameplay moves the root at the clip's mean velocity; `local` holds the body
    * relative to that ideal root path (height, sway, tilt, yaw wobble).
-   * 'full': the body follows `base` relative to frame 0 (jumps, gestures, dances, keyframes).
+   * 'full': the body follows `base` relative to frame 0 (jumps, claws, gestures, dances, skills).
    */
   root: 'inplace' | 'full';
   local: Float32Array | null;
@@ -45,8 +45,13 @@ export interface LoadedClip extends Omit<MotionClip, 'id'> {
   yawRate: number;
   /** Gait cycles in one loop (locomotion), used to keep blended gaits in phase. */
   cycles: number;
-  /** Keyframed poses that hold their last frame until stopped (death, sit). */
+  /**
+   * Clips that hold a pose until stopped (death, sit): a one-shot that reaches its end (or
+   * `holdAt`, whichever is first) stays there instead of fading back to locomotion.
+   */
   hold: boolean;
+  /** Clip seconds to hold at: the skill clips go on to stand up again after the pose held. */
+  holdAt?: number;
   events: Record<string, number[]>;
   /** Net planar drift and heading change over a 'full' clip, removed progressively on playback. */
   drift: { x: number; z: number; yaw: number };
@@ -76,6 +81,7 @@ interface ClipHeader {
   cycles?: number;
   root?: 'inplace' | 'full';
   hold?: boolean;
+  holdAt?: number;
 }
 
 const NJ = JOINT_NAMES.length;
@@ -135,6 +141,7 @@ function decode(h: ClipHeader, buf: ArrayBuffer): LoadedClip {
     yawRate: h.yawRate ?? 0,
     cycles: h.cycles ?? 0,
     hold: !!h.hold,
+    holdAt: h.holdAt,
     drift: { x: base[last] - base[0], z: base[last + 2] - base[2], yaw },
   };
 }

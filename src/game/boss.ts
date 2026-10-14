@@ -6,6 +6,7 @@ import type { Poi } from '../world/types';
 import type { Game } from './game';
 import type { Unit } from './unit';
 import type { Enemy } from './enemies';
+import { skillDelay, skillWindow } from '../motion/skills';
 import { BOSS_YELLS } from './quests';
 import { C } from './vfx/vfx';
 import type { Fx } from './vfx/effects';
@@ -14,6 +15,11 @@ import { angleDiff, rand, turnToward, yawTo } from './util';
 export const BOSS_HP = 1300;
 /** How far past the arena edge the player may kite before Corrodius gives up (after a grace period). */
 const ARENA_LEASH = 30;
+// The slam and spray mechanics land at a fixed moment (the telegraph's end); the swing starts as
+// long before it as the clip takes to reach its own hit, so the claws meet the deck on the impact.
+const SLAM_RATE = 1.2;
+const SLAM_LEAD = skillDelay('attack_slam', 'hit', skillWindow('attack_slam', 'move', SLAM_RATE)) ?? 0.55;
+const SPRAY_LEAD = skillDelay('attack_swipe', 'hit') ?? 0.4;
 
 type Mech = 'slam' | 'spray' | 'undertow';
 type State = 'dormant' | 'waking' | 'idle' | 'fight' | 'dying' | 'dead';
@@ -333,9 +339,9 @@ export class Boss {
     m.t += dt;
     if (m.kind === 'slam') {
       u.setYaw(turnToward(u.yaw, yawTo(u.pos.x, u.pos.z, m.at.x, m.at.z), 3, dt));
-      if (!m.swung && m.t > m.dur - 0.55) {
+      if (!m.swung && m.t > m.dur - SLAM_LEAD) {
         m.swung = true;
-        u.act('attack_slam', { speed: 1.2 });
+        u.act('attack_slam', { speed: SLAM_RATE });
       }
       if (m.t >= m.dur) {
         m.fired = true;
@@ -349,7 +355,7 @@ export class Boss {
         this.mech = null;
       }
     } else if (m.kind === 'spray') {
-      if (!m.swung && m.t > m.dur - 0.4) {
+      if (!m.swung && m.t > m.dur - SPRAY_LEAD) {
         m.swung = true;
         u.act('attack_swipe', { upper: true });
         g.vfx.rustSpray(m.at, m.yaw, 11, 0.55);
@@ -377,9 +383,9 @@ export class Boss {
           p.pushTime = 0.05;
         }
       }
-      if (!m.swung && m.t > m.dur - 0.55) {
+      if (!m.swung && m.t > m.dur - SLAM_LEAD) {
         m.swung = true;
-        u.act('attack_slam', { speed: 1.2 });
+        u.act('attack_slam', { speed: SLAM_RATE });
       }
       if (m.t >= m.dur) {
         m.fired = true;

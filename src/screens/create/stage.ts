@@ -6,6 +6,7 @@ import { createCrab } from '../../crab/provider';
 import type { CrabRig, CrabSpec, Expression } from '../../crab/types';
 import { CRAB_HEIGHT } from '../../crab/types';
 import { createMotionController } from '../../motion/provider';
+import { skillPlayOptions } from '../../motion/skills';
 import type { MotionController, MotionId } from '../../motion/types';
 import { createBackdrop, type Backdrop } from './backdrop';
 import { createDais, DAIS_TOP, RUNE_RING_RADIUS, type Dais } from './dais';
@@ -247,7 +248,8 @@ export class CreateStage {
   }
 
   private play(id: MotionId): void {
-    this.motion.play(id, { fade: 0.2 });
+    // A skill clip plays its move (the class pick shows the whole swipe or cast), not the rollout.
+    this.motion.play(id, skillPlayOptions(id, { fade: 0.2 }));
   }
 
   private expression(e: Expression, hold: number): void {

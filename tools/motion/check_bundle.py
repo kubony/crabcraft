@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -19,16 +20,19 @@ from jumper_sim import BUNDLE, Host  # noqa: E402
 def main() -> None:
     import onnxruntime as ort
 
-    ref_text = (BUNDLE / "reference.json").read_text("utf-8")
-    host = Host(operators=False, render=False)
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--bundle", type=Path, default=BUNDLE, help="the bundle directory (default: the example)")
+    bundle = ap.parse_args().bundle
+    ref_text = (bundle / "reference.json").read_text("utf-8")
+    host = Host(operators=False, render=False, bundle=bundle)
     report = host.fsm.check_reference(ref_text)
     print(f"controller replay: frames={report.frames} inferences={report.inferences} "
           f"observation={report.observation:.3g} target={report.target:.3g} "
           f"divergent={report.divergent} modeMismatches={report.mode_mismatches}")
     ref = json.loads(ref_text)
     frames = ref.get("frames") or []
-    manifest = json.loads((BUNDLE / "bundle.json").read_text("utf-8"))
-    sessions = {m: ort.InferenceSession(str(BUNDLE / e["models"]["onnx"]), providers=["CPUExecutionProvider"])
+    manifest = json.loads((bundle / "bundle.json").read_text("utf-8"))
+    sessions = {m: ort.InferenceSession(str(bundle / e["models"]["onnx"]), providers=["CPUExecutionProvider"])
                 for m, e in manifest["modes"].items()}
     worst: dict[str, float] = {}
     n = 0

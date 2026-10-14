@@ -1,39 +1,39 @@
 {
  "schema": "crabcraft-motions/1",
- "note": "Clips recorded as closed-loop rollouts of the Jumper example bundle's policies (KingKongRobotics/jumper, Apache-2.0) in MuJoCo, plus keyframed game-only clips. tools/motion/ rebuilds everything.",
+ "note": "Every clip is a closed-loop rollout of a Jumper policy (KingKongRobotics/jumper, Apache-2.0) in MuJoCo: the example bundle's walking, jump, claw, gesture and dance policies, and the six skills (jumper.skill_*, trained for this game) through the crabcraft bundle. tools/motion/ rebuilds everything.",
  "clips": [
   {
    "id": "attack_slam",
-   "source": "keyframe",
-   "kind": "keyframe",
+   "source": "skill_slam",
+   "kind": "skill",
    "fps": 50.0,
-   "frameCount": 66,
-   "duration": 1.32,
+   "frameCount": 270,
+   "duration": 5.4,
    "loop": false,
-   "speed": 0.0,
-   "bytes": 5138
+   "speed": 0.00326,
+   "bytes": 17808
   },
   {
    "id": "attack_swipe",
-   "source": "keyframe",
-   "kind": "keyframe",
+   "source": "skill_swipe",
+   "kind": "skill",
    "fps": 50.0,
-   "frameCount": 41,
-   "duration": 0.82,
+   "frameCount": 207,
+   "duration": 4.14,
    "loop": false,
-   "speed": 0.0,
-   "bytes": 3745
+   "speed": 0.00455,
+   "bytes": 14048
   },
   {
    "id": "cast",
-   "source": "keyframe",
-   "kind": "keyframe",
+   "source": "skill_cast",
+   "kind": "skill",
    "fps": 50.0,
-   "frameCount": 62,
-   "duration": 1.24,
+   "frameCount": 344,
+   "duration": 6.88,
    "loop": false,
-   "speed": 0.0,
-   "bytes": 4905
+   "speed": 0.00239,
+   "bytes": 22131
   },
   {
    "id": "claw_left",
@@ -103,14 +103,14 @@
   },
   {
    "id": "death",
-   "source": "keyframe",
-   "kind": "keyframe",
+   "source": "skill_powerdown",
+   "kind": "skill",
    "fps": 50.0,
-   "frameCount": 86,
-   "duration": 1.72,
+   "frameCount": 385,
+   "duration": 7.7,
    "loop": false,
-   "speed": 0.0,
-   "bytes": 6312
+   "speed": 0.00208,
+   "bytes": 24724
   },
   {
    "id": "gesture_bow",
@@ -158,14 +158,14 @@
   },
   {
    "id": "hit_react",
-   "source": "keyframe",
-   "kind": "keyframe",
+   "source": "skill_flinch",
+   "kind": "skill",
    "fps": 50.0,
-   "frameCount": 25,
-   "duration": 0.5,
+   "frameCount": 170,
+   "duration": 3.4,
    "loop": false,
-   "speed": 0.0,
-   "bytes": 2813
+   "speed": 0.0034,
+   "bytes": 11892
   },
   {
    "id": "idle",
@@ -196,14 +196,14 @@
   },
   {
    "id": "sit",
-   "source": "keyframe",
-   "kind": "keyframe",
+   "source": "skill_sit",
+   "kind": "skill",
    "fps": 50.0,
-   "frameCount": 61,
-   "duration": 1.22,
+   "frameCount": 367,
+   "duration": 7.34,
    "loop": false,
-   "speed": 0.0,
-   "bytes": 4820
+   "speed": 0.00213,
+   "bytes": 23550
   },
   {
    "id": "strafe_left",

@@ -5,6 +5,11 @@
 Locomotion: the steady-state gait is cut into a seamless loop where the joint state repeats
 (whole gait cycles), and the seam is crossfaded. Everything else is kept whole, from the
 moment the bundle's button is pressed until the robot is standing again.
+
+The six skills (record_clips.py SKILLS, the `jumper.skill_*` policies) are kept whole the same
+way and carry, besides, their reference's moments moved to where the policy played them, the
+game's window of the move in clip seconds, and for death and sit the moment the game holds. The
+windows and moments are also written to src/motion/skillClips.ts, which gameplay reads.
 """
 from __future__ import annotations
 
@@ -23,10 +28,28 @@ from clipfile import (  # noqa: E402
 )
 from jumper_sim import JUMPER, LEGS, load_model  # noqa: E402
 
+# The six skills: game clip id -> the jumper.skill_* move, the window the game plays in the
+# reference's own seconds ("The game's windows", docs/CRABCRAFT_SKILLS.md in the jumper checkout),
+# the stretch the policy's lag is fitted over (the move, holds included), the reference moment
+# the game's `hit` is, and for the two that hold, the moment the game holds.
+SKILLS = {
+    "attack_swipe": {"move": "swipe", "window": (0.00, 0.94), "fit": (0.00, 0.94), "hit": "hit"},
+    "attack_slam": {"move": "slam", "window": (0.40, 1.50), "fit": (0.40, 1.50), "hit": "hit"},
+    "cast": {"move": "cast", "window": (0.40, 3.10), "fit": (0.40, 3.10), "hit": "release"},
+    "hit_react": {"move": "flinch", "window": (0.00, 0.46), "fit": (0.00, 0.46), "hit": "hit"},
+    # the power-down settles at 2.05 and stays down to 3.20: the game holds 0.25 s into that
+    "death": {"move": "powerdown", "window": (0.00, 2.30), "fit": (0.00, 3.20), "hit": None,
+              "hold": 2.30, "settled": "settled_from"},
+    # seated 1.70 to 2.90 (one breath): the game holds 0.25 s into it
+    "sit": {"move": "sit", "window": (0.80, 1.95), "fit": (0.80, 2.90), "hit": None,
+            "hold": 1.95, "settled": "seated_from"},
+}
+SKILL_TABLE = Path(__file__).resolve().parents[2] / "src" / "motion" / "skillClips.ts"
+
 ROOT = Path(__file__).resolve().parents[2]
 DT = 0.005
 LOCO_FPS = 50.0
-ACTION_FPS = {"jump": 50.0, "claw": 50.0, "motion": 30.0}
+ACTION_FPS = {"jump": 50.0, "claw": 50.0, "motion": 30.0, "skill": 50.0}
 LOOP_TARGET_S = {"idle": 2.5}
 LOOP_MIN_S = 0.9
 
@@ -268,6 +291,7 @@ def export_motion(raw: Raw, out: Path) -> dict:
         events["policy_start"] = [float(raw.t[on[0]] - T[0])]
         events["policy_end"] = [float(raw.t[on[-1]] - T[0])]
     extra_events(raw, events, T)
+    skill = skill_events(raw, events, T) if kind == "skill" else None
     drift = rel[-1]
     yaw_drift = float(np.interp(T[-1], raw.t, raw.yaw) - y0)
     speed = float(np.hypot(drift[0], drift[1]) / max(1e-6, T[-1] - T[0]))
@@ -275,13 +299,115 @@ def export_motion(raw: Raw, out: Path) -> dict:
           f"yaw drift {np.degrees(yaw_drift):+.1f} deg, max tilt "
           f"{np.degrees(np.arccos(np.clip(1 - 2 * (quat[:, 1] ** 2 + quat[:, 2] ** 2), -1, 1))).max():.1f} deg, "
           f"events { {k: len(v) for k, v in events.items()} }")
+    extra = {"root": "full", "provenance": provenance(raw, {"trigger_s": round(t_start, 4)})}
+    if skill is not None:
+        extra["skill"] = skill
+        if "hold" in skill:
+            extra["hold"] = True
+            extra["holdAt"] = skill["hold"]
     return write_clip(
         out, raw.id, source=raw.meta["source"], kind=kind if kind != "motion" else
         ("dance" if raw.id.startswith("dance") else "gesture"),
         fps=fps_target, loop=False, q=q, base=to_game_block(rel, rq), local=None, speed=speed,
-        events=events,
-        extra={"root": "full", "provenance": provenance(raw, {"trigger_s": round(t_start, 4)})},
+        events=events, extra=extra,
     )
+
+
+def skill_events(raw: Raw, events: dict, T: np.ndarray) -> dict:
+    """The reference's moments, moved to where this rollout played them, and the game's window.
+
+    The controller starts the recording on the policy's first tick (`starts_on_entry`), so a
+    reference moment x is at that tick + x in an ideal rollout. A policy lags its reference a
+    little; the lag is the time shift that fits the rollout's joints best to the reference's
+    over the move, and every moment is moved by it. The slam's impact is also read off the
+    rollout itself: the first claw pad touching the floor after the wind-up.
+    """
+    spec = SKILLS[raw.id]
+    bundle = Path(raw.meta["bundle"])
+    mode = raw.meta["source"]
+    manifest = json.loads((bundle / "bundle.json").read_text("utf-8"))
+    contract = json.loads((bundle / manifest["modes"][mode]["contract"]).read_text("utf-8"))
+    traj = json.loads((bundle / manifest["modes"][mode]["trajectory"]).read_text("utf-8"))
+    order = traj["joint_order"]
+    ref = np.asarray(traj["q"], dtype=np.float64)[:, [order.index(n) for n in JOINT_NAMES]]
+    rec_hz = float(contract["reference"]["rec_hz"])
+    tref = np.arange(len(ref)) / rec_hz
+    move = spec["move"]
+    media = JUMPER / "tasks" / "jumper" / mode / "media" / f"{move}.npz"
+    moments = json.loads(str(np.load(media)["events"]))
+    run = np.nonzero(np.array([m == mode for m in raw.modes]) & raw.running)[0]
+    t_on = float(raw.t[run[0]])
+    a, b = spec["fit"]
+    fit = (tref >= a - 1e-9) & (tref <= b + 1e-9)
+
+    def rms(lag: float) -> float:
+        got = np.stack([np.interp(t_on + tref[fit] + lag, raw.t, raw.q[:, j]) for j in range(22)], -1)
+        return float(np.sqrt(np.mean((got - ref[fit]) ** 2)))
+
+    lags = np.round(np.arange(-0.04, 0.3001, 0.005), 3)
+    errs = [rms(x) for x in lags]
+    lag = float(lags[int(np.argmin(errs))])
+    at = lambda x: round(t_on + lag + x - float(T[0]), 4)  # noqa: E731
+    for name, x in moments.items():
+        events[name] = [at(x)]
+    if spec["hit"]:
+        events["hit"] = [at(moments[spec["hit"]])]
+    measured = {}
+    if move == "slam":
+        # LEGS order: LF, RF first; the pads lift with the claws and come down on the impact
+        t_wind = t_on + lag + moments["windup"]
+        downs = [x for k in (0, 1) for x in onsets(raw.contacts[:, k], raw.t) if x >= t_wind - 0.1]
+        if downs:
+            impact = min(downs)
+            measured["impact"] = round(impact - float(T[0]), 4)
+            if abs(impact - (t_on + lag + moments["hit"])) <= 0.15:
+                events["hit"] = [measured["impact"]]
+            events["impact"] = [measured["impact"]]
+    if "settled" in spec:
+        events["settled"] = [at(moments[spec["settled"]])]
+    window = [at(spec["window"][0]), at(spec["window"][1])]
+    out = {
+        "task": f"jumper.{mode}",
+        "policyStart": round(t_on - float(T[0]), 4),
+        "lag": lag,
+        "fitRmsDeg": round(float(np.degrees(min(errs))), 2),
+        "window": window,
+        "refWindow": list(spec["window"]),
+        **({"hold": window[1]} if "hold" in spec else {}),
+        "refEvents": moments,
+        **({"measured": measured} if measured else {}),
+    }
+    print(f"    skill {mode}: policy from {out['policyStart']:.3f}s, lag {lag:+.3f}s (fit {out['fitRmsDeg']} deg), "
+          f"window {window}, hit {events.get('hit')}, measured {measured}")
+    return out
+
+
+def write_skill_table(out_dir: Path, path: Path) -> None:
+    """src/motion/skillClips.ts: each skill clip's window and moments, from the clip headers."""
+    rows = []
+    for header_path in sorted(out_dir.glob("*.json")):
+        if header_path.name == "index.json":
+            continue
+        h = json.loads(header_path.read_text())
+        sk = h.get("skill")
+        if h.get("kind") != "skill" or not sk:
+            continue
+        ev = {k: v[0] for k, v in sorted(h["events"].items())
+              if not k.startswith("foot") and k != "footstep" and len(v) == 1}
+        evs = ", ".join(f"{k}: {v}" for k, v in ev.items())
+        rows.append(f"  {h['id']}: {{\n    task: '{sk['task']}',\n    from: {sk['window'][0]},\n"
+                    f"    to: {sk['window'][1]},\n    hold: {'true' if h.get('hold') else 'false'},\n"
+                    f"    events: {{ {evs} }},\n  }},")
+    text = (
+        "// Generated by tools/motion/export_clips.py from the recorded skill clips in public/motions/.\n"
+        "// Do not edit: re-run the export. Clip seconds: `from`/`to` is the move as\n"
+        "// docs/CRABCRAFT_SKILLS.md (jumper) cuts it, moved to where the policy played it in the\n"
+        "// rollout; `events` are the reference's moments moved the same way (the slam's `hit` is the\n"
+        "// claw pads' measured impact), `hold` says the game holds the clip at `to`.\n"
+        "export const SKILL_CLIPS = {\n" + "\n".join(rows) + "\n} as const;\n"
+    )
+    path.write_text(text)
+    print(f"skill table: {path} ({len(rows)} clips)")
 
 
 def extra_events(raw: Raw, events: dict, T: np.ndarray) -> None:
@@ -327,12 +453,27 @@ def beat_times_crab() -> np.ndarray:
 def provenance(raw: Raw, more: dict) -> dict:
     return {
         "method": "closed-loop rollout",
-        "bundle": "out/bundle_example/jumper (KingKongRobotics/jumper)",
-        "controller": "runtime/mjlab/macosx-universal2/controller.so",
+        **bundle_provenance(raw),
         "policy": raw.meta["source"],
         "inferences": raw.meta.get("inferences"),
         "physics": "MuJoCo, training contact/solver setup, per-mode timestep (tools/motion/jumper_sim.py)",
         **more,
+    }
+
+
+def bundle_provenance(raw: Raw) -> dict:
+    if "bundle" not in raw.meta:
+        return {"bundle": "out/bundle_example/jumper (KingKongRobotics/jumper)",
+                "controller": "runtime/mjlab/macosx-universal2/controller.so"}
+    bundle = Path(raw.meta["bundle"])
+    manifest = json.loads((bundle / "bundle.json").read_text("utf-8"))
+    mjlab = manifest["runtimes"]["mjlab"]
+    built = (manifest.get("built_from") or {}).get(raw.meta["source"], {})
+    return {
+        "bundle": f"crabcraft bundle, scripts/deploy.py --manifests deploy/crabcraft.manifests.json "
+                  f"(jumper branch feat/crabcraft-skills, controller source {mjlab['commit'][:7]})",
+        "controller": next(iter(mjlab["extensions"].values()))["file"],
+        **({"checkpoint": built["from"]} if built.get("from") else {}),
     }
 
 
@@ -357,6 +498,8 @@ def main() -> None:
         print(f"    -> {info['frameCount']} frames, {info['duration']:.2f}s, {info['bytes']} bytes")
     idx = write_index(args.out)
     print(f"index: {len(idx['clips'])} clips")
+    if args.out.resolve() == (ROOT / "public" / "motions").resolve():
+        write_skill_table(args.out, SKILL_TABLE)
 
 
 if __name__ == "__main__":

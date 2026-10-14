@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import type { Game } from './game';
 import type { Unit } from './unit';
+import { C } from './vfx/vfx';
 
 export type School = 'physical' | 'frost' | 'water' | 'holy' | 'rust';
 
@@ -104,7 +105,14 @@ export class Combat {
     dst.hp = 0;
     dst.cancelPendingHit();
     dst.motion.stop(undefined, 0.1);
-    dst.act('death', { fade: 0.1 });
+    // The power-down: the legs give way and the shell settles on the floor, where it stays.
+    dst.act('death', {
+      fade: 0.1,
+      onEvent: (name) => {
+        if (name !== 'settled' || dst.hidden || dst.culled) return;
+        g.vfx.smoke(v.set(dst.pos.x, dst.pos.y + 0.05, dst.pos.z), C.dust, 6, 0.7 * dst.radius, 0.4, 0.35 * dst.height, 0.7);
+      },
+    });
     dst.express('dead', 999);
     dst.rig.face.setTint(null);
     dst.centre(v);

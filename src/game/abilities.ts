@@ -52,8 +52,7 @@ export function executeAbility(g: Game, p: Player, ab: AbilityDef, target: Unit 
       const t = target!;
       u.act('attack_swipe', {
         upper: true,
-        hitAt: 0.2,
-        speed: 1.2,
+        speed: 1.3,
         onHit: () => {
           if (!t.alive) return;
           hit(g, p, t, 16, 21, 'physical', 0.05);
@@ -67,7 +66,6 @@ export function executeAbility(g: Game, p: Player, ab: AbilityDef, target: Unit 
       const t = target!;
       u.act('attack_slam', {
         upper: true,
-        hitAt: 0.28,
         onHit: () => {
           if (!t.alive) return;
           hit(g, p, t, 10, 13, 'physical');
@@ -185,11 +183,19 @@ export function executeAbility(g: Game, p: Player, ab: AbilityDef, target: Unit 
       break;
     }
     case 'holy-tide': {
-      u.act('cast', { upper: true, speed: 2 });
-      g.vfx.holyTide(u.pos, ab.range);
-      g.follow.shake(0.1, 0.25);
-      for (const t of enemiesNear(g, u.pos.x, u.pos.z, ab.range)) hit(g, p, t, 15, 19, 'holy');
-      g.combat.heal(u, u, u.maxHp * 0.15);
+      // The tide breaks on the cast's release: the claws flung wide.
+      u.act('cast', {
+        upper: true,
+        part: 'release',
+        speed: 1.5,
+        onHit: () => {
+          if (!u.alive) return;
+          g.vfx.holyTide(u.pos, ab.range);
+          g.follow.shake(0.1, 0.25);
+          for (const t of enemiesNear(g, u.pos.x, u.pos.z, ab.range)) hit(g, p, t, 15, 19, 'holy');
+          g.combat.heal(u, u, u.maxHp * 0.15);
+        },
+      });
       break;
     }
   }

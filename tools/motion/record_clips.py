@@ -1,11 +1,15 @@
 """Record every policy-backed game clip as a closed-loop rollout of the bundle's own policies.
 
     python -I tools/motion/record_clips.py [--out scratch/motion-raw] [--only walk_fwd,jump]
+    python -I tools/motion/record_clips.py --bundle <jumper>/out/bundle_<ts>/crabcraft --only skills
 
 Each clip is a fresh robot standing on the floor at the calibrated home pose, driven through the
 bundle's controller exactly like `play --app` drives it: velocity commands for locomotion, the
-bundle's own pad bindings to enter jump / gestures / dances / claws. Writes one raw `<id>.npz`
-per clip (200 Hz control-tick samples); `export_clips.py` turns those into game clips.
+bundle's own pad bindings to enter jump / gestures / dances / claws / skills. Writes one raw
+`<id>.npz` per clip (200 Hz control-tick samples); `export_clips.py` turns those into game clips.
+
+The six skills (attack_swipe, attack_slam, cast, hit_react, death, sit) are the `jumper.skill_*`
+policies, which only the crabcraft bundle carries: record them with `--bundle` pointing at it.
 """
 from __future__ import annotations
 
@@ -18,7 +22,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from jumper_sim import Host  # noqa: E402
+from jumper_sim import BUNDLE, Host  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -61,6 +65,17 @@ GESTURES = {
     "dance_dream_wings": ((1, 0), True, "dance_dream_wings"),
 }
 
+# The crabcraft bundle's six skills (deploy/manifests.json, bundle "crabcraft"): Menu + a pad
+# button, from locomotion. Game clip id -> (pad button held with Menu, bundle mode).
+SKILLS = {
+    "attack_swipe": ("A", "skill_swipe"),
+    "attack_slam": ("X", "skill_slam"),
+    "cast": ("Y", "skill_cast"),
+    "hit_react": ("LB", "skill_flinch"),
+    "death": ("RB", "skill_powerdown"),
+    "sit": ("L3", "skill_sit"),
+}
+
 STAND = 1.5  # seconds standing before anything is asked
 
 
@@ -77,8 +92,15 @@ def save(out: Path, cid: str, host: Host, meta: dict) -> None:
     )
 
 
+BUNDLE_ARG: Path | None = None
+
+
+def new_host(*, operators: bool = False) -> Host:
+    return Host(operators=operators, render=False, bundle=BUNDLE_ARG)
+
+
 def record_locomotion(cid: str, cmd) -> Host:
-    h = Host(operators=False, render=False)
+    h = new_host()
     h.run(STAND)
     h.rec.mark("command", h.t)
     h.command(*cmd)
@@ -88,7 +110,7 @@ def record_locomotion(cid: str, cmd) -> Host:
 
 def record_motion(cid: str) -> Host:
     dpad, chord, mode = GESTURES[cid]
-    h = Host(operators=False, render=False)
+    h = new_host()
     h.run(STAND)
     h.rec.mark("trigger", h.t)
     if chord:
@@ -119,8 +141,45 @@ def record_motion(cid: str) -> Host:
     return h
 
 
+def record_skill(cid: str) -> Host:
+    """Menu held, the skill's button pressed and let go, Menu let go: the bundle's own chord.
+
+    Then until the recording has played out, the controller has handed back to locomotion and
+    the walking policy is running again, and 1.2 s of standing after, as for the gestures."""
+    button, mode = SKILLS[cid]
+    h = new_host()
+    if mode not in h.contracts:
+        raise SystemExit(f"{cid}: the bundle {h.bundle} has no mode {mode}; record skills with "
+                         "--bundle <the crabcraft bundle>")
+    h.run(STAND)
+    h.rec.mark("trigger", h.t)
+    h.button("menu", True)
+    h.run(0.04)
+    h.button(button, True)
+    h.run(0.04)
+    h.button(button, False)
+    h.run(0.04)
+    h.button("menu", False)
+    entered = False
+    limit = 60.0
+    while h.t < limit:
+        h.step()
+        if h.mode == mode:
+            entered = True
+        elif entered and h.mode == "locomotion":
+            h.rec.mark("left", h.t)
+            break
+    if not entered:
+        raise SystemExit(f"{cid}: the controller never entered {mode}")
+    while not h.fsm.running_policy and h.t < limit:
+        h.step()
+    h.rec.mark("locomotion", h.t)
+    h.run(1.2)
+    return h
+
+
 def record_jump() -> Host:
-    h = Host(operators=False, render=False)
+    h = new_host()
     h.run(STAND)
     h.rec.mark("trigger", h.t)
     h.press("A", 0.04)
@@ -147,7 +206,7 @@ def record_claw(side: str) -> Host:
     """
     toggle, trigger = ("LB", "LT") if side == "left" else ("RB", "RT")
     mode = f"claw_{side}"
-    h = Host(operators=True, render=False)
+    h = new_host(operators=True)
     h.run(STAND)
     h.rec.mark("trigger", h.t)
     h.press(toggle, 0.04)
@@ -182,13 +241,30 @@ def record_claw(side: str) -> Host:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path, default=ROOT / "scratch" / "motion-raw")
-    ap.add_argument("--only", default="")
+    ap.add_argument("--only", default="", help="clip ids, comma-separated; `skills` for the six skills")
+    ap.add_argument("--bundle", type=Path, default=None,
+                    help="the bundle to drive (default: the jumper checkout's example bundle)")
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
+    global BUNDLE_ARG
+    BUNDLE_ARG = args.bundle
     only = set(filter(None, args.only.split(",")))
+    if "skills" in only:
+        only = (only - {"skills"}) | set(SKILLS)
     jobs = [(cid, "locomotion", cmd) for cid, cmd in LOCOMOTION.items()]
     jobs += [("jump", "jump", None), ("claw_left", "claw", "left"), ("claw_right", "claw", "right")]
     jobs += [(cid, "motion", None) for cid in GESTURES]
+    bundle = args.bundle or BUNDLE
+    modes = json.loads((bundle / "bundle.json").read_text("utf-8"))["modes"]
+    carried = [cid for cid, (_, mode) in SKILLS.items() if mode in modes]
+    jobs += [(cid, "skill", None) for cid in carried]
+    missing = sorted(set(SKILLS) - set(carried))
+    if only & set(missing):
+        raise SystemExit(f"{bundle} has no mode for {sorted(only & set(missing))}; record the skills "
+                         "with --bundle <the crabcraft bundle>")
+    if missing and not only:
+        print(f"skipped {missing}: {bundle} does not carry their modes (record them with --bundle "
+              "<the crabcraft bundle>)")
     for cid, kind, arg in jobs:
         if only and cid not in only:
             continue
@@ -202,6 +278,9 @@ def main() -> None:
         elif kind == "claw":
             h = record_claw(arg)
             meta = {"kind": kind, "source": f"claw_{arg}"}
+        elif kind == "skill":
+            h = record_skill(cid)
+            meta = {"kind": kind, "source": SKILLS[cid][1], "bundle": str(h.bundle)}
         else:
             h = record_motion(cid)
             meta = {"kind": kind, "source": GESTURES[cid][2]}

@@ -38,6 +38,8 @@ interface Action {
   /** Clip window in seconds (from/to options); end is clamped to the clip length when sampled. */
   start: number;
   end: number;
+  /** Where a windowed loop (loop with a finite `to`) starts again. */
+  loopFrom: number;
   speed: number;
   loop: boolean;
   upper: boolean;
@@ -142,6 +144,7 @@ class Controller implements MotionControllerImpl {
       t: start,
       start,
       end: opts.to ?? Infinity,
+      loopFrom: Math.max(start, opts.loopFrom ?? start),
       speed: opts.speed ?? 1,
       loop: opts.loop ?? false,
       upper: !!opts.upperBodyOnly,
@@ -191,7 +194,8 @@ class Controller implements MotionControllerImpl {
     const out = this.out.copy(this.loco);
     for (const a of this.actions) {
       if (!a.clip || a.weight <= 0) continue;
-      sampleClip(a.clip, a.t, a.loop, this.tmp);
+      // a windowed loop wraps itself (updateActions); only a whole-clip loop wraps in sampleClip
+      sampleClip(a.clip, a.t, a.loop && !Number.isFinite(a.end), this.tmp);
       out.blend(this.tmp, a.weight, a.upper ? CLAW_JOINTS : undefined);
     }
     this.apply(out);
@@ -218,13 +222,26 @@ class Controller implements MotionControllerImpl {
         }
       }
       const c = a.clip;
-      const end = Math.min(c.length, a.end);
+      // a held clip stops at its hold point: the skill clips stand up again after it
+      const end = Math.min(c.length, a.end, c.hold && c.holdAt !== undefined ? c.holdAt : Infinity);
       const prev = a.t;
       if (a.target > a.weight) a.weight = Math.min(a.target, a.weight + dt / a.fadeIn);
       else if (a.target < a.weight) a.weight = Math.max(a.target, a.weight - dt / a.fadeOut);
       if (dt <= 0) continue;
       a.t += dt * a.speed;
       const loop = a.loop;
+      if (loop && Number.isFinite(a.end)) {
+        // windowed loop: once through [start, end), then [loopFrom, end) again and again
+        const span = end - a.loopFrom;
+        if (a.opts.onEvent && !a.interrupted) {
+          crossedEvents(c, prev === a.start ? prev - 1e-6 : prev, Math.min(a.t, end), false, a.opts.onEvent);
+        }
+        if (span > 1e-3 && a.t >= end) {
+          a.t = a.loopFrom + ((a.t - end) % span);
+          if (a.opts.onEvent && !a.interrupted) crossedEvents(c, a.loopFrom - 1e-6, a.t, false, a.opts.onEvent);
+        } else if (a.t > end) a.t = end;
+        continue;
+      }
       if (!loop && !c.hold) {
         // start fading back to locomotion so the blend completes as the clip does
         const fadeAt = end - a.fadeOut * a.speed;

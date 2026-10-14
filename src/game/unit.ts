@@ -2,6 +2,7 @@
 // and the boss are all Units; their behaviour lives in separate controllers.
 import * as THREE from 'three';
 import type { CrabRig, Expression } from '../crab/types';
+import { isSkill, skillDelay, skillWindow, type SkillPart } from '../motion/skills';
 import type { MotionController, MotionId } from '../motion/types';
 import type { World } from '../world/types';
 import { angleDiff, clamp, damp } from './util';
@@ -15,16 +16,23 @@ const tmp2 = new THREE.Vector2();
 export interface ActionOptions {
   /** Claws only; the legs keep walking. */
   upper?: boolean;
-  /** Seconds after start when onHit fires if the clip sends no 'hit' event. */
+  /**
+   * Seconds after start when onHit fires if the clip sends no 'hit' event (a clip still loading).
+   * Skill clips default to just after their own hit, so the clip's moment is what lands it.
+   */
   hitAt?: number;
   onHit?: () => void;
   onEnd?: () => void;
   speed?: number;
   loop?: boolean;
   fade?: number;
-  /** Clip window in clip seconds (see MotionPlayOptions.from/to). */
+  /**
+   * Clip window in clip seconds (see MotionPlayOptions.from/to). Skill clips default to their
+   * move's window (src/motion/skills.ts); `part` picks the cast's channel or release instead.
+   */
   from?: number;
   to?: number;
+  part?: SkillPart;
   /** Named clip events other than 'hit' ('takeoff', 'land', ...). */
   onEvent?: (name: string) => void;
 }
@@ -182,19 +190,23 @@ export class Unit {
 
   /** Play a clip; onHit fires on the clip's 'hit' event or after hitAt seconds, whichever is first. */
   act(id: MotionId, o: ActionOptions = {}): void {
+    // A skill clip is the whole recorded rollout: play its move, at its rate, unless told otherwise.
+    const w = isSkill(id) ? skillWindow(id, o.part ?? (o.loop ? 'channel' : 'move'), o.speed) : null;
     if (o.onHit) {
       // A swing interrupted by the next one still lands.
       if (this.pendingHit) this.pendingHit.fn();
-      this.pendingHit = { fn: o.onHit, left: o.hitAt ?? 0.3 };
+      const own = w && isSkill(id) && o.from === undefined ? skillDelay(id, 'hit', w) : null;
+      this.pendingHit = { fn: o.onHit, left: o.hitAt ?? (own !== null ? own + 0.1 : 0.3) };
     }
     if (id === 'death') this.deathT = 0;
     this.motion.play(id, {
       upperBodyOnly: o.upper,
-      speed: o.speed,
+      speed: w ? w.speed : o.speed,
       loop: o.loop,
       fade: o.fade ?? 0.12,
-      from: o.from,
-      to: o.to,
+      from: o.from ?? w?.from,
+      to: o.to ?? w?.to,
+      loopFrom: w?.loopFrom,
       onEvent: (name) => {
         o.onEvent?.(name);
         if (name === 'hit' && this.pendingHit) {

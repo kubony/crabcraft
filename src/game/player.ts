@@ -268,7 +268,8 @@ export class Player {
         this.interruptCast('Invalid target');
       } else if (now >= c.end) {
         this.cast = null;
-        u.motion.stop('cast', 0.15);
+        // The channel hands over to the cast's release: the claws fling wide as the spell goes.
+        u.act('cast', { upper: true, part: 'release', fade: 0.1 });
         g.hud.castBar.finish();
         if (c.target && abilityNeedsTarget(c.ability) && !this.checkReach(c.ability, c.target)) return;
         this.commit(c.ability, c.target);
@@ -285,7 +286,7 @@ export class Player {
         g.vfx.beaconStream(claw, ch.to, (now - ch.start) / (ch.end - ch.start));
         if (now >= ch.end) {
           this.channel = null;
-          u.motion.stop('cast', 0.2);
+          u.act('cast', { upper: true, part: 'release', fade: 0.1 });
           g.hud.castBar.finish();
           ch.onDone();
         }
@@ -307,7 +308,6 @@ export class Player {
           this.lastAttack = now;
           u.act('attack_swipe', {
             upper: true,
-            hitAt: 0.22,
             onHit: () => {
               if (!t.alive || u.gapTo(t) > MELEE_GAP + 0.8) return;
               const crit = rollCrit();

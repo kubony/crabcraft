@@ -24,6 +24,12 @@ Physics is reproduced from the upstream training configuration rather than copie
 Run with a Python that has mujoco 3.11 + onnxruntime, pointing JUMPER_ROOT at a checkout of
 https://github.com/KingKongRobotics/jumper:
     JUMPER_ROOT=/path/to/jumper python -I tools/motion/<script>.py
+
+The bundle defaults to the jumper checkout's example bundle (`out/bundle_example/jumper`), which
+recorded the walking, jump, claw, gesture and dance clips. `Host(bundle=...)` runs another one: the
+six skill clips were recorded through the crabcraft bundle (`scripts/deploy.py --manifests
+deploy/crabcraft.manifests.json` on the jumper branch that carries `jumper.skill_*`), which is the
+example bundle's modes plus the six skills.
 """
 
 from __future__ import annotations
@@ -175,16 +181,37 @@ def servo_limit(speed: np.ndarray) -> np.ndarray:
     return np.where(w >= CUTOFF, 0.0, lim)
 
 
-def _load_controller():
-    if "mjrl_fsm" in sys.modules:
-        return sys.modules["mjrl_fsm"]
-    path = BUNDLE / "runtime" / "mjlab" / "macosx-universal2" / "controller.so"
-    if sys.platform.startswith("linux"):
-        path = BUNDLE / "runtime" / "mjlab" / "linux-x86_64" / "controller.so"
+def extension_path(bundle: Path) -> Path:
+    """This machine's controller extension inside `bundle`, as its bundle.json lists it.
+
+    macOS: the cross-built universal2 file when the bundle has one, else the build machine's
+    (`macosx-<version>-arm64`, keyed by `sysconfig.get_platform()` where it was built)."""
+    manifest = json.loads((bundle / "bundle.json").read_text("utf-8"))
+    extensions = (manifest["runtimes"].get("mjlab") or {}).get("extensions", {})
+    prefix = "macosx" if sys.platform == "darwin" else "linux" if sys.platform.startswith("linux") else "win"
+    keys = sorted(k for k in extensions if k.startswith(prefix))
+    keys.sort(key=lambda k: "universal2" not in k)
+    if not keys:
+        raise SystemExit(f"{bundle}: no controller extension for {sys.platform} in bundle.json "
+                         f"(it has {sorted(extensions)})")
+    return bundle / extensions[keys[0]]["file"]
+
+
+_CONTROLLERS: dict[str, object] = {}
+
+
+def _load_controller(bundle: Path = BUNDLE):
+    path = extension_path(bundle).resolve()
+    if str(path) in _CONTROLLERS:
+        return _CONTROLLERS[str(path)]
+    if _CONTROLLERS:
+        # One extension module per process: a second `mjrl_fsm` would shadow the first.
+        raise SystemExit(f"this process already loaded {next(iter(_CONTROLLERS))}; run {path} in another")
     loader = importlib.machinery.ExtensionFileLoader("mjrl_fsm", str(path))
     spec = importlib.util.spec_from_file_location("mjrl_fsm", path, loader=loader)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    _CONTROLLERS[str(path)] = module
     return module
 
 
@@ -219,21 +246,23 @@ class Recording:
 class Host:
     """One robot, one controller, one floor. `step()` advances one 5 ms control tick."""
 
-    def __init__(self, *, operators: bool = False, render: bool = True):
+    def __init__(self, *, operators: bool = False, render: bool = True, bundle: Path | None = None):
         import onnxruntime as ort
 
-        self.mjrl_fsm = _load_controller()
-        manifest = json.loads((BUNDLE / "bundle.json").read_text("utf-8"))
-        self.contracts_text = {m: (BUNDLE / e["contract"]).read_text("utf-8") for m, e in manifest["modes"].items()}
+        bundle = Path(bundle) if bundle is not None else BUNDLE
+        self.bundle = bundle
+        self.mjrl_fsm = _load_controller(bundle)
+        manifest = json.loads((bundle / "bundle.json").read_text("utf-8"))
+        self.contracts_text = {m: (bundle / e["contract"]).read_text("utf-8") for m, e in manifest["modes"].items()}
         self.contracts = {m: json.loads(t) for m, t in self.contracts_text.items()}
-        trajectories = {m: (BUNDLE / e["trajectory"]).read_text("utf-8")
+        trajectories = {m: (bundle / e["trajectory"]).read_text("utf-8")
                         for m, e in manifest["modes"].items() if e.get("trajectory")}
         self.wire: list[str] = next(iter(self.contracts.values()))["wire_joint_order"]
         limits = self.contracts["locomotion"]["joint_limits"]
         gait = next((t.get("params") or {} for c in self.contracts.values()
                      for t in c["observation"]["terms"] if t["name"] == "gait_phase"), {})
         self.fsm = self.mjrl_fsm.Fsm(
-            (BUNDLE / "controller.toml").read_text("utf-8"),
+            (bundle / "controller.toml").read_text("utf-8"),
             self.contracts_text,
             {
                 "joint_names": self.wire,
@@ -249,7 +278,7 @@ class Host:
         )
         so = ort.SessionOptions()
         so.intra_op_num_threads = 1
-        self.sessions = {m: ort.InferenceSession(str(BUNDLE / e["models"]["onnx"]), so,
+        self.sessions = {m: ort.InferenceSession(str(bundle / e["models"]["onnx"]), so,
                                                  providers=["CPUExecutionProvider"])
                          for m, e in manifest["modes"].items()}
         self.inputs = {m: s.get_inputs()[0].name for m, s in self.sessions.items()}

@@ -113,7 +113,7 @@ motion.onLocomotionEvent = (name) => {
 const opts = { fade: 0.2, speed: 1, loop: false, upper: false };
 ui.innerHTML = `
   <h1>Motion harness</h1>
-  <div class="sub">Jumper policy rollouts (MuJoCo) and keyframed clips</div>
+  <div class="sub">Jumper policy rollouts (MuJoCo), whole: the game plays the skills' windows</div>
   <h2>Play</h2>
   <div class="row"><label>fade</label><input id="o-fade" type="range" min="0" max="1" step="0.05" value="0.2"><output id="v-fade">0.20</output></div>
   <div class="row"><label>speed</label><input id="o-speed" type="range" min="0.25" max="2" step="0.05" value="1"><output id="v-speed">1.00</output></div>
@@ -151,12 +151,12 @@ function startLayer(id: MotionId) {
 
 const groups: Record<string, ClipIndexEntry[]> = {};
 for (const c of lib.list()) (groups[c.kind] ??= []).push(c);
-const order = ['locomotion', 'jump', 'claw', 'gesture', 'dance', 'keyframe'];
+const order = ['locomotion', 'jump', 'claw', 'gesture', 'dance', 'skill'];
 const buttons = new Map<string, HTMLButtonElement>();
 for (const kind of order) {
   if (!groups[kind]) continue;
   const h = document.createElement('h2');
-  h.textContent = kind === 'keyframe' ? 'keyframed' : kind;
+  h.textContent = kind === 'skill' ? 'skills (jumper.skill_*)' : kind;
   $('groups').appendChild(h);
   const box = document.createElement('div');
   box.className = 'clips';

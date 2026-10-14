@@ -173,9 +173,10 @@ def write_index(out_dir: Path) -> dict:
         })
     index = {
         "schema": "crabcraft-motions/1",
-        "note": "Clips recorded as closed-loop rollouts of the Jumper example bundle's policies "
-                "(KingKongRobotics/jumper, Apache-2.0) in MuJoCo, plus keyframed game-only clips. "
-                "tools/motion/ rebuilds everything.",
+        "note": "Every clip is a closed-loop rollout of a Jumper policy (KingKongRobotics/jumper, "
+                "Apache-2.0) in MuJoCo: the example bundle's walking, jump, claw, gesture and dance "
+                "policies, and the six skills (jumper.skill_*, trained for this game) through the "
+                "crabcraft bundle. tools/motion/ rebuilds everything.",
         "clips": clips,
     }
     (out_dir / "index.json").write_text(json.dumps(index, indent=1) + "\n")

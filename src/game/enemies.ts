@@ -211,7 +211,6 @@ export class Enemy {
           this.nextSwing = now + this.stats.swing * rand(0.9, 1.1);
           u.act('attack_swipe', {
             upper: true,
-            hitAt: 0.28,
             onHit: () => {
               if (!u.alive || !p.alive || u.gapTo(p) > 2) return;
               g.combat.damage(u, p, rand(this.stats.dmg[0], this.stats.dmg[1]));

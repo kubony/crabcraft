@@ -38,7 +38,9 @@ export type MotionId =
   | 'claw_left' | 'claw_right'
   | 'gesture_hello' | 'gesture_bow' | 'gesture_salute' | 'gesture_paw'
   | 'dance_crab' | 'dance_brazilian' | 'dance_dream_wings' | 'dance_maze'
-  // Keyframed game-only clips (not from a policy):
+  // The six skills, jumper.skill_* (swipe, slam, cast, flinch, power-down, sit): trained for this
+  // game and recorded through the crabcraft bundle. Play them through src/motion/skills.ts, which
+  // cuts each to its move (from/to) at its pace.
   | 'attack_swipe' | 'attack_slam' | 'cast' | 'hit_react' | 'death' | 'sit';
 
 /**
@@ -59,6 +61,11 @@ export interface MotionPlayOptions {
    */
   from?: number;
   to?: number;
+  /**
+   * With `loop` and `to`: play from `from` once, then repeat [loopFrom, to) (the cast's channel,
+   * whose two ends are one pose). Defaults to `from`.
+   */
+  loopFrom?: number;
   /** Named clip events ("hit", "grab", "footstep") as they pass. */
   onEvent?: (name: string) => void;
   onEnd?: () => void;

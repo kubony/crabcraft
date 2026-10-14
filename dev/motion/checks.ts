@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { JOINT_NAMES, type CrabRig, type JointName, type SocketName } from '../../src/crab/types';
 import { createMotionController, type MotionLibrary } from '../../src/motion';
+import { skillPlayOptions } from '../../src/motion/skills';
 import type { MotionId } from '../../src/motion/types';
 import type { ViewerRig } from './viewerRig';
 
@@ -49,7 +50,7 @@ export async function runBench(lib: MotionLibrary, crabs = 25, frames = 600) {
   const t0 = performance.now();
   for (let f = 0; f < frames; f++) {
     for (let i = 0; i < ctrls.length; i++) {
-      if (f % 90 === i % 90 && i % 4 === 1) ctrls[i].play('hit_react', { fade: 0.08 });
+      if (f % 90 === i % 90 && i % 4 === 1) ctrls[i].play('hit_react', skillPlayOptions('hit_react', { fade: 0.08 }));
       ctrls[i].update(dt);
     }
   }
@@ -138,22 +139,22 @@ export async function runSelfTest(lib: MotionLibrary) {
   results.jumpEventsInOrder = order.every((i, k) => i >= 0 && (k === 0 || i > order[k - 1]));
   results.jumpOnEndOnce = ends === 1;
   results.actionClearedAfterEnd = c.action === null;
-  // 2. hit_react's first-frame hit event
+  // 2. hit_react's hit event, the first frame of its window
   const hits: string[] = [];
-  c.play('hit_react', { onEvent: (n) => hits.push(n) });
+  c.play('hit_react', skillPlayOptions('hit_react', { onEvent: (n) => hits.push(n) }));
   run(0.6);
   results.hitAtFrameZero = hits.includes('hit');
   // 3. replacing an action ends the first one
   let castEnd = 0;
-  c.play('cast', { onEnd: () => castEnd++ });
+  c.play('cast', skillPlayOptions('cast', { onEnd: () => castEnd++ }));
   run(0.2);
-  c.play('attack_swipe', { fade: 0.1 });
+  c.play('attack_swipe', skillPlayOptions('attack_swipe', { fade: 0.1 }));
   results.replacedActionEnds = castEnd === 1;
   run(1);
   // 4. upper body only: legs keep walking (leg joints differ from a frozen pose over time)
   c.setLocomotion(0, 0.25 * rig.metersToUnits, 0);
   run(1.5);
-  c.play('cast', { upperBodyOnly: true, loop: true, fade: 0.05 });
+  c.play('cast', skillPlayOptions('cast', { upperBodyOnly: true, loop: true, fade: 0.05 }));
   run(0.3);
   captured.length = 0;
   run(0.5);
@@ -167,7 +168,7 @@ export async function runSelfTest(lib: MotionLibrary) {
   run(1);
   // 5. death holds its last frame and keeps reporting the action
   let deathEnd = 0;
-  c.play('death', { onEnd: () => deathEnd++ });
+  c.play('death', skillPlayOptions('death', { onEnd: () => deathEnd++ }));
   run(3);
   const h = rig.body.position.y / rig.metersToUnits;
   results.deathHolds = c.action === 'death' && deathEnd === 1 && h < 0.07 ? `yes (body ${h.toFixed(3)} m)` : `no (${c.action}, ${deathEnd}, ${h.toFixed(3)})`;
