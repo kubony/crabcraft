@@ -1,2 +1,2 @@
-// Integration switch: points at the stand-in until Clawhaven is merged.
-export { createWorld } from './stub';
+// Integration switch: Clawhaven and the Brine Shore (src/world/index.ts).
+export { createWorld } from './index';

@@ -1,0 +1,176 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Clawhaven world harness</title>
+<style>
+  body { margin: 0; background: #000; overflow: hidden; font: 12px/1.4 ui-monospace, Menlo, monospace; }
+  #hud { position: fixed; left: 8px; top: 8px; color: #f4e9d0; background: rgba(10, 12, 20, 0.62); padding: 6px 9px; border-radius: 6px; pointer-events: none; white-space: pre; z-index: 5; }
+  #bar { position: fixed; right: 8px; top: 8px; display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; max-width: 60vw; z-index: 5; }
+  #bar button { font: inherit; background: rgba(30, 24, 18, 0.8); color: #f6dfa4; border: 1px solid #a07a3a; border-radius: 4px; padding: 3px 7px; cursor: pointer; }
+  #bar button.on { background: #a0442a; color: #fff; }
+  #help { position: fixed; left: 8px; bottom: 8px; color: #f4e9d0aa; pointer-events: none; z-index: 5; }
+  body.clean #hud, body.clean #bar, body.clean #help { display: none; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="hud">loading...</div>
+<div id="bar"></div>
+<div id="help">V: fly / walk   WASD move   Q/E down/up (fly)   Shift fast   drag: look   1/2/3 mood   B beacon   H hide UI</div>
+<script type="module">
+import * as THREE from 'three';
+import { Engine } from '../src/core/engine';
+import { Input } from '../src/core/input';
+import { FollowCamera } from '../src/core/followCamera';
+import { createWorld } from '../src/world/index';
+import { gpuProbe, perfProbe, validatePoints, walkTest } from './world-walktest';
+
+const params = new URLSearchParams(location.search);
+const quality = params.get('q') === 'low' ? 'low' : 'high';
+if (params.has('clean')) document.body.classList.add('clean');
+const engine = new Engine(document.getElementById('app'), quality);
+const scene = new THREE.Scene();
+const cam = new THREE.PerspectiveCamera(50, 1, 0.1, 3000);
+// Post settings the world is tuned for (reported to the integration branch).
+const VIEW = { bloom: { intensity: 0.9, threshold: 1.0, smoothing: 0.35, radius: 0.75 }, exposure: 1.0, vignette: { offset: 0.3, darkness: 0.5 } };
+engine.setView(scene, cam, VIEW);
+const hud = document.getElementById('hud');
+const t0 = performance.now();
+const world = await createWorld({
+  renderer: engine.renderer,
+  scene,
+  quality,
+  onProgress: (f, label) => (hud.textContent = `${Math.round(f * 100)}% ${label}`),
+});
+const loadSeconds = (performance.now() - t0) / 1000;
+
+// Walk mode: a one-unit capsule using heightAt and resolveCollision.
+const capsule = new THREE.Mesh(
+  new THREE.CapsuleGeometry(0.42, 0.2, 6, 12).translate(0, 0.5, 0),
+  new THREE.MeshPhysicalMaterial({ color: '#d2202f', roughness: 0.25, clearcoat: 1 }),
+);
+capsule.castShadow = true;
+const spawn = world.pois.spawn;
+capsule.position.copy(spawn.position);
+scene.add(capsule);
+
+const input = new Input(engine.canvas);
+const follow = new FollowCamera(cam, { raycast: (a, b) => world.raycastSolid(a, b), distance: 9, maxDistance: 40 });
+follow.yaw = spawn.yaw + Math.PI;
+let mode = params.get('walk') ? 'walk' : 'fly';
+let flyYaw = 0.6, flyPitch = -0.1;
+cam.position.set(-40, 30, 70);
+const v2 = new THREE.Vector2();
+let mood = Number(params.get('mood') ?? 0);
+let beacon = params.get('beacon') === '1';
+world.setMood(mood);
+world.setBeaconLit(beacon);
+
+const presets = {
+  establish: { p: [-70, 58, 86], t: [128, 10, -108], fov: 32 },
+  square: { p: [-3.5, 5.4, 19.5], t: [4, 6.2, -4], fov: 50 },
+  shore: { p: [108, 6, 52], t: [150, 3, 112] },
+  grove: { p: [-66, 8.6, 41], t: [-82, 6.4, 52], fov: 55 },
+  arena: { p: [124, 15, 96], t: [160, 4, 122], fov: 55 },
+  arenaNight: { p: [129, 14, 151], t: [160, 5, 110], fov: 58 },
+  fireworks: { p: [20, 14, 30], t: [122, 50, 0], fov: 55 },
+  lighthouse: { p: [150, 30, -96], t: [190, 22, -132] },
+  town: { p: [44, 22, 46], t: [-4, 4, -10] },
+};
+function setCam(p, t, fov = 50) {
+  mode = 'fly';
+  cam.fov = fov;
+  cam.updateProjectionMatrix();
+  cam.position.set(p[0], p[1], p[2]);
+  const d = new THREE.Vector3(t[0] - p[0], t[1] - p[1], t[2] - p[2]).normalize();
+  flyYaw = Math.atan2(-d.x, -d.z);
+  flyPitch = Math.asin(d.y);
+}
+if (params.get('cam') && presets[params.get('cam')]) {
+  const pr = presets[params.get('cam')];
+  setCam(pr.p, pr.t, pr.fov);
+}
+
+const bar = document.getElementById('bar');
+const buttons = {};
+function button(id, label, fn) {
+  const b = document.createElement('button');
+  b.textContent = label;
+  b.onclick = () => { fn(); refresh(); };
+  bar.appendChild(b);
+  buttons[id] = b;
+}
+button('m0', 'Dusk', () => world.setMood((mood = 0)));
+button('m1', 'Night', () => world.setMood((mood = 1)));
+button('m2', 'Celebrate', () => world.setMood((mood = 2)));
+button('beacon', 'Beacon', () => world.setBeaconLit((beacon = !beacon)));
+button('walk', 'Walk', () => (mode = mode === 'walk' ? 'fly' : 'walk'));
+for (const k of Object.keys(presets)) button('p-' + k, k, () => setCam(presets[k].p, presets[k].t, presets[k].fov));
+function refresh() {
+  for (const i of [0, 1, 2]) buttons['m' + i].classList.toggle('on', mood === i);
+  buttons.beacon.classList.toggle('on', beacon);
+  buttons.walk.classList.toggle('on', mode === 'walk');
+}
+refresh();
+
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'KeyV') { mode = mode === 'walk' ? 'fly' : 'walk'; refresh(); }
+  if (e.code === 'Digit1') { world.setMood((mood = 0)); refresh(); }
+  if (e.code === 'Digit2') { world.setMood((mood = 1)); refresh(); }
+  if (e.code === 'Digit3') { world.setMood((mood = 2)); refresh(); }
+  if (e.code === 'KeyB') { world.setBeaconLit((beacon = !beacon)); refresh(); }
+  if (e.code === 'KeyH') document.body.classList.toggle('clean');
+});
+
+const tmp = new THREE.Vector3();
+let frames = 0;
+engine.onFrame(({ dt, elapsed }) => {
+  const fast = input.isDown('ShiftLeft') ? 3 : 1;
+  if (mode === 'fly') {
+    if (input.isButtonDown(0) || input.isButtonDown(2)) {
+      flyYaw -= input.dx * 0.004;
+      flyPitch = THREE.MathUtils.clamp(flyPitch - input.dy * 0.004, -1.5, 1.5);
+    }
+    cam.rotation.set(flyPitch, flyYaw, 0, 'YXZ');
+    const f = (input.isDown('KeyW') ? 1 : 0) - (input.isDown('KeyS') ? 1 : 0);
+    const s = (input.isDown('KeyD') ? 1 : 0) - (input.isDown('KeyA') ? 1 : 0);
+    const u = (input.isDown('KeyE') ? 1 : 0) - (input.isDown('KeyQ') ? 1 : 0);
+    tmp.set(s, u, -f).multiplyScalar(25 * fast * dt).applyEuler(cam.rotation);
+    cam.position.add(tmp);
+  } else {
+    const f = (input.isDown('KeyW') ? 1 : 0) - (input.isDown('KeyS') ? 1 : 0);
+    const s = (input.isDown('KeyA') ? 1 : 0) - (input.isDown('KeyD') ? 1 : 0);
+    const yaw = follow.forwardYaw;
+    const speed = 5 * fast;
+    const nx = capsule.position.x + (Math.sin(yaw) * f + Math.cos(yaw) * s) * speed * dt;
+    const nz = capsule.position.z + (Math.cos(yaw) * f - Math.sin(yaw) * s) * speed * dt;
+    world.resolveCollision(nx, nz, 0.75, v2);
+    capsule.position.set(v2.x, world.heightAt(v2.x, v2.y), v2.y);
+    follow.update(dt, input, capsule.position);
+  }
+  world.update(dt, elapsed, cam);
+});
+engine.onAfterFrame(() => {
+  input.endFrame();
+  frames++;
+  if (frames % 15 === 0) {
+    const info = engine.renderer.info;
+    const p = mode === 'walk' ? capsule.position : cam.position;
+    hud.textContent =
+      `fps ${engine.fps.toFixed(0)}  calls ${info.render.calls}  tris ${(info.render.triangles / 1000).toFixed(0)}k  ${quality}\n` +
+      `${mode}  pos ${p.x.toFixed(1)} ${p.y.toFixed(1)} ${p.z.toFixed(1)}  ground ${world.heightAt(p.x, p.z).toFixed(2)}\n` +
+      `geo ${info.memory.geometries}  tex ${info.memory.textures}  load ${loadSeconds.toFixed(1)}s\n` +
+      `${Object.entries(world.debug?.foliage ?? {}).map(([k, v]) => k + ' ' + v).join('  ')}`;
+    window.__stats = { fps: engine.fps, calls: info.render.calls, triangles: info.render.triangles, loadSeconds };
+  }
+});
+engine.start();
+window.__cc = { world, engine, cam, setCam, presets, capsule, walkTest: () => walkTest(world), validate: () => validatePoints(world),
+  gpu: async (frames) => { engine.stop(); const r = await gpuProbe(world, { renderer: engine.renderer, camera: cam, renderOnce: () => { engine.renderer.info.reset(); engine.composer.render(1 / 60); } }, presets, frames); engine.start(); return r; },
+  perf: (frames) => { engine.stop(); const r = perfProbe(world, { renderer: engine.renderer, camera: cam, renderOnce: () => { engine.renderer.info.reset(); engine.composer.render(1 / 60); } }, presets, frames); engine.start(); return r; }, setMood: (m) => { mood = m; world.setMood(m); refresh(); }, setBeacon: (b) => { beacon = b; world.setBeaconLit(b); refresh(); } };
+// Moods blend over ~2.5 s; give the first frames time to settle before screenshots.
+setTimeout(() => (window.__ready = true), Number(params.get('settle') ?? 4000));
+</script>
+</body>
+</html>
