@@ -1,6 +1,7 @@
 // First-time control hints: a small card at the first spawn with the five things a new crab needs.
 // Each row ticks itself off when the player does it; the card leaves once everything is ticked,
-// when it is closed, or after a minute of play, and never comes back (cc.hintsSeen).
+// six seconds after all but one are, when it is closed, or after 46 s of play, and never comes back
+// (cc.hintsSeen).
 import { h } from '../dom';
 import { localStorageGet, localStorageSet } from '../../app';
 
@@ -55,12 +56,14 @@ export class ControlHints {
     this.done.add(step);
     this.rows.get(step)?.classList.add('done');
     if (this.done.size === ROWS.length) setTimeout(() => this.dismiss(), 1200);
+    // Four of five is plenty: the last one usually never comes (keyboard players never right drag).
+    else if (this.done.size === ROWS.length - 1) this.shownFor = Math.max(this.shownFor, 40);
   }
 
   update(dt: number): void {
     if (!this.active) return;
     this.shownFor += dt;
-    if (this.shownFor > 60) this.dismiss();
+    if (this.shownFor > 46) this.dismiss();
   }
 
   dismiss(): void {
