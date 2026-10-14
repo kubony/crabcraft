@@ -126,6 +126,103 @@ SHOTS.robot = async () => {
   }).finally(() => app.browser.close());
 };
 
+/**
+ * Beat 3b: three of the six skills trained for this game (jumper.skill_*), played live in Robot
+ * Mode on their own keys: the slam, the cast and the power-down, each from standing and each handed
+ * back to the walking policy before the next one. The HUD's mode card names the running policy and
+ * the dock's Skills group (all six, the active one lit) sits under it. `layout` 'port' renders the
+ * same take on a 1080x1920 page for the vertical cut, where the HUD lays itself out for the narrow
+ * screen instead of being cropped away.
+ */
+const skillsShot = (layout) => async () => {
+  const port = layout === 'port';
+  const size = port ? [1080, 1920] : [1920, 1080];
+  const app = await openApp({ base, query: 'screen=robot', spec: SPECS.orcWarrior, dsf, size });
+  const { page } = app;
+  const SKILLS = ['skill_slam', 'skill_cast', 'skill_powerdown'];
+  await page.waitForFunction(
+    (skills) => window.__robotMode && skills.every((m) => window.__robotMode.client.policies.has(m)),
+    SKILLS,
+    { timeout: 180000 },
+  );
+  await page.evaluate(() => window.__robotMode.handle.setAppearance('bare'));
+  // Only the Skills group of the dock, moved under the mode card, clear of the captions.
+  await page.evaluate(() => {
+    for (const g of document.querySelectorAll('.rm-dock .rm-group')) {
+      if (g.querySelector('.gl')?.textContent?.trim().toLowerCase() === 'skills') g.classList.add('cap-skills');
+    }
+  });
+  await css(page, `
+    .rm-tools, .rm-help, .rm-notice, .rm-log, .rm-look { display: none !important; }
+    .rm { transition: none !important; }
+    .rm-dock { left: 28px !important; right: auto !important; top: ${port ? 452 : 430}px !important; bottom: auto !important;
+      transform: none !important; max-width: none !important; justify-content: flex-start !important; }
+    .rm-dock > .rm-group:not(.cap-skills) { display: none !important; }
+    .rm-dock > .rm-group.cap-skills { border-left: none !important; padding-left: 4px !important; }
+  `);
+  await page.waitForTimeout(800);
+  await page.evaluate(() => window.__capture.begin());
+  await advance(app, 1.5);
+  // Press times (shot seconds): each skill hands back to locomotion before the next one is asked
+  // for (they are bound from locomotion only). Measured in Robot Mode: the slam takes 4.1 s from the
+  // press to the hand-back, the cast 5.7 s, the power-down 5.7 s.
+  const AT = { slam: 0.3, cast: 5.0, powerdown: 11.2 };
+  await page.evaluate(([AT, port]) => {
+    const R = window.__robotMode;
+    R.orbit.update = () => {};
+    const T = window.__T;
+    const cam = R.orbit.camera;
+    // One set-up per skill: azimuth from the robot's front, elevation, distance and look height,
+    // each eased from the first value to the second over the skill's window.
+    const SETUPS = [
+      { from: 0, to: AT.cast - 0.1, az: [0.62, 0.4], el: [0.12, 0.09], dist: [0.92, 0.8], lookY: [0.09, 0.09], fov: 30 },
+      { from: AT.cast - 0.1, to: AT.powerdown - 0.1, az: [-0.5, -0.3], el: [0.2, 0.16], dist: [0.9, 0.78], lookY: [0.09, 0.09], fov: 30 },
+      { from: AT.powerdown - 0.1, to: AT.powerdown + 4.4, az: [1.0, 0.72], el: [0.3, 0.22], dist: [0.92, 0.76], lookY: [0.065, 0.05], fov: 30 },
+    ];
+    // The portrait page is narrower: pull back so the robot keeps its size against the width.
+    const distScale = port ? 2.0 : 1;
+    let seg = -1;
+    let ref = null;
+    T.onFrame((t) => {
+      const s = R.handle.getState();
+      const b = s.base.position;
+      const i = Math.max(0, SETUPS.findIndex((x) => t >= x.from && t < x.to));
+      const S = SETUPS[i];
+      if (i !== seg) {
+        // A new set-up frames the robot where it stands now, facing the way it faces now.
+        seg = i;
+        const fwd = b.clone().set(0, 0, 1).applyQuaternion(s.base.quaternion);
+        ref = { x: b.x, z: b.z, yaw: Math.atan2(fwd.x, fwd.z) };
+      }
+      const k = T.ease('inout', (t - S.from) / (S.to - S.from));
+      const cx = T.lerp(ref.x, b.x, 0.7);
+      const cz = T.lerp(ref.z, b.z, 0.7);
+      const a = ref.yaw + T.lerp(S.az[0], S.az[1], k);
+      const el = T.lerp(S.el[0], S.el[1], k);
+      const dist = T.lerp(S.dist[0], S.dist[1], k) * distScale;
+      const lookY = T.lerp(S.lookY[0], S.lookY[1], k);
+      const p = [cx + Math.sin(a) * Math.cos(el) * dist, lookY + Math.sin(el) * dist, cz + Math.cos(a) * Math.cos(el) * dist];
+      T.place(cam, p, [cx, lookY, cz], S.fov);
+      R.engine.setFocus(Math.hypot(p[0] - b.x, p[1] - b.y * 0.6, p[2] - b.z), 0.22);
+    });
+  }, [AT, port]);
+  const press = (mode) => (p) =>
+    p.evaluate((mode) => {
+      if (!window.__robotMode.handle.requestMode(mode)) throw new Error(`Robot Mode refused ${mode} in ${window.__robotMode.handle.getState().mode}`);
+    }, mode);
+  return record(app, resolve(outDir, port ? 'skills-port' : 'skills'), {
+    duration: AT.powerdown + 4.4,
+    stills,
+    events: [
+      { t: AT.slam, mark: 'slam', fn: press('skill_slam') },
+      { t: AT.cast, mark: 'cast', fn: press('skill_cast') },
+      { t: AT.powerdown, mark: 'powerdown', fn: press('skill_powerdown') },
+    ],
+  }).finally(() => app.browser.close());
+};
+SHOTS.skills = skillsShot('land');
+SHOTS['skills-port'] = skillsShot('port');
+
 // ------------------------------------------------------------------------------------ Creation
 
 /** Beat 5: all six races on the dais, a class change, then Randomize. */

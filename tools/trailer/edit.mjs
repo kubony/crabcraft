@@ -45,6 +45,49 @@ const shot = (name) => (meta[name] ??= JSON.parse(readFileSync(resolve(shotsDir,
 /** Output time (s) of a marked event in a shot. */
 const mark = (name, m) => shot(name).marks[m] / FPS;
 
+/**
+ * The skills beat: the slam, the cast and the power-down from the skills shot (marks are the key
+ * presses), one cut each, filling timeline [t0, t1). Each window starts so the move's moment lands
+ * a fixed time into its cut: the slam's claws meet the floor, the cast's claws fling wide, the
+ * shell settles. Moments are seconds after the press, read off the capture frame by frame.
+ * Returns the segments (with `extra` merged in, e.g. portrait framing) and the moments' timeline
+ * times for the sound effects.
+ */
+const SKILL_MOMENTS = { slamHit: 1.85, castRelease: 3.17, pdDown: 2.53 };
+function skillBeat(src, t0, t1, extra = {}) {
+  const press = (m) => mark(src, m);
+  const d = t1 - t0;
+  const c1 = t0 + d * 0.32;
+  const c2 = t0 + d * 0.66;
+  // Lead-ins before each moment: the claws' wind-up, the channel before the fling, the legs giving way.
+  const slamIn = press('slam') + SKILL_MOMENTS.slamHit - 0.92;
+  const castIn = press('cast') + SKILL_MOMENTS.castRelease - 1.05;
+  const pdIn = press('powerdown') + SKILL_MOMENTS.pdDown - 0.95;
+  return {
+    segs: [
+      { src, in: slamIn, end: c1, ...extra },
+      { src, in: castIn, end: c2, ...extra },
+      { src, in: pdIn, end: t1, ...extra },
+    ],
+    slamHit: t0 + 0.92,
+    castRelease: c1 + 1.05,
+    pdStart: c2,
+    pdDown: c2 + 0.95,
+  };
+}
+
+/** Sound for the skills beat: servos on each cut, the slam's impact, the cast's sweep, the power-down. */
+const skillSfx = (sk) => [
+  ['sfx-servo-whir', sk.slamHit - 0.85, 0.4],
+  ['sfx-crit', sk.slamHit, 0.6],
+  ['sfx-hit', sk.slamHit + 0.01, 0.5],
+  ['sfx-cast', sk.castRelease - 0.4, 0.55],
+  ['sfx-servo-whir', sk.castRelease + 0.02, 0.3],
+  // Its whine runs 1.65 s before the clunk: started just before the cut, the clunk lands as the
+  // shell settles (0.43 s after it touches down).
+  ['sfx-death', sk.pdDown + 0.43 - 1.65, 0.45],
+];
+
 // ---------------------------------------------------------------------------------- beat grids
 
 /** Title theme: 121.75 bpm, first beat 0.389 s into the file; the swell at 14.68 s lands on the logo,
@@ -62,7 +105,8 @@ const END_BEAT = 60 / 69;
 /**
  * Edit decision list: each entry plays `src` from `in` (seconds of that clip) until timeline `end`.
  * `zoom` punches in (crop of the 4K source), `cx`/`cy` place the crop centre (fractions); for the
- * portrait cut, `px` (and optional `px2` at the segment end) is the horizontal centre of the 9:16 crop.
+ * portrait cut, `px` (and optional `px2` at the segment end) is the horizontal centre of the 9:16 crop,
+ * and `native` marks a take captured on a portrait page, used whole.
  */
 function landCut() {
   const c0 = tb(49); // combat starts after the town section
@@ -72,10 +116,20 @@ function landCut() {
   const e0 = D(28);
   const E = (n) => e0 + n * END_BEAT;
   const crab = { cx: 0.4713, cy: 0.415 };
+  // Cold open, cut on the title theme's beats up to the logo: the face (A), the dance with the HUD
+  // (B), three of the six new skills (S), the switch to a crab (C).
+  const aEnd = tb(-22);
+  const bEnd = tb(-15);
+  const sEnd = tb(-6);
+  const sw = mark('robot', 'switch');
+  const cIn = sw - 0.35;
+  const swAt = sEnd + 0.35; // the switch on the timeline
+  const sk = skillBeat('skills', bEnd, sEnd);
   const segs = [
-    { src: 'robot', in: 0, end: 6.17 },
-    { src: 'robot', in: 6.2, end: tb(-8) },
-    { src: 'robot', in: mark('robot', 'C'), end: LOGO_AT },
+    { src: 'robot', in: 0, end: aEnd },
+    { src: 'robot', in: 6.2, end: bEnd },
+    ...sk.segs,
+    { src: 'robot', in: cIn, end: LOGO_AT },
     { src: 'card-logo-land', in: 0, end: tb(9) },
   ];
   // Character creation: two beats per crab, every other cut punched in on the dais.
@@ -93,15 +147,18 @@ function landCut() {
     { src: 'beacon', in: mark('beacon', 'blaze') - 0.45, end: D(7) },
     { src: 'rise', in: mark('rise', 'wake') - 0.25, end: D(16) },
     { src: 'fight', in: 0.6, end: e0 },
-    { src: 'death', in: 0.05, end: E(1.5) },
-    { src: 'death', in: 3.45, end: E(5) },
+    // Corrodius powers down (the trained death: his hull settles on the deck and stays), then
+    // Little Red steps out.
+    { src: 'death', in: 0.05, end: E(2) },
+    { src: 'death', in: 3.88, end: E(5) },
     { src: 'dance', in: 1.2, end: E(9) },
     { src: 'card-end-land', in: 0, end: E(9) + 6.2 },
   );
   const captions = [
-    ['jumper', 0.9, 5.8],
-    ['policy', 6.45, tb(-8) - 0.2],
-    ['same', mark('robot', 'switch') - mark('robot', 'C') + tb(-8) + 0.25, LOGO_AT - 0.3],
+    ['jumper', 0.6, aEnd - 0.2],
+    ['policy', aEnd + 0.2, bEnd - 0.15],
+    ['skills', bEnd + 0.2, sEnd - 0.2],
+    ['same', sEnd + 0.15, LOGO_AT - 0.3],
     ['races', tb(10.5), tb(21)],
     ['town', tb(29) + 0.4, tb(41) - 0.3],
     ['combat', c0 + 0.45, C(10)],
@@ -121,12 +178,12 @@ function landCut() {
     { file: 'music-boss', from: 0.209, at: b0, end: e0, fadeIn: 0.02, fadeOut: 0.08, gain: 0.85 },
     { file: 'music-ending', from: 0.842 + 3 * END_BEAT, at: e0, end: E(9) + 6.2, fadeIn: 0.03, fadeOut: 1.8, gain: 0.95 },
   ];
-  const rob = (m) => m; // robot clip time == timeline time for A and B
   const sfx = [
     ['sfx-servo-whir', 0.5, 0.35],
-    ['sfx-servo-whir', rob(mark('robot', 'dance')) + 0.1, 0.45],
-    ['sfx-levelup', tb(-8) + (mark('robot', 'switch') - mark('robot', 'C')), 0.75],
-    ['sfx-servo-whir', tb(-8) + (mark('robot', 'switch') - mark('robot', 'C')) + 0.05, 0.4],
+    ['sfx-servo-whir', aEnd + 0.05, 0.45],
+    ...skillSfx(sk),
+    ['sfx-levelup', swAt, 0.75],
+    ['sfx-servo-whir', swAt + 0.05, 0.4],
     ['sfx-crit', LOGO_AT, 0.75],
     ['sfx-beacon', LOGO_AT + 0.02, 0.45],
     ...picks.slice(1, 7).map((_, i) => ['sfx-click', tb(10.5 + i * 2), 0.5]),
@@ -149,7 +206,7 @@ function landCut() {
     ['sfx-boss-roar', D(16) + (mark('fight', 'phase2') - 0.6), 0.6],
     ['sfx-death', e0 + 0.05, 0.6],
     ['sfx-boss-roar', e0 + 0.1, 0.45],
-    ['sfx-levelup', E(1.5) + 0.2, 0.55],
+    ['sfx-levelup', E(2) + 0.2, 0.55],
     ['sfx-crit', E(5) + 0.5, 0.25],
     ['sfx-crit', E(5) + 1.6, 0.2],
     ['sfx-crit', E(5) + 2.7, 0.25],
@@ -162,11 +219,11 @@ function landCut() {
 }
 
 /**
- * Portrait cut (about 40 s) for Shorts, TikTok and Douyin: the same 4K masters re-framed with a
+ * Portrait cut (about 44 s) for Shorts, TikTok and Douyin: the same 4K masters re-framed with a
  * 9:16 crop that follows the subject, portrait title cards and captions placed above the app UI.
  */
 function portCut() {
-  const L = 10.6; // logo
+  const L = 12.8; // logo
   const tbp = (n) => L + n * TITLE_BEAT;
   const c0 = tbp(17); // combat
   const C = (n) => c0 + n * COMBAT_BEAT;
@@ -176,10 +233,16 @@ function portCut() {
   const E = (n) => e0 + n * END_BEAT;
   const end = E(5) + 5.2;
   const sw = mark('robot', 'switch');
+  const aEnd = tbp(-21);
+  const bEnd = tbp(-15);
+  const sEnd = tbp(-6.5);
+  // The skills come from their own portrait take (the HUD laid out for the tall page), uncropped.
+  const sk = skillBeat('skills-port', bEnd, sEnd, { native: true });
   const segs = [
-    // Robot: face push-in, the dance, the switch (slow motion).
-    { src: 'robot', in: 0.6, end: 3.3, px: 0.5 },
-    { src: 'robot', in: 7.2, end: 6.6, px: 0.5 },
+    // Robot: face push-in, the dance, three of the six skills, the switch (slow motion).
+    { src: 'robot', in: 0.6, end: aEnd, px: 0.5 },
+    { src: 'robot', in: 7.2, end: bEnd, px: 0.5 },
+    ...sk.segs,
     { src: 'robot', in: sw - 0.5, end: L, px: 0.5 },
     { src: 'card-logo-port', in: 0, end: tbp(6) },
     { src: 'create', in: mark('create', 'orc') + 0.06, end: tbp(8), px: 0.4713 },
@@ -187,20 +250,26 @@ function portCut() {
     { src: 'create', in: mark('create', 'nightelf') + 0.06, end: tbp(12), px: 0.4713 },
     { src: 'create', in: mark('create', 'tauren') + 0.06, end: tbp(14), px: 0.4713 },
     { src: 'town-crane', in: 2.4, end: c0, px: 0.5 },
-    { src: 'warrior', in: mark('warrior', 'whirlpool') - 0.35, end: C(6), px: 0.43 },
-    { src: 'mage', in: mark('mage', 'nova') - 0.35, end: C(11), px: 0.7 },
+    // Framed so the nameplates, the boss frame and the speech bubbles stay inside the 9:16 crop or
+    // clear of it (measured on the 4K masters): in the warrior's shot the second Scrapling's plates
+    // stay right of the frame until they swing in; the boss's yell sits right of Little Red; the
+    // fight's bubble, boss frame and banner fit only between x 1417 and 1435 of 3840, at the cost
+    // of the hero's left legs.
+    { src: 'warrior', in: mark('warrior', 'whirlpool') - 0.35, end: C(6), px: 0.405 },
+    { src: 'mage', in: mark('mage', 'nova') - 0.35, end: C(11), px: 0.69 },
     { src: 'priest', in: mark('priest', 'tide') - 0.45, end: b0, px: 0.65 },
     { src: 'beacon', in: mark('beacon', 'blaze') - 0.3, end: D(6), px: 0.5 },
     { src: 'rise', in: mark('rise', 'wake') + 0.2, end: D(12), px: 0.5 },
-    { src: 'fight', in: 1.0, end: e0, px: 0.5 },
-    { src: 'death', in: 3.6, end: E(2), px: 0.42, px2: 0.4 },
+    { src: 'fight', in: 1.0, end: e0, px: 0.528 },
+    { src: 'death', in: 3.6, end: E(2), px: 0.455, px2: 0.43 },
     { src: 'dance', in: 1.2, end: E(5), px: 0.5 },
     { src: 'card-end-port', in: 0, end },
   ];
   const captions = [
-    ['jumper', 0.35, 3.2],
-    ['policy', 3.45, 6.5],
-    ['same', 6.75, L - 0.25],
+    ['jumper', 0.3, aEnd - 0.15],
+    ['policy', aEnd + 0.15, bEnd - 0.15],
+    ['skills', bEnd + 0.2, sEnd - 0.2],
+    ['same', sEnd + 0.15, L - 0.25],
     ['races', tbp(6) + 0.3, tbp(14) - 0.2],
     ['combat', c0 + 0.3, C(11)],
     ['boss', b0 + 0.3, D(12)],
@@ -219,7 +288,9 @@ function portCut() {
   ];
   const sfx = [
     ['sfx-servo-whir', 0.2, 0.35],
-    ['sfx-levelup', 6.6 + 0.5, 0.75],
+    ['sfx-servo-whir', aEnd + 0.05, 0.4],
+    ...skillSfx(sk),
+    ['sfx-levelup', sEnd + 0.5, 0.75],
     ['sfx-crit', L, 0.75],
     ['sfx-beacon', L + 0.02, 0.45],
     ['sfx-click', tbp(6), 0.5],
@@ -262,9 +333,9 @@ plan.segs.forEach((s, i) => {
   const f0 = frames(s.in);
   const srcFrames = s.src.startsWith('card-') ? Infinity : shot(s.src).frames;
   if (f0 + n > srcFrames) throw new Error(`segment ${i} (${s.src}) runs past its clip: ${f0}+${n} > ${srcFrames}`);
-  // Sources are 3840x2160 (landscape) or 2160x3840 (portrait cards).
+  // Sources are 3840x2160 (landscape) or 2160x3840 (portrait cards and `native` portrait takes).
   let vf;
-  if (cut === 'port' && !s.src.startsWith('card-')) {
+  if (cut === 'port' && !s.src.startsWith('card-') && !s.native) {
     const cw = 1215;
     const x0 = Math.round((s.px ?? 0.5) * 3840 - cw / 2);
     const x1 = Math.round((s.px2 ?? s.px ?? 0.5) * 3840 - cw / 2);
@@ -357,8 +428,10 @@ for (const [id, a, b] of plan.captions) {
   k++;
 }
 for (const f of plan.flashes) {
-  vChains.push(`color=c=white:s=${W}x${H}:r=${FPS}:d=${f.d},format=rgba,colorchannelmixer=aa=${f.a},fade=t=out:st=0:d=${f.d}:alpha=1,setpts=PTS-STARTPTS+${f.at.toFixed(3)}/TB[f${n}]`);
-  vChains.push(`${base}[f${n}]overlay=0:0:eof_action=pass:enable='between(t,${f.at.toFixed(3)},${(f.at + f.d).toFixed(3)})'[b${n}]`);
+  // On the frame grid, so a flash on a cut starts on the cut's first frame and not one after it.
+  const at = frames(f.at) / FPS;
+  vChains.push(`color=c=white:s=${W}x${H}:r=${FPS}:d=${f.d},format=rgba,colorchannelmixer=aa=${f.a},fade=t=out:st=0:d=${f.d}:alpha=1,setpts=PTS-STARTPTS+${at.toFixed(4)}/TB[f${n}]`);
+  vChains.push(`${base}[f${n}]overlay=0:0:eof_action=pass:enable='between(t,${(at - 0.001).toFixed(4)},${(at + f.d).toFixed(4)})'[b${n}]`);
   base = `[b${n++}]`;
 }
 vChains.push(`${base}format=yuv420p[vout]`);

@@ -2,6 +2,7 @@
   { "id": "jumper", "en": "This is Jumper. A real crab robot.", "zh": "这是 Jumper，一只真实的螃蟹机器人。" },
   { "id": "policy", "en": "Every move in this game is its real trained policy.", "zh": "游戏里的每一个动作，都来自它真实训练出的策略。" },
   { "id": "same", "en": "Same policy. Any appearance.", "zh": "同一个策略，任意外观。" },
+  { "id": "skills", "en": "Six new moves. Trained by us, open source.", "zh": "六个全新动作，由我们训练并开源。" },
   { "id": "races", "en": "Six races. Three classes. One robot body.", "zh": "六个种族，三种职业，同一副机器人身体。", "landPos": "band" },
   { "id": "town", "en": "A harbour town where everyone walks sideways.", "zh": "一座人人都横着走的港口小镇。" },
   { "id": "combat", "en": "Warrior. Mage. Priest. Real-time combat.", "zh": "战士、法师、牧师，即时战斗。" },
