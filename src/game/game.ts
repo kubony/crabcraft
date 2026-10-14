@@ -459,14 +459,20 @@ export class Game {
       this.updateDeath();
       this.updateStatuses();
     }
-    // Visual updates (culled when far away)
+    // Visual updates (culled when far away, simplified when small on screen)
     const cam = this.camera.position;
+    // Screen pixels per world unit at distance 1 (CSS pixels, so Retina does not change the LOD).
+    const pxPerUnit = window.innerHeight / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)));
     for (const u of this.units) {
       const d = cam.distanceTo(u.pos);
       const culled = d > CULL_DIST * (u.kind === 'boss' ? 1.6 : 1);
       u.culled = culled;
       u.setShadows(d < SHADOW_DIST * (u.kind === 'boss' ? 2 : 1));
       u.rig.root.visible = !culled && !u.hidden;
+      // Far LOD under ~90 px of shell height; back to full detail over ~110 px (no flicker).
+      const px = (u.height * pxPerUnit) / Math.max(d, 0.1);
+      u.lod = px < (u.lod ? 110 : 90) ? 1 : 0;
+      u.rig.setLod?.(u.lod);
       if (!paused) u.updateVisual(dt);
     }
     if (!paused) this.vfx.update(dt);

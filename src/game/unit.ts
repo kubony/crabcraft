@@ -55,6 +55,8 @@ export class Unit {
   lift = 0;
   /** Skipped by motion/rig updates when far away. */
   culled = false;
+  /** Level of detail the rig is drawn at (0 full, 1 far). */
+  lod = 0;
   /** Removed from play (dead and sunk, not yet spawned). */
   hidden = false;
   targetable = true;

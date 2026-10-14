@@ -133,6 +133,7 @@ export async function dressCrab(
   if (!current()) return;
   for (const o of rig.gearMeshes) o.removeFromParent();
   rig.gearMeshes.length = 0;
+  rig.gearDetail.length = 0;
 
   const add = (p: Piece, tint: string, socket?: SocketName) => {
     const o = instantiate(p, tint);
@@ -164,6 +165,7 @@ export async function dressCrab(
       fill: enemy === 'corrodius' ? 0.5 : 0,
     });
     rig.updateNameplate(top);
+    markGearDetail(rig);
     return;
   }
 
@@ -191,4 +193,27 @@ export async function dressCrab(
     for (const p of find('weapons', (p) => p.id === id)) add(p, tint, p.attach as SocketName);
   }
   rig.updateNameplate(Math.max(0, top));
+  markGearDetail(rig);
+}
+
+const tmpS = new THREE.Vector3();
+const tmpP = new THREE.Vector3();
+
+/** Gear meshes smaller than 7 % of the crab's height are hidden at the far LOD (beads, rivets, lamps). */
+function markGearDetail(rig: JumperRig): void {
+  rig.root.updateMatrixWorld(true);
+  const height = rig.root.matrixWorld.getMaxScaleOnAxis() * rig.metersToUnits * 0.178;
+  for (const g of rig.gearMeshes) {
+    g.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere();
+      m.matrixWorld.decompose(tmpP, new THREE.Quaternion(), tmpS);
+      const r = m.geometry.boundingSphere!.radius * Math.max(tmpS.x, tmpS.y, tmpS.z);
+      if (r < height * 0.07) {
+        rig.gearDetail.push(m);
+        m.visible = rig.lodLevel === 0;
+      }
+    });
+  }
 }

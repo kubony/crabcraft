@@ -2,7 +2,7 @@
 // the kinematic link table, and one skinned geometry per material class (rigid skinning, one bone
 // per moving link) so a whole crab draws in about six calls however many links it has.
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { mergeGeometries, toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { loadGLTF } from '../core/assets';
 import { JOINT_NAMES, type JointName } from './types';
 
@@ -47,9 +47,15 @@ export interface CrabTemplate {
   face: THREE.BufferGeometry;
   /** Rest-pose (q = 0) frame of every link relative to base_link. */
   restMatrix: THREE.Matrix4[];
+  /**
+   * Far level of detail (jumper-lod.glb, about a sixth of the triangles), same classes and
+   * skinning as parts(); null when the file is missing.
+   */
+  lodParts: ((without?: readonly string[]) => Map<PartClass, THREE.BufferGeometry>) | null;
 }
 
 const URL = 'models/crab/jumper.glb';
+const LOD_URL = 'models/crab/jumper-lod.glb';
 let pending: Promise<CrabTemplate> | null = null;
 
 export function loadCrabTemplate(): Promise<CrabTemplate> {
@@ -58,6 +64,7 @@ export function loadCrabTemplate(): Promise<CrabTemplate> {
 }
 
 async function build(): Promise<CrabTemplate> {
+  const lodGltf = loadGLTF(LOD_URL).catch(() => null);
   const gltf = await loadGLTF(URL);
   const scene = gltf.scene;
   scene.updateMatrixWorld(true);
@@ -128,15 +135,7 @@ async function build(): Promise<CrabTemplate> {
     const cls = mat.name as PartClass;
     if (!PART_CLASSES.includes(cls)) return;
     const g = dequantize(mesh.geometry, mesh.matrixWorld, tmpN, false);
-    const n = g.attributes.position.count;
-    const si = new Uint16Array(n * 4);
-    const sw = new Float32Array(n * 4);
-    for (let v = 0; v < n; v++) {
-      si[v * 4] = link.bone;
-      sw[v * 4] = 1;
-    }
-    g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4));
-    g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+    skinTo(g, link.bone);
     let byCls = pieces.get(link.name);
     if (!byCls) pieces.set(link.name, (byCls = new Map()));
     const list = byCls.get(cls) ?? [];
@@ -154,8 +153,73 @@ async function build(): Promise<CrabTemplate> {
     feetHome: parse(base.feetHome),
   };
 
+  const parts = mergedParts(pieces, '');
+
+  // Far LOD: the same link tree, simplified; pieces go to the main template's bones by link name.
+  let lodParts: CrabTemplate['lodParts'] = null;
+  const lod = await lodGltf;
+  if (lod) {
+    lod.scene.updateMatrixWorld(true);
+    const lodPieces = new Map<string, Map<PartClass, THREE.BufferGeometry[]>>();
+    lod.scene.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      let p: THREE.Object3D | null = mesh.parent;
+      while (p && !p.userData.link) p = p.parent;
+      const link = p ? linkByName.get(p.userData.link as string) : undefined;
+      const cls = (mesh.material as THREE.Material).name as PartClass;
+      if (!link || !PART_CLASSES.includes(cls)) return;
+      const g = creased(dequantize(mesh.geometry, mesh.matrixWorld, tmpN, false));
+      skinTo(g, link.bone);
+      let byCls = lodPieces.get(link.name);
+      if (!byCls) lodPieces.set(link.name, (byCls = new Map()));
+      const list = byCls.get(cls) ?? [];
+      list.push(g);
+      byCls.set(cls, list);
+    });
+    if (lodPieces.size) lodParts = mergedParts(lodPieces, '-lod');
+  }
+
+  return {
+    links,
+    linkByName,
+    boneLinks,
+    boneInverses,
+    jointLinks,
+    info,
+    parts,
+    face,
+    restMatrix,
+    lodParts,
+  };
+}
+
+/** Rigid skinning: every vertex follows one bone. */
+function skinTo(g: THREE.BufferGeometry, bone: number): void {
+  const n = g.attributes.position.count;
+  const si = new Uint16Array(n * 4);
+  const sw = new Float32Array(n * 4);
+  for (let v = 0; v < n; v++) {
+    si[v * 4] = bone;
+    sw[v * 4] = 1;
+  }
+  g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4));
+  g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+}
+
+/** Normals for the simplified LOD (it ships without them): smooth, split at edges over 40 degrees. */
+function creased(g: THREE.BufferGeometry): THREE.BufferGeometry {
+  // toCreasedNormals hashes positions at 0.01 units; work in millimetres so nearby vertices stay apart.
+  g.scale(1000, 1000, 1000);
+  const out = toCreasedNormals(g, THREE.MathUtils.degToRad(40));
+  out.scale(0.001, 0.001, 0.001);
+  return out;
+}
+
+/** One merged skinned geometry per material class, cached per set of left-out links. */
+function mergedParts(pieces: Map<string, Map<PartClass, THREE.BufferGeometry[]>>, suffix: string) {
   const cache = new Map<string, Map<PartClass, THREE.BufferGeometry>>();
-  const parts = (without: readonly string[] = []) => {
+  return (without: readonly string[] = []) => {
     const key = [...without].sort().join(',');
     let out = cache.get(key);
     if (out) return out;
@@ -168,26 +232,14 @@ async function build(): Promise<CrabTemplate> {
       }
       if (!list.length) continue;
       const merged = mergeGeometries(list, false);
-      if (!merged) throw new Error(`could not merge ${cls}`);
-      merged.name = `crab-${cls}${key ? `-without-${key}` : ''}`;
+      if (!merged) throw new Error(`could not merge ${cls}${suffix}`);
+      merged.name = `crab-${cls}${suffix}${key ? `-without-${key}` : ''}`;
       // Generous bounds: the rig poses far from the bind pose, culling uses the mesh sphere.
       merged.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 0.45);
       out.set(cls, merged);
     }
     cache.set(key, out);
     return out;
-  };
-
-  return {
-    links,
-    linkByName,
-    boneLinks,
-    boneInverses,
-    jointLinks,
-    info,
-    parts,
-    face,
-    restMatrix,
   };
 }
 

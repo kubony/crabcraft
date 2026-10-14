@@ -88,6 +88,11 @@ export interface CrabRig {
   applySpec(spec: CrabSpec): Promise<void>;
   /** Per-frame update for face animation, idle shimmer, undead flicker etc. */
   update(dt: number): void;
+  /**
+   * Optional level of detail: 0 full, 1 far (a simplified body, small gear hidden). Callers
+   * pick the level from the crab's size on screen; rigs without LOD ignore it.
+   */
+  setLod?(level: number): void;
   dispose(): void;
 }
 
