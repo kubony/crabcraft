@@ -124,6 +124,50 @@
       ]
     },
     {
+      "mode": "break_clawstand",
+      "task": "jumper.break_clawstand",
+      "default": false,
+      "summary": "A recorded motion, 6.5 s long, that starts the moment this mode is entered.",
+      "enter": "hold Home, then Y or keyboard: Shift + 3 or keyboard: Shift + Num 3",
+      "leave": "Hands back to locomotion by itself when the motion ends; the switch pressed again stops it early. Menu, pressed and let go on its own or keyboard: Ctrl, pressed and let go on its own interrupts it and goes back to locomotion.",
+      "keyboard": "This mode reads no sticks, triggers or keys.",
+      "controls": [],
+      "keys": []
+    },
+    {
+      "mode": "break_oneclaw",
+      "task": "jumper.break_oneclaw",
+      "default": false,
+      "summary": "A recorded motion, 6.5 s long, that starts the moment this mode is entered.",
+      "enter": "hold Home, then left stick click (L3) or keyboard: Shift + 4 or keyboard: Shift + Num 4",
+      "leave": "Hands back to locomotion by itself when the motion ends; the switch pressed again stops it early. Menu, pressed and let go on its own or keyboard: Ctrl, pressed and let go on its own interrupts it and goes back to locomotion.",
+      "keyboard": "This mode reads no sticks, triggers or keys.",
+      "controls": [],
+      "keys": []
+    },
+    {
+      "mode": "break_sixstep",
+      "task": "jumper.break_sixstep",
+      "default": false,
+      "summary": "A recorded motion, 5.3 s long, that starts the moment this mode is entered.",
+      "enter": "hold Home, then X or keyboard: Shift + 2 or keyboard: Shift + Num 2",
+      "leave": "Hands back to locomotion by itself when the motion ends; the switch pressed again stops it early. Menu, pressed and let go on its own or keyboard: Ctrl, pressed and let go on its own interrupts it and goes back to locomotion.",
+      "keyboard": "This mode reads no sticks, triggers or keys.",
+      "controls": [],
+      "keys": []
+    },
+    {
+      "mode": "break_toprock",
+      "task": "jumper.break_toprock",
+      "default": false,
+      "summary": "A recorded motion, 6.2 s long, that starts the moment this mode is entered.",
+      "enter": "hold Home, then A or keyboard: Shift + 1 or keyboard: Shift + Num 1",
+      "leave": "Hands back to locomotion by itself when the motion ends; the switch pressed again stops it early. Menu, pressed and let go on its own or keyboard: Ctrl, pressed and let go on its own interrupts it and goes back to locomotion.",
+      "keyboard": "This mode reads no sticks, triggers or keys.",
+      "controls": [],
+      "keys": []
+    },
+    {
       "mode": "claw_left",
       "task": "jumper.five_foot",
       "default": false,
@@ -517,6 +561,17 @@
       "keys": []
     },
     {
+      "mode": "power_spin",
+      "task": "jumper.power_spin_feet",
+      "default": false,
+      "summary": "A mode of its own, with its own controls.",
+      "enter": "hold Home, then left bumper (LB) or keyboard: Shift + 5 or keyboard: Shift + Num 5",
+      "leave": "Press its switch again to go back to locomotion. Menu, pressed and let go on its own or keyboard: Ctrl, pressed and let go on its own interrupts it and goes back to locomotion.",
+      "keyboard": "This mode reads no sticks, triggers or keys.",
+      "controls": [],
+      "keys": []
+    },
+    {
       "mode": "skill_cast",
       "task": "jumper.skill_cast",
       "default": false,
@@ -587,6 +642,17 @@
     {
       "device": "pad",
       "control": "A",
+      "with": "home",
+      "keys": [],
+      "pad": "hold Home, then A",
+      "does": "switch to break_toprock; press again to switch back (from locomotion only)",
+      "from": [
+        "locomotion"
+      ]
+    },
+    {
+      "device": "pad",
+      "control": "A",
       "with": null,
       "keys": [],
       "pad": "A",
@@ -609,10 +675,32 @@
     {
       "device": "pad",
       "control": "X",
+      "with": "home",
+      "keys": [],
+      "pad": "hold Home, then X",
+      "does": "switch to break_sixstep; press again to switch back (from locomotion only)",
+      "from": [
+        "locomotion"
+      ]
+    },
+    {
+      "device": "pad",
+      "control": "X",
       "with": "menu",
       "keys": [],
       "pad": "hold Menu, then X",
       "does": "switch to skill_slam; press again to switch back (from locomotion only)",
+      "from": [
+        "locomotion"
+      ]
+    },
+    {
+      "device": "pad",
+      "control": "Y",
+      "with": "home",
+      "keys": [],
+      "pad": "hold Home, then Y",
+      "does": "switch to break_clawstand; press again to switch back (from locomotion only)",
       "from": [
         "locomotion"
       ]
@@ -638,6 +726,17 @@
       "from": [
         "locomotion",
         "claw_right"
+      ]
+    },
+    {
+      "device": "pad",
+      "control": "LB",
+      "with": "home",
+      "keys": [],
+      "pad": "hold Home, then left bumper (LB)",
+      "does": "switch to power_spin; press again to switch back (from locomotion only)",
+      "from": [
+        "locomotion"
       ]
     },
     {
@@ -680,7 +779,7 @@
       "with": null,
       "keys": [],
       "pad": "Menu, pressed and let go on its own",
-      "does": "leave dance_crab, dance_brazilian, dance_maze, dance_dream_wings, gesture_hello, gesture_bow, gesture_paw, gesture_salute, skill_swipe, skill_slam, skill_cast, skill_flinch, skill_powerdown, skill_sit -- whichever is on -- back to locomotion (from dance_crab, dance_brazilian, dance_maze, dance_dream_wings, gesture_hello, gesture_bow, gesture_paw, gesture_salute, skill_swipe, skill_slam, skill_cast, skill_flinch, skill_powerdown, skill_sit only)",
+      "does": "leave dance_crab, dance_brazilian, dance_maze, dance_dream_wings, gesture_hello, gesture_bow, gesture_paw, gesture_salute, skill_swipe, skill_slam, skill_cast, skill_flinch, skill_powerdown, skill_sit, break_toprock, break_sixstep, break_clawstand, break_oneclaw, power_spin -- whichever is on -- back to locomotion (from dance_crab, dance_brazilian, dance_maze, dance_dream_wings, gesture_hello, gesture_bow, gesture_paw, gesture_salute, skill_swipe, skill_slam, skill_cast, skill_flinch, skill_powerdown, skill_sit, break_toprock, break_sixstep, break_clawstand, break_oneclaw, power_spin only)",
       "from": [
         "dance_crab",
         "dance_brazilian",
@@ -695,7 +794,23 @@
         "skill_cast",
         "skill_flinch",
         "skill_powerdown",
-        "skill_sit"
+        "skill_sit",
+        "break_toprock",
+        "break_sixstep",
+        "break_clawstand",
+        "break_oneclaw",
+        "power_spin"
+      ]
+    },
+    {
+      "device": "pad",
+      "control": "L3",
+      "with": "home",
+      "keys": [],
+      "pad": "hold Home, then left stick click (L3)",
+      "does": "switch to break_oneclaw; press again to switch back (from locomotion only)",
+      "from": [
+        "locomotion"
       ]
     },
     {
@@ -845,7 +960,7 @@
         "Ctrl"
       ],
       "pad": null,
-      "does": "leave dance_crab, dance_brazilian, dance_maze, dance_dream_wings, gesture_hello, gesture_bow, gesture_paw, gesture_salute, skill_swipe, skill_slam, skill_cast, skill_flinch, skill_powerdown, skill_sit -- whichever is on -- back to locomotion (from dance_crab, dance_brazilian, dance_maze, dance_dream_wings, gesture_hello, gesture_bow, gesture_paw, gesture_salute, skill_swipe, skill_slam, skill_cast, skill_flinch, skill_powerdown, skill_sit only)",
+      "does": "leave dance_crab, dance_brazilian, dance_maze, dance_dream_wings, gesture_hello, gesture_bow, gesture_paw, gesture_salute, skill_swipe, skill_slam, skill_cast, skill_flinch, skill_powerdown, skill_sit, break_toprock, break_sixstep, break_clawstand, break_oneclaw, power_spin -- whichever is on -- back to locomotion (from dance_crab, dance_brazilian, dance_maze, dance_dream_wings, gesture_hello, gesture_bow, gesture_paw, gesture_salute, skill_swipe, skill_slam, skill_cast, skill_flinch, skill_powerdown, skill_sit, break_toprock, break_sixstep, break_clawstand, break_oneclaw, power_spin only)",
       "from": [
         "dance_crab",
         "dance_brazilian",
@@ -860,7 +975,12 @@
         "skill_cast",
         "skill_flinch",
         "skill_powerdown",
-        "skill_sit"
+        "skill_sit",
+        "break_toprock",
+        "break_sixstep",
+        "break_clawstand",
+        "break_oneclaw",
+        "power_spin"
       ]
     },
     {
@@ -1328,6 +1448,136 @@
       ],
       "pad": null,
       "does": "switch to skill_powerdown; press again to switch back (from locomotion only)",
+      "from": [
+        "locomotion"
+      ]
+    },
+    {
+      "device": "keyboard",
+      "control": "shift+key_1",
+      "with": "shift",
+      "keys": [
+        "Shift + 1"
+      ],
+      "pad": null,
+      "does": "switch to break_toprock; press again to switch back (from locomotion only)",
+      "from": [
+        "locomotion"
+      ]
+    },
+    {
+      "device": "keyboard",
+      "control": "shift+key_2",
+      "with": "shift",
+      "keys": [
+        "Shift + 2"
+      ],
+      "pad": null,
+      "does": "switch to break_sixstep; press again to switch back (from locomotion only)",
+      "from": [
+        "locomotion"
+      ]
+    },
+    {
+      "device": "keyboard",
+      "control": "shift+key_3",
+      "with": "shift",
+      "keys": [
+        "Shift + 3"
+      ],
+      "pad": null,
+      "does": "switch to break_clawstand; press again to switch back (from locomotion only)",
+      "from": [
+        "locomotion"
+      ]
+    },
+    {
+      "device": "keyboard",
+      "control": "shift+key_4",
+      "with": "shift",
+      "keys": [
+        "Shift + 4"
+      ],
+      "pad": null,
+      "does": "switch to break_oneclaw; press again to switch back (from locomotion only)",
+      "from": [
+        "locomotion"
+      ]
+    },
+    {
+      "device": "keyboard",
+      "control": "shift+key_5",
+      "with": "shift",
+      "keys": [
+        "Shift + 5"
+      ],
+      "pad": null,
+      "does": "switch to power_spin; press again to switch back (from locomotion only)",
+      "from": [
+        "locomotion"
+      ]
+    },
+    {
+      "device": "keyboard",
+      "control": "shift+keypad_1",
+      "with": "shift",
+      "keys": [
+        "Shift + Num 1"
+      ],
+      "pad": null,
+      "does": "switch to break_toprock; press again to switch back (from locomotion only)",
+      "from": [
+        "locomotion"
+      ]
+    },
+    {
+      "device": "keyboard",
+      "control": "shift+keypad_2",
+      "with": "shift",
+      "keys": [
+        "Shift + Num 2"
+      ],
+      "pad": null,
+      "does": "switch to break_sixstep; press again to switch back (from locomotion only)",
+      "from": [
+        "locomotion"
+      ]
+    },
+    {
+      "device": "keyboard",
+      "control": "shift+keypad_3",
+      "with": "shift",
+      "keys": [
+        "Shift + Num 3"
+      ],
+      "pad": null,
+      "does": "switch to break_clawstand; press again to switch back (from locomotion only)",
+      "from": [
+        "locomotion"
+      ]
+    },
+    {
+      "device": "keyboard",
+      "control": "shift+keypad_4",
+      "with": "shift",
+      "keys": [
+        "Shift + Num 4"
+      ],
+      "pad": null,
+      "does": "switch to break_oneclaw; press again to switch back (from locomotion only)",
+      "from": [
+        "locomotion"
+      ]
+    },
+    {
+      "device": "keyboard",
+      "control": "shift+keypad_5",
+      "with": "shift",
+      "keys": [
+        "Shift + Num 5"
+      ],
+      "pad": null,
+      "does": "switch to power_spin; press again to switch back (from locomotion only)",
       "from": [
         "locomotion"
       ]

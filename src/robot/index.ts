@@ -122,6 +122,11 @@ const EXPRESSION: Record<string, FaceExpr> = {
   gesture_salute: 'focused',
   claw_left: 'focused',
   claw_right: 'focused',
+  break_toprock: 'happy',
+  break_sixstep: 'focused',
+  break_clawstand: 'focused',
+  break_oneclaw: 'love',
+  power_spin: 'happy',
   safe: 'dead',
 };
 

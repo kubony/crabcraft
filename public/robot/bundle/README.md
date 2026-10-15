@@ -8,6 +8,18 @@ runtime/web/controller.wasm       the controller for a browser, and its binding
 runtime/web/controller.js           (wasm-bindgen 0.2.128)
 runtime/mjlab/macosx-11.0-arm64/controller.so the controller for `play --app` on macosx-11.0-arm64
 controller.toml                   the modes, the rules that switch between them, the keys
+break_clawstand.json              break_clawstand's contract: observation layout, joint order, gains
+models/break_clawstand.onnx       break_clawstand's policy, onnx
+clawstand.motion.trajectory.json  the recording break_clawstand is driven by
+break_oneclaw.json                break_oneclaw's contract: observation layout, joint order, gains
+models/break_oneclaw.onnx         break_oneclaw's policy, onnx
+oneclaw.motion.trajectory.json    the recording break_oneclaw is driven by
+break_sixstep.json                break_sixstep's contract: observation layout, joint order, gains
+models/break_sixstep.onnx         break_sixstep's policy, onnx
+sixstep.motion.trajectory.json    the recording break_sixstep is driven by
+break_toprock.json                break_toprock's contract: observation layout, joint order, gains
+models/break_toprock.onnx         break_toprock's policy, onnx
+toprock.motion.trajectory.json    the recording break_toprock is driven by
 claw_left.json                    claw_left's contract: observation layout, joint order, gains
 models/claw_left.onnx             claw_left's policy, onnx
 claw_right.json                   claw_right's contract: observation layout, joint order, gains
@@ -40,6 +52,8 @@ models/jump.onnx                  jump's policy, onnx
 high_jump_flat.trajectory.json    the recording jump is driven by
 locomotion.json                   locomotion's contract: observation layout, joint order, gains
 models/locomotion.onnx            locomotion's policy, onnx
+power_spin.json                   power_spin's contract: observation layout, joint order, gains
+models/power_spin.onnx            power_spin's policy, onnx
 skill_cast.json                   skill_cast's contract: observation layout, joint order, gains
 models/skill_cast.onnx            skill_cast's policy, onnx
 cast.motion.trajectory.json       the recording skill_cast is driven by

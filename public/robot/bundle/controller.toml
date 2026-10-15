@@ -4,7 +4,9 @@
 # The crabcraft bundle's state machine: the jumper bundle's cascade
 # (`jumper.controller.toml`, which this copies rule for rule and number for
 # number) plus the six skills "World of Crabcraft" plays, `jumper.skill_*`
-# (docs/CRABCRAFT_SKILLS.md). A copy rather than an include: the crate reads
+# (docs/CRABCRAFT_SKILLS.md), and its breakdance: the four tracked breaking
+# moves, `jumper.break_*` (docs/CRABCRAFT_BREAKING.md), and the spin,
+# `jumper.power_spin_feet` (docs/CRABCRAFT_POWER.md). A copy rather than an include: the crate reads
 # one file, and a change to the jumper bundle's cascade is a decision to make
 # here too, not one to inherit without reading.
 #
@@ -52,6 +54,19 @@ exclusive = true
 # and the six skills, from their clips (docs/CRABCRAFT_SKILLS.md, "The clip as
 # written", tilt at most): swipe 3.7, slam 10.3, cast 7.4, flinch 6.4,
 # power-down 3.2, sit 11.5 degrees.
+#
+# The breaking moves, from their clips (docs/CRABCRAFT_BREAKING.md, tilt at
+# most): toprock 4.6, six-step 0.0, and the two freezes 34.4 -- held for 1.68 s
+# with 15.6 degrees to spare, and the policies hold them at 34.3 to 34.8. The
+# spin has no clip; measured on its policy (native MuJoCo, no randomisation,
+# docs/CRABCRAFT_POWER.md): 9.0 degrees.
+#
+# The back flip (`jumper.power_backflip`) would not fit under this number: it
+# passes 178 degrees in the air and lands at up to 57, so running it needs
+# `skip_tilt_check` on its state, which a mode composed from a manifest cannot
+# set. It is not in this bundle, and nor is the 720 jump spin, for a reason of
+# their own: neither takes off from a robot standing at HOME
+# (docs/CRABCRAFT_POWER.md, "Under the controller").
 #
 # So the limit is not sized to let a motion through -- it is where an attitude
 # stops being one the robot chose.
@@ -199,6 +214,31 @@ enter = "skill_powerdown"
 when = "button:skill_sit"
 enter = "skill_sit"
 
+# The breakdance. The four tracked moves are recordings like the skills, ending
+# by themselves and left early the same way (Menu, or Ctrl, on its own). The
+# spin has no recording and no clock: it spins until its switch is pressed
+# again or Menu (Ctrl) lets go of it. Same place in the order and for the same
+# reason: asked for, never while the robot is tilted or blind.
+[[fsm.rule]]
+when = "button:break_toprock"
+enter = "break_toprock"
+
+[[fsm.rule]]
+when = "button:break_sixstep"
+enter = "break_sixstep"
+
+[[fsm.rule]]
+when = "button:break_clawstand"
+enter = "break_clawstand"
+
+[[fsm.rule]]
+when = "button:break_oneclaw"
+enter = "break_oneclaw"
+
+[[fsm.rule]]
+when = "button:power_spin"
+enter = "power_spin"
+
 # The claw, carried on either side: one jumper.five_foot export, two modes, the
 # side in each one's hook. Below the recordings, and that is not only habit:
 # the pad's Menu + d-pad chords reach a dance from a claw mode, whose own
@@ -227,15 +267,99 @@ enter = "locomotion"
 name = "leave_motion"
 pad = "menu"
 on = "fall"
-from = ["dance_crab", "dance_brazilian", "dance_maze", "dance_dream_wings", "gesture_hello", "gesture_bow", "gesture_paw", "gesture_salute", "skill_swipe", "skill_slam", "skill_cast", "skill_flinch", "skill_powerdown", "skill_sit"]
-leaves = ["dance_crab", "dance_brazilian", "dance_maze", "dance_dream_wings", "gesture_hello", "gesture_bow", "gesture_paw", "gesture_salute", "skill_swipe", "skill_slam", "skill_cast", "skill_flinch", "skill_powerdown", "skill_sit"]
+from = ["dance_crab", "dance_brazilian", "dance_maze", "dance_dream_wings", "gesture_hello", "gesture_bow", "gesture_paw", "gesture_salute", "skill_swipe", "skill_slam", "skill_cast", "skill_flinch", "skill_powerdown", "skill_sit", "break_toprock", "break_sixstep", "break_clawstand", "break_oneclaw", "power_spin"]
+leaves = ["dance_crab", "dance_brazilian", "dance_maze", "dance_dream_wings", "gesture_hello", "gesture_bow", "gesture_paw", "gesture_salute", "skill_swipe", "skill_slam", "skill_cast", "skill_flinch", "skill_powerdown", "skill_sit", "break_toprock", "break_sixstep", "break_clawstand", "break_oneclaw", "power_spin"]
 
 [[fsm.button]]
 name = "leave_motion"
 key = "ctrl"
 on = "fall"
-from = ["dance_crab", "dance_brazilian", "dance_maze", "dance_dream_wings", "gesture_hello", "gesture_bow", "gesture_paw", "gesture_salute", "skill_swipe", "skill_slam", "skill_cast", "skill_flinch", "skill_powerdown", "skill_sit"]
-leaves = ["dance_crab", "dance_brazilian", "dance_maze", "dance_dream_wings", "gesture_hello", "gesture_bow", "gesture_paw", "gesture_salute", "skill_swipe", "skill_slam", "skill_cast", "skill_flinch", "skill_powerdown", "skill_sit"]
+from = ["dance_crab", "dance_brazilian", "dance_maze", "dance_dream_wings", "gesture_hello", "gesture_bow", "gesture_paw", "gesture_salute", "skill_swipe", "skill_slam", "skill_cast", "skill_flinch", "skill_powerdown", "skill_sit", "break_toprock", "break_sixstep", "break_clawstand", "break_oneclaw", "power_spin"]
+leaves = ["dance_crab", "dance_brazilian", "dance_maze", "dance_dream_wings", "gesture_hello", "gesture_bow", "gesture_paw", "gesture_salute", "skill_swipe", "skill_slam", "skill_cast", "skill_flinch", "skill_powerdown", "skill_sit", "break_toprock", "break_sixstep", "break_clawstand", "break_oneclaw", "power_spin"]
+
+[[fsm.button]]
+name = "break_clawstand"
+pad = "Y"
+on = "toggle"
+with = "home"
+from = ["locomotion"]
+
+[[fsm.button]]
+name = "break_clawstand"
+key = "key_3"
+on = "toggle"
+with = "shift"
+from = ["locomotion"]
+
+[[fsm.button]]
+name = "break_clawstand"
+key = "keypad_3"
+on = "toggle"
+with = "shift"
+from = ["locomotion"]
+
+[[fsm.button]]
+name = "break_oneclaw"
+pad = "L3"
+on = "toggle"
+with = "home"
+from = ["locomotion"]
+
+[[fsm.button]]
+name = "break_oneclaw"
+key = "key_4"
+on = "toggle"
+with = "shift"
+from = ["locomotion"]
+
+[[fsm.button]]
+name = "break_oneclaw"
+key = "keypad_4"
+on = "toggle"
+with = "shift"
+from = ["locomotion"]
+
+[[fsm.button]]
+name = "break_sixstep"
+pad = "X"
+on = "toggle"
+with = "home"
+from = ["locomotion"]
+
+[[fsm.button]]
+name = "break_sixstep"
+key = "key_2"
+on = "toggle"
+with = "shift"
+from = ["locomotion"]
+
+[[fsm.button]]
+name = "break_sixstep"
+key = "keypad_2"
+on = "toggle"
+with = "shift"
+from = ["locomotion"]
+
+[[fsm.button]]
+name = "break_toprock"
+pad = "A"
+on = "toggle"
+with = "home"
+from = ["locomotion"]
+
+[[fsm.button]]
+name = "break_toprock"
+key = "key_1"
+on = "toggle"
+with = "shift"
+from = ["locomotion"]
+
+[[fsm.button]]
+name = "break_toprock"
+key = "keypad_1"
+on = "toggle"
+with = "shift"
+from = ["locomotion"]
 
 [[fsm.button]]
 name = "claw_left"
@@ -430,6 +554,27 @@ on = "toggle"
 from = ["locomotion"]
 
 [[fsm.button]]
+name = "power_spin"
+pad = "LB"
+on = "toggle"
+with = "home"
+from = ["locomotion"]
+
+[[fsm.button]]
+name = "power_spin"
+key = "key_5"
+on = "toggle"
+with = "shift"
+from = ["locomotion"]
+
+[[fsm.button]]
+name = "power_spin"
+key = "keypad_5"
+on = "toggle"
+with = "shift"
+from = ["locomotion"]
+
+[[fsm.button]]
 name = "skill_cast"
 pad = "Y"
 on = "toggle"
@@ -544,6 +689,26 @@ on = "toggle"
 from = ["locomotion"]
 
 [[fsm.state]]
+name = "break_clawstand"
+model = "break_clawstand.onnx"
+task = "jumper.break_clawstand"
+
+[[fsm.state]]
+name = "break_oneclaw"
+model = "break_oneclaw.onnx"
+task = "jumper.break_oneclaw"
+
+[[fsm.state]]
+name = "break_sixstep"
+model = "break_sixstep.onnx"
+task = "jumper.break_sixstep"
+
+[[fsm.state]]
+name = "break_toprock"
+model = "break_toprock.onnx"
+task = "jumper.break_toprock"
+
+[[fsm.state]]
 name = "claw_left"
 model = "claw_left.onnx"
 task = "jumper.five_foot"
@@ -604,6 +769,11 @@ task = "jumper.jump"
 name = "locomotion"
 model = "locomotion.onnx"
 task = "jumper.posture"
+
+[[fsm.state]]
+name = "power_spin"
+model = "power_spin.onnx"
+task = "jumper.power_spin_feet"
 
 [[fsm.state]]
 name = "skill_cast"

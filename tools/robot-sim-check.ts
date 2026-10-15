@@ -1,8 +1,9 @@
 // Headless check of Robot Mode's simulation core under Node: the same src/robot/sim/core.ts the
 // browser worker runs, the bundle's controller wasm, onnxruntime-web (wasm backend) and MuJoCo
 // WASM, loaded from public/. Drives the robot through standing, 30 s of walking, dances, a gesture,
-// the jump and each of the six skills, and prints what happened (exit 1 when a skill fails to
-// enter, finish or hand back).
+// the jump, each of the six skills and the breakdance moves the bundle carries (the four
+// jumper.break_* recordings and the spin), and prints what happened (exit 1 when one of them fails
+// to enter, finish or hand back).
 //
 //   node tools/robot-sim-check.ts [--quick]
 import { readFileSync, readdirSync } from 'node:fs';
@@ -67,10 +68,18 @@ console.log('reference replay:', sim.buildFsm().checkReference(refText));
 let minZ = Infinity;
 let maxTilt = 0;
 let maxZ = 0;
+/** Heading of the base, rad (MuJoCo frame), and the turn accumulated over the last run. */
+const heading = () => {
+  const q = sim.data.qpos as Float64Array;
+  const w = q[3], x = q[4], y = q[5], z = q[6];
+  return Math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z));
+};
+let turned = 0;
 const run = async (seconds: number, label: string, every?: () => void) => {
   const t0 = performance.now();
   const sim0 = sim.simTime;
-  minZ = Infinity; maxTilt = 0; maxZ = 0;
+  minZ = Infinity; maxTilt = 0; maxZ = 0; turned = 0;
+  let prevYaw = heading();
   const modes = new Set<string>();
   const p0 = [sim.data.qpos[0], sim.data.qpos[1]];
   const ticks = Math.round(seconds / 0.005);
@@ -79,16 +88,19 @@ const run = async (seconds: number, label: string, every?: () => void) => {
     await sim.tick();
     const u = sim.baseUpright();
     minZ = Math.min(minZ, u.z); maxZ = Math.max(maxZ, u.z); maxTilt = Math.max(maxTilt, u.tilt);
+    const yaw = heading();
+    turned += ((yaw - prevYaw + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
+    prevYaw = yaw;
     modes.add(`${sim.mode}${sim.runningPolicy ? '' : '(ramp)'}`);
   }
   const wall = (performance.now() - t0) / 1000;
   const d = Math.hypot(sim.data.qpos[0] - p0[0], sim.data.qpos[1] - p0[1]);
   console.log(
     `${label.padEnd(26)} sim ${(sim.simTime - sim0).toFixed(1)}s wall ${wall.toFixed(1)}s | modes ${[...modes].join(',')} | ` +
-      `z ${minZ.toFixed(3)}..${maxZ.toFixed(3)} tilt ${(maxTilt * 57.3).toFixed(1)}deg moved ${d.toFixed(2)}m | ` +
+      `z ${minZ.toFixed(3)}..${maxZ.toFixed(3)} tilt ${(maxTilt * 57.3).toFixed(1)}deg moved ${d.toFixed(2)}m turned ${(turned * 57.3).toFixed(0)}deg | ` +
       `infer ${sim.stats.inferHz.toFixed(0)}Hz ${sim.stats.inferMs.toFixed(3)}ms step ${sim.stats.physicsStepMs.toFixed(3)}ms tick ${sim.stats.tickMs.toFixed(3)}ms`,
   );
-  return { minZ, maxTilt, maxZ, d };
+  return { minZ, maxTilt, maxZ, d, turned };
 };
 const press = (code: string, down: boolean) => sim.key(code, down, false);
 const chord = async (mod: string, code: string) => {
@@ -148,11 +160,57 @@ for (const [mode, code, clip] of SKILLS) {
   if (!entered || !back || r.maxTilt * 57.3 > 45) skillsFailed++;
   await run(1, 'settle');
 }
+// The breakdance moves (jumper.break_* and jumper.power_spin_feet), on Shift + 1 to 5. The four
+// recordings end by themselves and hand back; the spin has no recording, so it is held for 6 s
+// and let go with its own switch, as a person would.
+const shiftTap = async (code: string) => {
+  press('ShiftLeft', true); press(code, true);
+  await run(0.1, `  Shift+${code} down`);
+  press(code, false); press('ShiftLeft', false);
+};
+const BREAKS: [string, string, number][] = [
+  ['break_toprock', 'Digit1', 6.24], ['break_sixstep', 'Digit2', 5.32],
+  ['break_clawstand', 'Digit3', 6.52], ['break_oneclaw', 'Digit4', 6.52], ['power_spin', 'Digit5', 0],
+];
+const breaks: Record<string, { entered: boolean; back: boolean; minZ: number; maxTiltDeg: number; turnedDeg: number; revPerS?: number }> = {};
+for (const [mode, code, clip] of BREAKS) {
+  if (!bundle.modes[mode]) continue;
+  const before = sim.log.length;
+  await shiftTap(code);
+  let r;
+  let revPerS: number | undefined;
+  if (clip > 0) r = await run(clip + 3.2, mode);
+  else {
+    // the switch-in ramp, then the spin; the rate is read over the last 4 s of the 6
+    const ramp = await run(1.0, `${mode} ramp+spin-up`);
+    const spin = await run(1.0, `${mode} spin-up`);
+    const held = await run(4.0, `${mode} held`);
+    revPerS = held.turned / (2 * Math.PI) / 4.0;
+    await shiftTap(code);
+    const out = await run(3.0, `${mode} let go`);
+    r = {
+      minZ: Math.min(ramp.minZ, spin.minZ, held.minZ, out.minZ),
+      maxTilt: Math.max(ramp.maxTilt, spin.maxTilt, held.maxTilt, out.maxTilt),
+      turned: ramp.turned + spin.turned + held.turned + out.turned,
+    };
+  }
+  const moves = sim.log.slice(before).map((l) => `${l.from}->${l.to}`);
+  const entered = moves.includes(`locomotion->${mode}`);
+  const back = moves.includes(`${mode}->locomotion`) && sim.mode === 'locomotion' && sim.runningPolicy;
+  breaks[mode] = {
+    entered, back, minZ: +r.minZ.toFixed(3), maxTiltDeg: +(r.maxTilt * 57.3).toFixed(1),
+    turnedDeg: +(r.turned * 57.3).toFixed(1), ...(revPerS !== undefined ? { revPerS: +revPerS.toFixed(2) } : {}),
+  };
+  if (!entered || !back || r.maxTilt * 57.3 > 45) skillsFailed++;
+  await run(1, 'settle');
+}
+
 console.log(JSON.stringify({ walkMinZ: walk.minZ, walkMaxTiltDeg: walk.maxTilt * 57.3, walkDist: walk.d, jumpApex: jump.maxZ }));
 if (Object.keys(skills).length) console.log('skills', JSON.stringify(skills));
+if (Object.keys(breaks).length) console.log('breaks', JSON.stringify(breaks));
 console.log('log', sim.log.map((l) => `${l.from}->${l.to}`).join(' '));
 sim.dispose();
 if (skillsFailed) {
-  console.error(`${skillsFailed} skill(s) did not enter, finish and hand back to locomotion`);
+  console.error(`${skillsFailed} skill(s) or breakdance move(s) did not enter, finish and hand back to locomotion`);
   process.exit(1);
 }

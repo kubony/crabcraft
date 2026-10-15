@@ -26,6 +26,11 @@ export const MODE_LABEL: Record<string, string> = {
   skill_flinch: 'Flinch',
   skill_powerdown: 'Power Down',
   skill_sit: 'Sit',
+  break_toprock: 'Toprock',
+  break_sixstep: 'Six-step',
+  break_clawstand: 'Claw Stand',
+  break_oneclaw: 'One Claw',
+  power_spin: 'Spin',
   safe: 'Safe Hold',
 };
 
@@ -124,7 +129,7 @@ export class Hud {
         h(
           'div',
           { class: 't2' },
-          'Loading the files a real Jumper loads: its controller, the trained policies for all twelve modes and the physics model they learned in.',
+          'Loading the files a real Jumper loads: its controller, the trained policy for every mode and the physics model they learned in.',
         ),
         h('div', { class: 'bar' }, this.loadBar),
         h('div', { class: 'meta' }, this.loadLabel, this.loadBytes),
@@ -292,6 +297,11 @@ export class Hud {
     // The six skills trained for this game (jumper.skill_*), the same moves the RPG plays.
     const skills = ['skill_swipe', 'skill_slam', 'skill_cast', 'skill_flinch', 'skill_powerdown', 'skill_sit'].filter(has);
     if (skills.length) dock.append(group('Skills', ...skills.map((m) => btn(m, MODE_LABEL[m]))));
+    // The game's breakdance, the moves the bundle can run: the four tracked ones (jumper.break_*)
+    // and the spin. The 720 and the back flip are recordings in the game only: neither policy
+    // takes off from a robot a mode switch has stood at HOME, so they are not modes here.
+    const breaks = ['break_toprock', 'break_sixstep', 'break_clawstand', 'break_oneclaw', 'power_spin'].filter(has);
+    if (breaks.length) dock.append(group('Breaking', ...breaks.map((m) => btn(m, MODE_LABEL[m]))));
     const claws = ['claw_left', 'claw_right'].filter(has);
     if (claws.length) dock.append(group('Claw', ...claws.map((m) => btn(m, m === 'claw_left' ? 'Left' : 'Right'))));
     r.append(dock);
@@ -308,6 +318,7 @@ export class Hud {
         kbd('Q E', 'turn'),
         kbd('N M', 'body height'),
         kbd('Ctrl', 'end a motion'),
+        ...(has('power_spin') ? [kbd('Shift+5', 'spin, again to stop')] : []),
         kbd('Esc', 'let go'),
         ...(this.actions.appearance ? [kbd('T', 'robot or crab')] : []),
         kbd('Drag', 'orbit'),
