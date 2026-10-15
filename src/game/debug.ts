@@ -1,9 +1,18 @@
 // ?debug=1 only: F8 god mode, F9 complete the current objective, F10 teleport to the next
 // objective, an fps / draw-call readout, and window.cc for the playtest script.
 import * as THREE from 'three';
+import type { BreakRoutine } from './breakdance';
 import type { Game } from './game';
 import { QUESTS } from './quests';
 import { C } from './vfx/vfx';
+
+function routineState(r: BreakRoutine) {
+  const p = r.progress;
+  return {
+    active: r.active, step: r.step?.id ?? null, index: r.stepIndex, t: +p.t.toFixed(3),
+    length: +p.length.toFixed(3), lastCompleted: r.lastCompleted,
+  };
+}
 
 export class DebugTools {
   private acc = 0;
@@ -139,6 +148,9 @@ export class DebugTools {
       dialogueOpen: g.hud.dialogue.isOpen,
       boss: { state: g.boss.state, phase: g.boss.phase, hp: g.boss.unit.hp, telegraph: g.boss.telegraphActive, mech: g.boss.mechName, adds: g.boss.adds.filter((a) => a.unit.alive).length },
       ending: g.ending.active,
+      // The B emote and the hero's routine at the ending: which move is playing, how far in.
+      breakdance: routineState(g.player.breakdance),
+      endingBreakdance: g.ending.routine ? routineState(g.ending.routine) : null,
       zone: g.zone,
       crabs: g.units.filter((u) => !u.hidden && !u.culled).length,
       particles: g.vfx.add.count + g.vfx.alpha.count,

@@ -14,6 +14,7 @@ const CONTROLS: [string, string][] = [
   ['Both mouse buttons', 'Walk forward'],
   ['Mouse wheel', 'Zoom'],
   ['Space', 'Jump'],
+  ['B', 'Breakdance: six trained moves in a row (move to stop)'],
   ['Tab / Click', 'Target an enemy'],
   ['1 2 3 4', 'Abilities'],
   ['F', 'Talk, continue a conversation, hold at the beacon'],

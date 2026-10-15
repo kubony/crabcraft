@@ -1,0 +1,212 @@
+#!/usr/bin/env node
+// Headless check of the breakdance in installed Chrome (real GPU), with screenshots for review:
+//   game   boots ?screen=game&debug=1 with a saved crab, presses B, follows the routine through
+//          window.cc.state() and fails unless all six moves play in order and it ends completed;
+//          then starts it again and walks (W) to check that moving ends it;
+//   robot  opens Robot Mode (?screen=robot), switches into each live breaking mode on Shift + its
+//          digit, and fails unless each one runs and hands back to walking (the spin is let go
+//          with Shift + 5 again).
+// Any console error or uncaught exception fails the run.
+//
+//   node tools/breakdance-check.mjs [--url http://localhost:5206] [--out dir] [--only game|robot]
+// Needs a dev or preview server running (pnpm dev --port 5206 --strictPort).
+import { chromium } from 'playwright';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+const args = process.argv.slice(2);
+const opt = (name, dflt) => {
+  const i = args.indexOf(name);
+  return i >= 0 ? args[i + 1] : dflt;
+};
+const base = opt('--url', 'http://localhost:5206');
+const outDir = resolve(opt('--out', 'breakdance-out'));
+const only = opt('--only', '');
+mkdirSync(outDir, { recursive: true });
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const SPEC = { race: 'human', sex: 'male', classId: 'warrior', shell: 0, crest: 0, led: 0, name: 'Pinchwick' };
+const ROUTINE = ['break_toprock', 'break_sixstep', 'break_spin', 'break_jumpspin', 'break_backflip', 'break_oneclaw'];
+// Robot Mode's live breaking modes: [mode, HUD label, key, seconds held before letting go (0: ends by itself)]
+const LIVE = [
+  ['break_toprock', 'Toprock', 'Digit1', 0],
+  ['break_sixstep', 'Six-step', 'Digit2', 0],
+  ['break_clawstand', 'Claw Stand', 'Digit3', 0],
+  ['break_oneclaw', 'One Claw', 'Digit4', 0],
+  ['power_spin', 'Spin', 'Digit5', 4],
+];
+
+async function open(url, spec) {
+  const browser = await chromium.launch({
+    channel: 'chrome',
+    headless: true,
+    args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'],
+  });
+  const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+  const errors = [];
+  page.on('console', (m) => {
+    if (m.type() !== 'error') return;
+    const url2 = m.location()?.url ?? '';
+    // Missing art/audio is counted by the playtest, not failed; the same here.
+    if (/Failed to load resource/.test(m.text()) && /\/(art|audio|fonts)\//.test(url2)) return;
+    errors.push(`${m.text()} ${url2 ? `(${url2})` : ''}`);
+  });
+  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+  if (spec) await page.addInitScript((s) => localStorage.setItem('cc.spec', JSON.stringify(s)), spec);
+  await page.goto(url, { waitUntil: 'load', timeout: 60000 });
+  return { browser, page, errors };
+}
+
+async function checkGame() {
+  const { browser, page, errors } = await open(`${base}/?screen=game&debug=1`, SPEC);
+  const shots = [];
+  const shot = async (name) => {
+    const file = resolve(outDir, `game-${name}.png`);
+    await page.screenshot({ path: file });
+    shots.push(file);
+  };
+  const state = () => page.evaluate(() => window.cc.state());
+  const fails = [];
+  const seen = [];
+  let yaw0 = 0;
+  let yaw1 = 0;
+  try {
+    await page.waitForFunction(() => window.__ready === true && window.cc, null, { timeout: 90000 });
+    await sleep(2500);
+    await page.mouse.click(800, 450);
+    // A camera in front of the crab, a little to its left, so the moves read.
+    await page.evaluate(() => {
+      const g = window.cc.game;
+      g.follow.yaw = g.player.unit.yaw + 0.5;
+      g.follow.pitch = 0.2;
+      g.follow.distance = 9;
+    });
+    await sleep(800);
+    yaw0 = await page.evaluate(() => window.cc.game.player.unit.yaw);
+    await shot('00-idle');
+    await page.keyboard.press('KeyB');
+    const t0 = Date.now();
+    let last = null;
+    const midShots = { break_spin: 2.2, break_sixstep: 2.0, break_toprock: 2.5, break_oneclaw: 2.6, break_jumpspin: 0.42, break_backflip: 0.3 };
+    let stepAt = 0;
+    let shotDone = false;
+    for (;;) {
+      const s = (await state()).breakdance;
+      if (s.step && s.step !== last) {
+        last = s.step;
+        seen.push(s.step);
+        stepAt = Date.now();
+        shotDone = false;
+      }
+      if (last && !shotDone && (Date.now() - stepAt) / 1000 >= midShots[last]) {
+        shotDone = true;
+        await shot(`${String(seen.length).padStart(2, '0')}-${last}`);
+      }
+      if (!s.active && seen.length) {
+        if (s.lastCompleted !== true) fails.push(`the routine ended early (lastCompleted ${s.lastCompleted}) at ${last}`);
+        break;
+      }
+      if (Date.now() - t0 > 60000) {
+        fails.push('the routine did not end within 60 s');
+        break;
+      }
+      await sleep(40);
+    }
+    const length = (Date.now() - t0) / 1000;
+    yaw1 = await page.evaluate(() => window.cc.game.player.unit.yaw);
+    await sleep(600);
+    await shot('07-after');
+    if (JSON.stringify(seen) !== JSON.stringify(ROUTINE)) fails.push(`moves seen ${seen.join(', ')}`);
+    console.log(`  game: routine ${seen.join(' > ')} in ${length.toFixed(1)} s wall; crab heading ${(((yaw1 - yaw0) * 180) / Math.PI).toFixed(1)} deg from where it started`);
+
+    // Moving ends it.
+    await page.keyboard.press('KeyB');
+    await sleep(2000);
+    const during = (await state()).breakdance;
+    await page.keyboard.down('KeyW');
+    await sleep(400);
+    await page.keyboard.up('KeyW');
+    const after = (await state()).breakdance;
+    if (!during.active) fails.push('B did not start the routine a second time');
+    if (after.active || after.lastCompleted !== false) fails.push(`walking did not end it (active ${after.active}, lastCompleted ${after.lastCompleted})`);
+    console.log(`  game: second run at ${during.step}, W pressed -> active ${after.active}, completed ${after.lastCompleted}`);
+  } catch (e) {
+    fails.push(`step failed: ${e.message}`);
+  }
+  await browser.close();
+  return { fails, errors, shots };
+}
+
+async function checkRobot() {
+  const { browser, page, errors } = await open(`${base}/?screen=robot`, SPEC);
+  const shots = [];
+  const fails = [];
+  const shot = async (name) => {
+    const file = resolve(outDir, `robot-${name}.png`);
+    await page.screenshot({ path: file });
+    shots.push(file);
+  };
+  const modeName = () => page.evaluate(() => document.querySelector('.rm-mode .name')?.textContent ?? '');
+  const live = () => page.evaluate(() => !!document.querySelector('.rm-badge.live'));
+  const waitMode = async (label, running, timeout) => {
+    const t0 = Date.now();
+    while (Date.now() - t0 < timeout) {
+      if ((await modeName()) === label && (!running || (await live()))) return true;
+      await sleep(50);
+    }
+    return false;
+  };
+  const chord = async (code) => {
+    await page.keyboard.down('Shift');
+    await page.keyboard.down(code);
+    await sleep(120);
+    await page.keyboard.up(code);
+    await page.keyboard.up('Shift');
+  };
+  try {
+    await page.waitForSelector('.rm-loading.done', { timeout: 120000 });
+    await page.waitForFunction(() => !document.querySelector('.rm-btn.loading'), null, { timeout: 120000 });
+    await sleep(2500);
+    await page.mouse.move(800, 450);
+    await shot('00-dock');
+    for (const [mode, label, code, hold] of LIVE) {
+      await chord(code);
+      if (!(await waitMode(label, true, 8000))) {
+        fails.push(`${mode}: the policy never ran (HUD shows ${await modeName()})`);
+        continue;
+      }
+      const t0 = Date.now();
+      await sleep(hold > 0 ? hold * 1000 * 0.6 : mode === 'break_sixstep' ? 2200 : 3000);
+      await shot(mode);
+      if (hold > 0) {
+        await sleep(Math.max(0, hold * 1000 - (Date.now() - t0)));
+        await chord(code);
+      }
+      if (!(await waitMode('Walk', true, 15000))) fails.push(`${mode}: did not hand back to walking`);
+      else console.log(`  robot: ${mode} ran live and handed back to walking after ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+      await sleep(800);
+    }
+  } catch (e) {
+    fails.push(`step failed: ${e.message}`);
+  }
+  await browser.close();
+  return { fails, errors, shots };
+}
+
+const results = {};
+let pass = true;
+for (const [name, fn] of [['game', checkGame], ['robot', checkRobot]]) {
+  if (only && only !== name) continue;
+  console.log(`breakdance ${name}`);
+  const r = await fn();
+  results[name] = r;
+  const ok = r.fails.length === 0 && r.errors.length === 0;
+  pass = pass && ok;
+  console.log(`${ok ? 'PASS' : 'FAIL'} ${name}`);
+  for (const f of r.fails) console.log(`  fail: ${f}`);
+  console.log(`  console errors: ${r.errors.length}`);
+  for (const e of r.errors) console.log(`    ${e}`);
+  console.log(`  screenshots:\n${r.shots.map((s) => `    ${s}`).join('\n')}`);
+}
+writeFileSync(resolve(outDir, 'breakdance-check.json'), JSON.stringify(results, null, 1));
+console.log(pass ? 'ALL PASS' : 'SOME FAILED');
+process.exit(pass ? 0 : 1);
