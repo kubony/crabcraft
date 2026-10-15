@@ -19,22 +19,27 @@ own trained policies.
 World of Crabcraft turns the Jumper crab robot into a whole fantasy world. Create a crab from six races
 and three classes, scuttle sideways through the harbour town of Clawhaven, follow a four-quest chain
 along the Brine Shore and up Saltmere Lighthouse, and defeat Corrodius, the Rust Tyrant, on the deck of
-the Iron Wreck. At the end the whole town gathers in the square and dances.
+the Iron Wreck. At the end the whole town gathers in the square and dances, and your crab breaks:
+toprock, six-step, spin, a 720 jump spin, a back flip and a one-claw freeze, while the town cheers.
+Press B to break anywhere in the world.
 
-Every crab is built from Jumper's own URDF and visual meshes, and every one of the game's 37 motion
-clips is a closed-loop rollout of a Jumper policy in MuJoCo, so the walking, waving, dancing and
-fighting you see is what the robot's policies actually do. The six combat moves had no policy, so we
-wrote six new Jumper tasks for them, published with this project in its `jumper/` folder, and trained them. Robot Mode goes
-further: it runs MuJoCo WebAssembly, the bundle's own controller.wasm and all 17 policies live in the
-browser, the six skills included, checks itself against the
+Every crab is built from Jumper's own URDF and visual meshes, and every one of the game's 44 motion
+clips is a closed-loop rollout of a trained Jumper policy in MuJoCo, so the walking, waving, dancing,
+fighting and breaking you see is what the robot's policies actually do. The six combat moves and the
+breakdance had no policy, so we wrote thirteen new Jumper tasks for them, published with this project
+in its `jumper/` folder, and trained them. The breakdance is a result in simulation: none of its
+policies has run on a physical robot, and a real back flip would need the robot controller's
+50-degree tilt guard disabled. Robot Mode goes
+further: it runs MuJoCo WebAssembly, the bundle's own controller.wasm and all 22 policies live in the
+browser, the six skills, four breaking moves and the spin included, checks itself against the
 bundle's reference recording and SHA-256 digests before the robot wakes, and lets you switch between
 the bare robot and your geared crab on the same live simulation. The whole project is open source under
 Apache-2.0 and runs as a static web page.
 
 **Technical highlights**
 
-- Real motion: all 37 clips are closed-loop rollouts of Jumper policies through a bundle's own
-  controller extension in MuJoCo 3.11. 31 come from the example bundle (walking in 8 directions,
+- Real motion: all 44 clips are closed-loop rollouts of trained Jumper policies in MuJoCo 3.11, 42
+  of them through a bundle's own controller extension. 31 come from the example bundle (walking in 8 directions,
   turns, fast gait, jump, 2 claw modes, 4 gestures, 4 dances, `dance_crab` at its full 238.6 s).
 - Our open-source motion contribution: six new Jumper tasks, published with this project in its `jumper/` folder,
   `jumper.skill_swipe`, `skill_slam`, `skill_cast`, `skill_flinch`, `skill_powerdown` and `skill_sit`,
@@ -47,22 +52,35 @@ Apache-2.0 and runs as a static web page.
   for standing still. The game clips are recorded through that bundle's controller exactly as the
   gestures were, and gameplay is timed by the clips' own moments (the swipe's hit, the slam's measured
   impact, the cast's release, the power-down's settle).
+- A breakdance from seven more new Jumper tasks, also in `jumper/`: four tracked moves,
+  `jumper.break_toprock`, `break_sixstep`, `break_clawstand` and `break_oneclaw` (0 falls in 56
+  rollouts, joint RMS over the move 0.65 to 2.76 deg with randomisation against 10.1 to 32.8 deg for
+  standing still), and three reward-driven power moves, `jumper.power_spin_feet` (2.32 turns/s on
+  its feet), `power_jumpspin720` (708 deg in the air on average) and `power_backflip` (413 deg in
+  the air), each landing upright 32 of 32 times with randomisation. All simulation; none has run on a
+  physical Jumper. The six-step is used as it is, 345.9 of 360 degrees: the robot cannot see its
+  heading, so the turn is open loop. The routine (B, and the ending's finale) plays six of them in a
+  row and carries each move's travel and turn over to the crab, so one move starts where the last
+  left it. The 720 and the back flip take off only from their training environment's reset, so the
+  bundle's controller cannot start them: their clips are rollouts in that environment and they are
+  not in Robot Mode. A real back flip would also need the controller's 50-degree tilt guard disabled.
 - Bundle parity (`tools/motion/check_bundle.py`): controller replay observation diff 0, target diff 0;
   ONNX outputs vs recorded actions max diff 9.5e-07 (example bundle) and 0 (crabcraft bundle).
 - Real body: the crab model is built from Jumper's URDF and meshes; forward kinematics vs MuJoCo over
   41 bodies x 13 poses, max position error 0.000534 mm. 6 races x 4 crests, 3 class weapons, NPC
   extras, 3 enemies and an 11-expression LED face.
 - Robot Mode: official MuJoCo 3.11.0 WASM, onnxruntime-web 1.30.0, the bundle's controller.wasm and
-  17 ONNX policies (18 modes) live in the browser, 199 Hz control rate measured while walking; keys
-  5 to 0 run the six skills live. On load it replays `reference.json` (24 frames, diff 0), compares
-  policy outputs with recorded actions (8.3e-7) and checks 53 bundle files by SHA-256.
+  22 ONNX policies (23 modes) live in the browser, 199 Hz control rate measured while walking; keys
+  5 to 0 run the six skills live, Shift + 1 to 4 the four tracked breaking moves and Shift + 5 the
+  spin. On load it replays `reference.json` (24 frames, diff 0), compares policy outputs with
+  recorded actions (8.3e-7) and checks 67 bundle files by SHA-256.
 - Headless check (`node tools/robot-sim-check.ts`): 21.65 m in 30 s of walking without a fall, max tilt
-  1.88 deg, jump apex 0.228 m; each of the six skills entered on its key, played out and handed back
-  to walking.
+  1.88 deg, jump apex 0.228 m; each of the six skills and the five breaking modes entered on its key,
+  played out (the spin held 4 s at 2.02 turns/s, then let go) and handed back to walking.
 - Same policy, any appearance: the player's geared crab is posed from the live simulation, its links
   within 0.0013 mm of the physics bodies.
 - A complete game: 4 quests, 3 classes x 4 abilities, Scraplings, Rustclaw Scavengers, a 3-phase boss
-  and a dance-party ending. The automated playtest (`tools/playtest.mjs`) finishes the game as Warrior,
+  and a dance-party ending with the hero's breakdance. The automated playtest (`tools/playtest.mjs`) finishes the game as Warrior,
   Mage and Priest with 0 console errors.
 - Open assets: Quaternius CC0 kits, CC0 music and sound effects, OFL fonts and 2D art generated for
   the project, every file listed in `NOTICE.md`.
@@ -92,20 +110,21 @@ World of Crabcraft
 
 **作品简介**
 
-World of Crabcraft 把 Jumper 螃蟹机器人变成了一个完整的奇幻世界。玩家从六个种族和三个职业中创建自己的螃蟹，横着穿过港口小镇 Clawhaven，沿着海滩、登上灯塔完成四个连续任务，最后在铁船残骸的甲板上击败锈蚀暴君 Corrodius。通关后，全镇的螃蟹聚到广场上一起跳舞。
+World of Crabcraft 把 Jumper 螃蟹机器人变成了一个完整的奇幻世界。玩家从六个种族和三个职业中创建自己的螃蟹，横着穿过港口小镇 Clawhaven，沿着海滩、登上灯塔完成四个连续任务，最后在铁船残骸的甲板上击败锈蚀暴君 Corrodius。通关后，全镇的螃蟹聚到广场上一起跳舞，你的螃蟹在全镇的欢呼声中跳一段霹雳舞：toprock、six-step、原地旋转、720 度跳转、后空翻和单钳定格。在世界任何地方按 B 也能跳。
 
-每只螃蟹都由 Jumper 自己的 URDF 和外观网格生成，游戏里全部 37 段动作都是 Jumper 策略在 MuJoCo 中闭环运行录制下来的，所以你看到的行走、挥手、跳舞和战斗，就是机器人策略真实做出的动作。6 段战斗动作原本没有策略，我们为它们写了 6 个新的 Jumper 任务并完成训练，随本项目一同发布在 `jumper/` 目录中。Robot Mode 更进一步：在浏览器里实时运行 MuJoCo WebAssembly、bundle 自带的 controller.wasm 和全部 17 个策略（包括 6 个新技能），机器人启动前先用 bundle 的参考录制和 SHA-256 摘要自检，还可以在同一个实时仿真上，在裸机器人和你装备好的螃蟹之间切换。整个项目以 Apache-2.0 开源，作为静态网页即可运行。
+每只螃蟹都由 Jumper 自己的 URDF 和外观网格生成，游戏里全部 44 段动作都是训练好的 Jumper 策略在 MuJoCo 中闭环运行录制下来的，所以你看到的行走、挥手、跳舞、战斗和霹雳舞，就是机器人策略真实做出的动作。6 段战斗动作和霹雳舞原本没有策略，我们为它们写了 13 个新的 Jumper 任务并完成训练，随本项目一同发布在 `jumper/` 目录中。霹雳舞是仿真结果：这些策略都没有在实体机器人上运行过，真机做后空翻还需要关闭机器人控制器 50 度的倾角保护。Robot Mode 更进一步：在浏览器里实时运行 MuJoCo WebAssembly、bundle 自带的 controller.wasm 和全部 22 个策略（包括 6 个新技能、4 个霹雳舞动作和原地旋转），机器人启动前先用 bundle 的参考录制和 SHA-256 摘要自检，还可以在同一个实时仿真上，在裸机器人和你装备好的螃蟹之间切换。整个项目以 Apache-2.0 开源，作为静态网页即可运行。
 
 **技术亮点**
 
-- 真实动作：全部 37 段动作都是 Jumper 策略通过 bundle 自带的控制器扩展在 MuJoCo 3.11 中闭环运行的录制。其中 31 段来自示例 bundle（8 个方向的行走、转身、快速步态、跳跃、2 种钳子模式、4 个手势、4 支舞蹈，`dance_crab` 保留完整的 238.6 秒）。
+- 真实动作：全部 44 段动作都是训练好的 Jumper 策略在 MuJoCo 3.11 中闭环运行的录制，其中 42 段通过 bundle 自带的控制器扩展运行。31 段来自示例 bundle（8 个方向的行走、转身、快速步态、跳跃、2 种钳子模式、4 个手势、4 支舞蹈，`dance_crab` 保留完整的 238.6 秒）。
 - 我们的开源动作贡献：随本项目一同发布在 `jumper/` 目录中的 6 个新 Jumper 任务 `jumper.skill_swipe`、`skill_slam`、`skill_cast`、`skill_flinch`、`skill_powerdown`、`skill_sit`，对应机器人原本没有策略的 6 段战斗动作。每个任务的参考动作都在机器人模型上、在关节和平衡限制以内制作，用动作模仿强化学习在一张 H100 上训练 2000 到 3000 次 PPO 迭代，用 Jumper 的 `scripts/export.py` 导出，再用 `scripts/deploy.py` 与示例 bundle 的 11 个策略打包在一起。在任务自己的环境中从站立姿态出发：84 次运行（每个动作 10 次带训练时的域随机化，4 次不带）没有摔倒；动作区间内的关节 RMS 误差不带随机化为 0.26 到 1.54 度，带随机化为 0.42 到 1.68 度，原地不动则是 11.2 到 39.4 度。游戏动作和手势一样，通过这个 bundle 的控制器录制；游戏逻辑按动作自身的时刻触发（挥砍的命中、重砸实测的落地、施法的释放、断电倒地的落定）。
+- 霹雳舞来自另外 7 个新 Jumper 任务（同样在 `jumper/` 中）：4 个跟踪参考动作的任务 `jumper.break_toprock`、`break_sixstep`、`break_clawstand`、`break_oneclaw`（56 次运行没有摔倒，带随机化时动作区间内的关节 RMS 误差 0.65 到 2.76 度，原地不动为 10.1 到 32.8 度），以及 3 个靠奖励学出来的大招 `jumper.power_spin_feet`（只用脚旋转，每秒 2.32 圈）、`power_jumpspin720`（空中平均转 708 度）和 `power_backflip`（空中转 413 度），带随机化各 32 次全部站稳落地。全部是仿真结果，没有在实体 Jumper 上运行过。six-step 按原样使用，只转了 360 度中的 345.9 度：机器人看不到自己的朝向，转身是开环的。套路（按 B，以及结局的压轴）连续播放其中 6 个，并把每个动作的位移和转向交给螃蟹，下一个动作从上一个停下的地方开始。720 和后空翻只会从训练环境的复位状态起跳，bundle 的控制器无法让它们起跳，所以它们的动作片段是在训练环境中直接运行录制的，也不在 Robot Mode 里。真机做后空翻还需要关闭控制器 50 度的倾角保护。
 - bundle 一致性（`tools/motion/check_bundle.py`）：控制器回放观测差 0、目标差 0；ONNX 输出与录制动作最大差 9.5e-07（示例 bundle）和 0（crabcraft bundle）。
 - 真实身体：螃蟹模型由 Jumper 的 URDF 和网格生成；与 MuJoCo 的正向运动学对比 41 个刚体 x 13 个姿态，最大位置误差 0.000534 mm。6 个种族 x 4 种头饰、3 种职业武器、NPC 配件、3 种敌人和 11 种表情的 LED 面部。
-- Robot Mode：官方 MuJoCo 3.11.0 WASM、onnxruntime-web 1.30.0、bundle 自带的 controller.wasm 和 17 个 ONNX 策略（18 种模式）在浏览器中实时运行，行走时实测控制频率 199 Hz；按 5 到 0 可以实时运行 6 个技能。加载时回放 `reference.json`（24 帧，差值 0），比较策略输出与录制动作（8.3e-7），并用 SHA-256 校验 53 个 bundle 文件。
-- 无头检查（`node tools/robot-sim-check.ts`）：行走 30 秒前进 21.65 m 不摔倒，最大倾角 1.88 度，跳跃最高 0.228 m；6 个技能都能按键进入、播放完毕并交回行走。
+- Robot Mode：官方 MuJoCo 3.11.0 WASM、onnxruntime-web 1.30.0、bundle 自带的 controller.wasm 和 22 个 ONNX 策略（23 种模式）在浏览器中实时运行，行走时实测控制频率 199 Hz；按 5 到 0 可以实时运行 6 个技能，Shift + 1 到 4 运行 4 个霹雳舞跟踪动作，Shift + 5 原地旋转。加载时回放 `reference.json`（24 帧，差值 0），比较策略输出与录制动作（8.3e-7），并用 SHA-256 校验 67 个 bundle 文件。
+- 无头检查（`node tools/robot-sim-check.ts`）：行走 30 秒前进 21.65 m 不摔倒，最大倾角 1.88 度，跳跃最高 0.228 m；6 个技能和 5 个霹雳舞模式都能按键进入、播放完毕（旋转保持 4 秒，每秒 2.02 圈，然后松开）并交回行走。
 - 同一个策略，任意外观：玩家装备好的螃蟹按实时仿真逐帧摆姿，各连杆与物理刚体的偏差在 0.0013 mm 以内。
-- 完整的游戏：4 个任务、3 个职业 x 4 个技能、Scrapling 和 Rustclaw Scavenger 两种敌人、三阶段 Boss 和跳舞结局。自动试玩脚本（`tools/playtest.mjs`）用 Warrior、Mage、Priest 分别通关，控制台错误为 0。
+- 完整的游戏：4 个任务、3 个职业 x 4 个技能、Scrapling 和 Rustclaw Scavenger 两种敌人、三阶段 Boss 和以主角霹雳舞收尾的跳舞结局。自动试玩脚本（`tools/playtest.mjs`）用 Warrior、Mage、Priest 分别通关，控制台错误为 0。
 - 开放素材：Quaternius CC0 场景素材、CC0 音乐和音效、OFL 字体，以及为本项目生成的 2D 美术，所有文件都列在 `NOTICE.md` 中。
 
 **体验方式**
