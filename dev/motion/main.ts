@@ -151,12 +151,12 @@ function startLayer(id: MotionId) {
 
 const groups: Record<string, ClipIndexEntry[]> = {};
 for (const c of lib.list()) (groups[c.kind] ??= []).push(c);
-const order = ['locomotion', 'jump', 'claw', 'gesture', 'dance', 'skill'];
+const order = ['locomotion', 'jump', 'claw', 'gesture', 'dance', 'skill', 'break'];
 const buttons = new Map<string, HTMLButtonElement>();
 for (const kind of order) {
   if (!groups[kind]) continue;
   const h = document.createElement('h2');
-  h.textContent = kind === 'skill' ? 'skills (jumper.skill_*)' : kind;
+  h.textContent = kind === 'skill' ? 'skills (jumper.skill_*)' : kind === 'break' ? 'breakdance (jumper.break_* and the power moves)' : kind;
   $('groups').appendChild(h);
   const box = document.createElement('div');
   box.className = 'clips';

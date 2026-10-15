@@ -13,7 +13,7 @@ export type ClipId = MotionId | ExtraClipId;
 export interface ClipIndexEntry {
   id: ClipId;
   source: string;
-  kind: 'locomotion' | 'jump' | 'claw' | 'gesture' | 'dance' | 'skill';
+  kind: 'locomotion' | 'jump' | 'claw' | 'gesture' | 'dance' | 'skill' | 'break';
   fps: number;
   frameCount: number;
   duration: number;

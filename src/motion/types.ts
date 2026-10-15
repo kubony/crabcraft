@@ -41,7 +41,14 @@ export type MotionId =
   // The six skills, jumper.skill_* (swipe, slam, cast, flinch, power-down, sit): trained for this
   // game and recorded through the crabcraft bundle. Play them through src/motion/skills.ts, which
   // cuts each to its move (from/to) at its pace.
-  | 'attack_swipe' | 'attack_slam' | 'cast' | 'hit_react' | 'death' | 'sit';
+  | 'attack_swipe' | 'attack_slam' | 'cast' | 'hit_react' | 'death' | 'sit'
+  // The breakdance: the four tracked moves (jumper.break_*) and the spin (jumper.power_spin_feet),
+  // recorded through the crabcraft bundle, and the 720 jump spin and back flip
+  // (jumper.power_jumpspin720, jumper.power_backflip), recorded as rollouts in their own training
+  // environment. Play them through src/motion/breakdance.ts, which cuts each to its window and
+  // carries its travel and turn over to the crab.
+  | 'break_toprock' | 'break_sixstep' | 'break_clawstand' | 'break_oneclaw'
+  | 'break_spin' | 'break_jumpspin' | 'break_backflip';
 
 /**
  * What gameplay drives. The integration branch adapts the motion runtime to this interface
@@ -69,6 +76,17 @@ export interface MotionPlayOptions {
   /** Named clip events ("hit", "grab", "footstep") as they pass. */
   onEvent?: (name: string) => void;
   onEnd?: () => void;
+  /**
+   * Keep the clip's own travel and turn. A 'full' clip otherwise has its net drift and heading
+   * change taken out over its length, so the crab ends where and how it started; a spin that
+   * turns 2600 degrees would turn back the other way the whole time. With this set, the moment
+   * the action starts fading out (its end, or another action replacing it, or `stop`), the body's
+   * planar offset and heading relative to the root are handed here (robot metres in the crab's
+   * local game axes: dx toward its left, dz forward; dyaw radians, positive = turned left), and
+   * the fading layer is re-expressed against a root moved by exactly that much. The caller moves
+   * the root by that much, and the next action starts where this one stood.
+   */
+  carryRoot?: (dx: number, dz: number, dyaw: number) => void;
 }
 
 export interface MotionController {

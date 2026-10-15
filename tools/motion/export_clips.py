@@ -10,6 +10,12 @@ The six skills (record_clips.py SKILLS, the `jumper.skill_*` policies) are kept 
 way and carry, besides, their reference's moments moved to where the policy played them, the
 game's window of the move in clip seconds, and for death and sit the moment the game holds. The
 windows and moments are also written to src/motion/skillClips.ts, which gameplay reads.
+
+The seven breakdance clips (record_clips.py BREAKS and record_rollouts.py ROLLOUTS) are kept whole
+too. The four tracked moves carry their reference's moments moved by the policy's lag, as the
+skills do; the spin its own start and let-go; the two jumps (direct rollouts in their training
+environment, not the bundle) their take-off, apex and landing read off the rollout. Each carries
+the window the routine plays, and src/motion/breakClips.ts lists them for gameplay.
 """
 from __future__ import annotations
 
@@ -46,10 +52,28 @@ SKILLS = {
 }
 SKILL_TABLE = Path(__file__).resolve().parents[2] / "src" / "motion" / "skillClips.ts"
 
+# The breakdance: game clip id -> how its routine window is found. A tracked move ("move") is cut
+# in its reference's seconds as the skills are: from the policy's first tick (the reference's 0,
+# the robot at HOME) to the end of the move, before the lead-out and the hold
+# (docs/CRABCRAFT_BREAKING.md in the jumper checkout, "The game's windows"); `hit` names the
+# reference moment the game reacts to. The spin runs from its policy's start until the
+# controller's ramp after the let-go has stood it up; the jumps from the episode's start until the
+# landing has settled.
+BREAKS = {
+    "break_toprock": {"move": "toprock", "window": (0.00, 5.32), "fit": (0.00, 5.32), "hit": "beat8"},
+    "break_sixstep": {"move": "sixstep", "window": (0.00, 4.40), "fit": (0.00, 4.40), "hit": "turn_to"},
+    "break_clawstand": {"move": "clawstand", "window": (0.00, 5.60), "fit": (0.00, 5.60), "hit": "hit"},
+    "break_oneclaw": {"move": "oneclaw", "window": (0.00, 5.60), "fit": (0.00, 5.60), "hit": "hit"},
+    "break_spin": {"spin": True},
+    "break_jumpspin": {"jump": True},
+    "break_backflip": {"jump": True},
+}
+BREAK_TABLE = Path(__file__).resolve().parents[2] / "src" / "motion" / "breakClips.ts"
+
 ROOT = Path(__file__).resolve().parents[2]
 DT = 0.005
 LOCO_FPS = 50.0
-ACTION_FPS = {"jump": 50.0, "claw": 50.0, "motion": 30.0, "skill": 50.0}
+ACTION_FPS = {"jump": 50.0, "claw": 50.0, "motion": 30.0, "skill": 50.0, "break": 50.0}
 LOOP_TARGET_S = {"idle": 2.5}
 LOOP_MIN_S = 0.9
 
@@ -292,6 +316,7 @@ def export_motion(raw: Raw, out: Path) -> dict:
         events["policy_end"] = [float(raw.t[on[-1]] - T[0])]
     extra_events(raw, events, T)
     skill = skill_events(raw, events, T) if kind == "skill" else None
+    brk = break_events(raw, events, T) if kind == "break" else None
     drift = rel[-1]
     yaw_drift = float(np.interp(T[-1], raw.t, raw.yaw) - y0)
     speed = float(np.hypot(drift[0], drift[1]) / max(1e-6, T[-1] - T[0]))
@@ -300,6 +325,8 @@ def export_motion(raw: Raw, out: Path) -> dict:
           f"{np.degrees(np.arccos(np.clip(1 - 2 * (quat[:, 1] ** 2 + quat[:, 2] ** 2), -1, 1))).max():.1f} deg, "
           f"events { {k: len(v) for k, v in events.items()} }")
     extra = {"root": "full", "provenance": provenance(raw, {"trigger_s": round(t_start, 4)})}
+    if brk is not None:
+        extra["break"] = brk
     if skill is not None:
         extra["skill"] = skill
         if "hold" in skill:
@@ -313,7 +340,7 @@ def export_motion(raw: Raw, out: Path) -> dict:
     )
 
 
-def skill_events(raw: Raw, events: dict, T: np.ndarray) -> dict:
+def skill_events(raw: Raw, events: dict, T: np.ndarray, spec: dict | None = None) -> dict:
     """The reference's moments, moved to where this rollout played them, and the game's window.
 
     The controller starts the recording on the policy's first tick (`starts_on_entry`), so a
@@ -322,7 +349,7 @@ def skill_events(raw: Raw, events: dict, T: np.ndarray) -> dict:
     over the move, and every moment is moved by it. The slam's impact is also read off the
     rollout itself: the first claw pad touching the floor after the wind-up.
     """
-    spec = SKILLS[raw.id]
+    spec = spec or SKILLS[raw.id]
     bundle = Path(raw.meta["bundle"])
     mode = raw.meta["source"]
     manifest = json.loads((bundle / "bundle.json").read_text("utf-8"))
@@ -380,6 +407,100 @@ def skill_events(raw: Raw, events: dict, T: np.ndarray) -> dict:
     print(f"    skill {mode}: policy from {out['policyStart']:.3f}s, lag {lag:+.3f}s (fit {out['fitRmsDeg']} deg), "
           f"window {window}, hit {events.get('hit')}, measured {measured}")
     return out
+
+
+def break_events(raw: Raw, events: dict, T: np.ndarray) -> dict:
+    """The routine's window of a breakdance clip and the moments in it, in clip seconds."""
+    spec = BREAKS[raw.id]
+    t0 = float(T[0])
+    rel = lambda x: round(float(x) - t0, 4)  # noqa: E731
+    if "move" in spec:
+        out = skill_events(raw, events, T, spec)
+        out["method"] = "bundle"
+        return out
+    mode = raw.meta["source"]
+    yaw = lambda a, b: float(np.degrees(np.interp(b, raw.t, raw.yaw) - np.interp(a, raw.t, raw.yaw)))  # noqa: E731
+    if spec.get("spin"):
+        run = np.nonzero(np.array([m == mode for m in raw.modes]) & raw.running)[0]
+        t_on, t_go = float(raw.t[run[0]]), float(raw.marks["let_go"][0])
+        t_back = float(raw.marks["locomotion"][0])
+        events["spin_from"] = [rel(t_on)]
+        events["spin_to"] = [rel(t_go)]
+        events["hit"] = [rel(t_go)]
+        window = [rel(t_on), rel(t_back + 0.2)]
+        turned = yaw(t_on, t_back)
+        held = yaw(t_go - 2.0, t_go) / 360.0 / 2.0
+        print(f"    spin: policy {window[0]:.3f}s, let go {events['spin_to'][0]:.3f}s, walking again "
+              f"{rel(t_back):.3f}s; turned {turned:.0f} deg, {held:.2f} rev/s over the last 2 s held")
+        return {"task": raw.meta.get("task", "jumper.power_spin_feet"), "method": "bundle",
+                "window": window, "turnedDeg": round(turned, 1), "revPerS": round(held, 3)}
+    # A jump: one episode of the task's own environment from HOME (record_rollouts.py).
+    i0, i1 = np.searchsorted(raw.t, [T[0], T[-1]])
+    z = raw.pos[i0:i1, 2]
+    air = ~raw.contacts[i0:i1].any(axis=1)
+    k = int(np.argmax(z))
+    before = np.nonzero(~air[:k])[0]
+    after = np.nonzero(~air[k:])[0]
+    takeoff = float(raw.t[i0 + before[-1] + 1]) if len(before) else float(raw.t[i0])
+    land = float(raw.t[i0 + k + after[0]]) if len(after) else float(raw.t[i1 - 1])
+    events["takeoff"] = [rel(takeoff)]
+    events["apex"] = [rel(raw.t[i0 + k])]
+    events["land"] = [rel(land)]
+    events["hit"] = [rel(land)]
+    # Settled: the first moment after the landing from which, for 0.2 s, the body stands within
+    # 12 mm of its starting height, tilts less than 6 degrees and turns slower than 30 deg/s, and
+    # the joints' fastest speed, averaged over 0.1 s, stays under 6 rad/s. The 720 goes on turning
+    # on its feet for a while after it lands. Both policies keep their legs busy at HOME (they run
+    # at 200 Hz with no clock), so "still" is not a threshold they ever cross; this is.
+    qd = moving_average(np.abs(np.gradient(raw.q, raw.t, axis=0)).max(axis=1), int(round(0.1 / DT)))
+    wz = moving_average(np.abs(np.gradient(raw.yaw, raw.t)), int(round(0.1 / DT)))
+    x_, y_ = raw.quat[:, 1], raw.quat[:, 2]
+    tilt = np.degrees(np.arccos(np.clip(1 - 2 * (x_ * x_ + y_ * y_), -1, 1)))
+    quiet = (qd < 6.0) & (wz < np.radians(30)) & (tilt < 6) & (np.abs(raw.pos[:, 2] - raw.pos[0, 2]) < 0.012)
+    n = int(round(0.2 / DT))
+    settled = float(raw.t[i1 - 1])
+    for i in range(int(np.searchsorted(raw.t, land)), len(raw.t) - n):
+        if quiet[i:i + n].all():
+            settled = float(raw.t[i])
+            break
+    events["settled"] = [rel(settled)]
+    window = [0.0, rel(min(float(T[-1]), settled + 0.25))]
+    # The heading is read off the body's x axis, which a back flip turns upside down: for the
+    # flip the yaw is not a turn, so the turn about its pitch axis is reported instead.
+    print(f"    jump: take-off {events['takeoff'][0]:.3f}s, apex {events['apex'][0]:.3f}s "
+          f"({z.max() - z[0]:.3f} m), landing {events['land'][0]:.3f}s, settled "
+          f"{events['settled'][0]:.3f}s, window {window}")
+    return {"task": raw.meta["task"], "method": "direct rollout", "window": window,
+            "apexRise": round(float(z.max() - z[0]), 4)}
+
+
+def write_break_table(out_dir: Path, path: Path) -> None:
+    """src/motion/breakClips.ts: each breakdance clip's routine window and moments."""
+    rows = []
+    for header_path in sorted(out_dir.glob("*.json")):
+        if header_path.name == "index.json":
+            continue
+        h = json.loads(header_path.read_text())
+        bk = h.get("break")
+        if h.get("kind") != "break" or not bk:
+            continue
+        ev = {k: v[0] for k, v in sorted(h["events"].items())
+              if not k.startswith("foot") and k != "footstep" and len(v) == 1}
+        evs = ", ".join(f"{k}: {v}" for k, v in ev.items())
+        rows.append(f"  {h['id']}: {{\n    task: '{bk['task']}',\n    method: '{bk['method']}',\n"
+                    f"    from: {bk['window'][0]},\n    to: {bk['window'][1]},\n"
+                    f"    events: {{ {evs} }},\n  }},")
+    text = (
+        "// Generated by tools/motion/export_clips.py from the recorded breakdance clips in public/motions/.\n"
+        "// Do not edit: re-run the export. Clip seconds: `from`/`to` is the window the routine plays (a\n"
+        "// tracked move from its policy's first tick to the end of the move, moved by the policy's lag; the\n"
+        "// spin from its policy's start until it is walking again; a jump from the episode's start until the\n"
+        "// landing has settled). `method` is 'bundle' for a rollout through the crabcraft bundle's\n"
+        "// controller and 'direct rollout' for one episode of the policy's own training environment.\n"
+        "export const BREAK_CLIPS = {\n" + "\n".join(rows) + "\n} as const;\n"
+    )
+    path.write_text(text)
+    print(f"break table: {path} ({len(rows)} clips)")
 
 
 def write_skill_table(out_dir: Path, path: Path) -> None:
@@ -451,6 +572,17 @@ def beat_times_crab() -> np.ndarray:
 
 
 def provenance(raw: Raw, more: dict) -> dict:
+    if raw.meta.get("method") == "direct rollout":
+        return {
+            "method": "closed-loop rollout of the policy in its own training environment, not the bundle "
+                      "(tools/motion/record_rollouts.py: the bundle's controller cannot start this jump)",
+            "task": raw.meta["task"],
+            "actor": raw.meta["actor"],
+            "policy": raw.meta["source"],
+            "inferences": raw.meta.get("inferences"),
+            "physics": raw.meta["physics"],
+            **{k: v for k, v in more.items() if k != "trigger_s"},
+        }
     return {
         "method": "closed-loop rollout",
         **bundle_provenance(raw),
@@ -469,9 +601,12 @@ def bundle_provenance(raw: Raw) -> dict:
     manifest = json.loads((bundle / "bundle.json").read_text("utf-8"))
     mjlab = manifest["runtimes"]["mjlab"]
     built = (manifest.get("built_from") or {}).get(raw.meta["source"], {})
+    # The skills were recorded through the bundle as feat/crabcraft-skills built it; the breakdance
+    # through the one feat/crabcraft-dance built, which adds its modes. Same controller source.
+    branch = "feat/crabcraft-dance" if raw.meta["kind"] == "break" else "feat/crabcraft-skills"
     return {
         "bundle": f"crabcraft bundle, scripts/deploy.py --manifests deploy/crabcraft.manifests.json "
-                  f"(jumper branch feat/crabcraft-skills, controller source {mjlab['commit'][:7]})",
+                  f"(jumper branch {branch}, controller source {mjlab['commit'][:7]})",
         "controller": next(iter(mjlab["extensions"].values()))["file"],
         **({"checkpoint": built["from"]} if built.get("from") else {}),
     }
@@ -500,6 +635,7 @@ def main() -> None:
     print(f"index: {len(idx['clips'])} clips")
     if args.out.resolve() == (ROOT / "public" / "motions").resolve():
         write_skill_table(args.out, SKILL_TABLE)
+        write_break_table(args.out, BREAK_TABLE)
 
 
 if __name__ == "__main__":

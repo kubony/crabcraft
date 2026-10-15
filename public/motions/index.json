@@ -1,6 +1,6 @@
 {
  "schema": "crabcraft-motions/1",
- "note": "Every clip is a closed-loop rollout of a Jumper policy (KingKongRobotics/jumper, Apache-2.0) in MuJoCo: the example bundle's walking, jump, claw, gesture and dance policies, and the six skills (jumper.skill_*, trained for this game) through the crabcraft bundle. tools/motion/ rebuilds everything.",
+ "note": "Every clip is a closed-loop rollout of a Jumper policy (KingKongRobotics/jumper, Apache-2.0) in MuJoCo: the example bundle's walking, jump, claw, gesture and dance policies, the six skills (jumper.skill_*, trained for this game) and five of the seven breakdance moves (jumper.break_* and the spin) through the crabcraft bundle, and the 720 jump spin and the back flip as rollouts in their own training environment, which the bundle's controller cannot start. tools/motion/ rebuilds everything.",
  "clips": [
   {
    "id": "attack_slam",
@@ -23,6 +23,83 @@
    "loop": false,
    "speed": 0.00455,
    "bytes": 14048
+  },
+  {
+   "id": "break_backflip",
+   "source": "power_backflip",
+   "kind": "break",
+   "fps": 50.0,
+   "frameCount": 125,
+   "duration": 2.5,
+   "loop": false,
+   "speed": 0.00123,
+   "bytes": 10146
+  },
+  {
+   "id": "break_clawstand",
+   "source": "break_clawstand",
+   "kind": "break",
+   "fps": 50.0,
+   "frameCount": 427,
+   "duration": 8.54,
+   "loop": false,
+   "speed": 0.00135,
+   "bytes": 27013
+  },
+  {
+   "id": "break_jumpspin",
+   "source": "power_jumpspin",
+   "kind": "break",
+   "fps": 50.0,
+   "frameCount": 125,
+   "duration": 2.5,
+   "loop": false,
+   "speed": 0.09174,
+   "bytes": 9999
+  },
+  {
+   "id": "break_oneclaw",
+   "source": "break_oneclaw",
+   "kind": "break",
+   "fps": 50.0,
+   "frameCount": 427,
+   "duration": 8.54,
+   "loop": false,
+   "speed": 0.00127,
+   "bytes": 27041
+  },
+  {
+   "id": "break_sixstep",
+   "source": "break_sixstep",
+   "kind": "break",
+   "fps": 50.0,
+   "frameCount": 367,
+   "duration": 7.34,
+   "loop": false,
+   "speed": 0.00535,
+   "bytes": 24363
+  },
+  {
+   "id": "break_spin",
+   "source": "power_spin",
+   "kind": "break",
+   "fps": 50.0,
+   "frameCount": 322,
+   "duration": 6.44,
+   "loop": false,
+   "speed": 0.01641,
+   "bytes": 21843
+  },
+  {
+   "id": "break_toprock",
+   "source": "break_toprock",
+   "kind": "break",
+   "fps": 50.0,
+   "frameCount": 413,
+   "duration": 8.26,
+   "loop": false,
+   "speed": 0.00184,
+   "bytes": 26398
   },
   {
    "id": "cast",

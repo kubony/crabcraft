@@ -150,9 +150,10 @@ const qb = new Float32Array(4);
 /**
  * Sample a clip into `out`. In-place clips give the body relative to the clip's ideal root path;
  * full-root clips give it relative to frame 0, with the clip's net drift and heading change
- * removed progressively so the crab ends where it started (gameplay owns the root).
+ * removed progressively so the crab ends where it started (gameplay owns the root), unless
+ * `keepRoot` (MotionPlayOptions.carryRoot) leaves them in for the caller to carry over.
  */
-export function sampleClip(c: LoadedClip, t: number, loop: boolean, out: Pose): void {
+export function sampleClip(c: LoadedClip, t: number, loop: boolean, out: Pose, keepRoot = false): void {
   frameAt(c, t, loop, fr);
   const { i0, i1, f } = fr;
   const q = c.q;
@@ -169,7 +170,7 @@ export function sampleClip(c: LoadedClip, t: number, loop: boolean, out: Pose): 
   }
   nlerp(qa, qb, f);
   out.rot.set(qa);
-  if (!c.local && c.length > 0) {
+  if (!c.local && c.length > 0 && !keepRoot) {
     // full root: take out the drift linearly over the clip
     const u = Math.min(1, Math.max(0, (i0 + f) / Math.max(1, c.frameCount - 1)));
     out.pos[0] -= c.drift.x * u;
@@ -188,6 +189,29 @@ export function sampleClip(c: LoadedClip, t: number, loop: boolean, out: Pose): 
     out.pos[0] = c2 * cx + s2 * cz;
     out.pos[2] = -s2 * cx + c2 * cz;
   }
+}
+
+/** Heading of a body rotation (x, y, z, w; game axes, Y up) about +Y, radians. */
+export function headingOf(r: ArrayLike<number>): number {
+  const x = r[0], y = r[1], z = r[2], w = r[3];
+  return Math.atan2(2 * (w * y + x * z), 1 - 2 * (y * y + x * x));
+}
+
+/**
+ * Re-express a root-relative pose against a root moved by (x, z) and turned by `yaw` about +Y:
+ * pos = Ry(-yaw) (pos - (x, 0, z)), rot = yaw(-yaw) * rot.
+ */
+export function rebaseRoot(p: Pose, x: number, z: number, yaw: number): void {
+  const c = Math.cos(yaw), s = Math.sin(yaw);
+  const dx = p.pos[0] - x, dz = p.pos[2] - z;
+  p.pos[0] = c * dx - s * dz;
+  p.pos[2] = s * dx + c * dz;
+  const hs = Math.sin(-yaw / 2), hw = Math.cos(-yaw / 2);
+  const qx = p.rot[0], qy = p.rot[1], qz = p.rot[2], qw = p.rot[3];
+  p.rot[0] = hw * qx + hs * qz;
+  p.rot[1] = hw * qy + hs * qw;
+  p.rot[2] = hw * qz - hs * qx;
+  p.rot[3] = hw * qw - hs * qy;
 }
 
 /** Events with times in (from, to], wrapping for loops. Calls fn(name) for each. */

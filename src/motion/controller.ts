@@ -3,7 +3,7 @@
 // (full body, or the claws only while the legs keep walking), with crossfades between all of them.
 import type { CrabRig } from '../crab/types';
 import { getMotionLibrary, type ClipId, type LoadedClip, type MotionLibrary } from './library';
-import { CLAW_JOINTS, Pose, PoseSum, crossedEvents, sampleClip } from './pose';
+import { CLAW_JOINTS, Pose, PoseSum, crossedEvents, headingOf, rebaseRoot, sampleClip } from './pose';
 import type { MotionController, MotionId, MotionPlayOptions } from './types';
 
 // Directional gait sets, every 45 degrees counter-clockwise from forward (+Z) toward the crab's
@@ -51,6 +51,12 @@ interface Action {
   /** Stopped or replaced before its end: no more events. */
   interrupted: boolean;
   opts: MotionPlayOptions;
+  /**
+   * With `opts.carryRoot`: how far the root has been moved and turned under this action (body
+   * planar offset and heading handed over when it started fading out), taken back out of every
+   * sample after that so the fading layer stays where it was in the world.
+   */
+  rebase: { x: number; z: number; yaw: number } | null;
 }
 
 export interface MotionControllerImpl extends MotionController {
@@ -155,6 +161,7 @@ class Controller implements MotionControllerImpl {
       ended: false,
       interrupted: false,
       opts,
+      rebase: null,
     });
   }
 
@@ -167,12 +174,36 @@ class Controller implements MotionControllerImpl {
 
   /** Fade an action out early. Its onEnd still fires, once, so callers are never left waiting. */
   private interrupt(a: Action, fadeOut: number): void {
-    a.target = 0;
+    this.beginFadeOut(a);
     a.fadeOut = fadeOut;
     if (a.ended) return;
     a.interrupted = true;
     a.ended = true;
     a.opts.onEnd?.();
+  }
+
+  /**
+   * Start fading an action out. One that carries its root hands its travel and turn over now,
+   * while it is still the pose on screen, so the layer fading in (the next clip, or walking)
+   * starts from where the body is rather than from where the action started.
+   */
+  private beginFadeOut(a: Action): void {
+    if (a.target <= 0) return;
+    a.target = 0;
+    const carry = a.opts.carryRoot;
+    if (!carry || !a.clip || a.rebase) return;
+    const end = this.windowEnd(a, a.clip);
+    sampleClip(a.clip, Math.min(a.t, end), false, this.tmp, true);
+    const dx = this.tmp.pos[0];
+    const dz = this.tmp.pos[2];
+    const dyaw = headingOf(this.tmp.rot);
+    a.rebase = { x: dx, z: dz, yaw: dyaw };
+    carry(dx, dz, dyaw);
+  }
+
+  /** Where an action's clip stops: its window's end, the clip's, or its hold, whichever is first. */
+  private windowEnd(a: Action, c: LoadedClip): number {
+    return Math.min(c.length, a.end, c.hold && c.holdAt !== undefined ? c.holdAt : Infinity);
   }
 
   seek(t: number): void {
@@ -195,7 +226,8 @@ class Controller implements MotionControllerImpl {
     for (const a of this.actions) {
       if (!a.clip || a.weight <= 0) continue;
       // a windowed loop wraps itself (updateActions); only a whole-clip loop wraps in sampleClip
-      sampleClip(a.clip, a.t, a.loop && !Number.isFinite(a.end), this.tmp);
+      sampleClip(a.clip, a.t, a.loop && !Number.isFinite(a.end), this.tmp, !!a.opts.carryRoot);
+      if (a.rebase) rebaseRoot(this.tmp, a.rebase.x, a.rebase.z, a.rebase.yaw);
       out.blend(this.tmp, a.weight, a.upper ? CLAW_JOINTS : undefined);
     }
     this.apply(out);
@@ -223,7 +255,7 @@ class Controller implements MotionControllerImpl {
       }
       const c = a.clip;
       // a held clip stops at its hold point: the skill clips stand up again after it
-      const end = Math.min(c.length, a.end, c.hold && c.holdAt !== undefined ? c.holdAt : Infinity);
+      const end = this.windowEnd(a, c);
       const prev = a.t;
       if (a.target > a.weight) a.weight = Math.min(a.target, a.weight + dt / a.fadeIn);
       else if (a.target < a.weight) a.weight = Math.max(a.target, a.weight - dt / a.fadeOut);
@@ -245,7 +277,7 @@ class Controller implements MotionControllerImpl {
       if (!loop && !c.hold) {
         // start fading back to locomotion so the blend completes as the clip does
         const fadeAt = end - a.fadeOut * a.speed;
-        if (a.target > 0 && a.t >= fadeAt) a.target = 0;
+        if (a.target > 0 && a.t >= fadeAt) this.beginFadeOut(a);
       }
       // events from t = 0 inclusive (hit_react's "hit" is its first frame)
       if (a.opts.onEvent && !a.interrupted) {
