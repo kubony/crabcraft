@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Shots for the breakdance video, captured frame by frame in capture mode like the trailer's
-// (tools/trailer/lib.mjs, src/capture/clock.ts): the bare robot breaking live in Robot Mode, the
+// (tools/trailer/lib.mjs, src/capture/clock.ts): the bare robot breaking live in Robot Mode (the
+// jumps included), the
 // hero's routine in Clawhaven framed close, slow-motion takes of the 720 and the back flip, and the
 // ending's finale with the town around the hero. Every shot exists for a landscape page
 // (1920x1080) and a portrait one (1080x1920, name suffix -port), so the vertical cut is framed for
@@ -58,9 +59,10 @@ const FLIP = { takeoff: MOVE.backflip.at('takeoff'), land: MOVE.backflip.at('lan
 // ------------------------------------------------------------------------------------ Robot Mode
 
 /**
- * The bare robot breaks live: toprock, six-step, the one-claw freeze and the spin (held, then let
- * go), each asked for from walking, as Shift + 1, 2, 4 and 5 do, and handed back to walking before
- * the next. The HUD keeps what says what is running (the mode card, the policy's name, the badges
+ * The bare robot breaks live: toprock, six-step, the one-claw freeze, the spin (held, then let
+ * go), the 720 and the back flip, each asked for from walking, as Shift + 1, 2, 4, 5, 6 and 7 do,
+ * and handed back to walking before the next (the two jumps by the page's own press of their
+ * switch after the landing, src/robot/sim/core.ts AUTO_LEAVE_S). The HUD keeps what says what is running (the mode card, the policy's name, the badges
  * that it is MuJoCo WASM and ONNX Runtime Web) and the dock's Breaking group, moved under the card.
  * The page's headline is hidden: the video's own captions say what this is.
  */
@@ -68,7 +70,7 @@ const robotShot = (layout) => async () => {
   const port = layout === 'port';
   const app = await openApp({ base, query: 'screen=robot', spec: HERO, dsf, size: SIZE[layout] });
   const { page } = app;
-  const MODES = ['break_toprock', 'break_sixstep', 'break_oneclaw', 'power_spin'];
+  const MODES = ['break_toprock', 'break_sixstep', 'break_oneclaw', 'power_spin', 'power_jumpspin', 'power_backflip'];
   try {
     await page.waitForFunction((m) => window.__robotMode && m.every((x) => window.__robotMode.client.policies.has(x)), MODES, { timeout: 180000 });
     await page.evaluate(() => window.__robotMode.handle.setAppearance('bare'));
@@ -89,8 +91,10 @@ const robotShot = (layout) => async () => {
     await page.evaluate(() => window.__capture.begin());
     await advance(app, 1.5);
     // Press times (shot seconds), from walking each time; measured in Robot Mode: the toprock runs
-    // 6.2 s after its 0.8 s ramp, the six-step 5.3 s, the one-claw 6.5 s; the spin runs until let go.
-    const AT = { toprock: 0.3, sixstep: 7.9, oneclaw: 14.6, spin: 22.5, release: 26.7, end: 28.9 };
+    // 6.2 s after its 0.8 s ramp, the six-step 5.3 s, the one-claw 6.5 s; the spin runs until let go
+    // and is walking again 1.1 s later; each jump is walking again about 2.8 s after its press (the
+    // ramp, the jump, the page's press 1.4 s or 1.2 s after the handover, the ramp back).
+    const AT = { toprock: 0.3, sixstep: 7.9, oneclaw: 14.6, spin: 22.5, release: 26.7, jumpspin: 28.6, backflip: 32.0, end: 35.2 };
     await page.evaluate(([AT, port]) => {
       const R = window.__robotMode;
       R.orbit.update = () => {};
@@ -102,7 +106,11 @@ const robotShot = (layout) => async () => {
         { from: 0, to: AT.sixstep - 0.2, az: [0.55, 0.2], el: [0.16, 0.1], dist: [0.72, 0.62], lookY: [0.075, 0.08], fov: 30 },
         { from: AT.sixstep - 0.2, to: AT.oneclaw - 0.2, az: [-0.5, -0.85], el: [0.5, 0.42], dist: [0.76, 0.68], lookY: [0.05, 0.05], fov: 30 },
         { from: AT.oneclaw - 0.2, to: AT.spin - 0.2, az: [0.9, 0.55], el: [0.12, 0.08], dist: [0.74, 0.64], lookY: [0.085, 0.09], fov: 30 },
-        { from: AT.spin - 0.2, to: AT.end + 1, az: [-0.25, 0.15], el: [0.22, 0.16], dist: [0.68, 0.62], lookY: [0.07, 0.075], fov: 30 },
+        { from: AT.spin - 0.2, to: AT.jumpspin - 0.2, az: [-0.25, 0.15], el: [0.22, 0.16], dist: [0.68, 0.62], lookY: [0.07, 0.075], fov: 30 },
+        // The jumps go 0.25 m up: further back and a higher look point keep the apex in frame; the
+        // flip from its side, where the turn is.
+        { from: AT.jumpspin - 0.2, to: AT.backflip - 0.2, az: [0.45, 0.6], el: [0.12, 0.12], dist: [1.3, 1.25], lookY: [0.2, 0.2], fov: 30 },
+        { from: AT.backflip - 0.2, to: AT.end + 1, az: [1.5, 1.6], el: [0.07, 0.07], dist: [1.02, 0.98], lookY: [0.17, 0.17], fov: 30 },
       ];
       // The portrait page is narrower: a wider lens and a little more distance keep the robot's
       // width in frame without leaving the desk.
@@ -145,6 +153,8 @@ const robotShot = (layout) => async () => {
         { t: AT.oneclaw, mark: 'oneclaw', fn: press('break_oneclaw') },
         { t: AT.spin, mark: 'spin', fn: press('power_spin') },
         { t: AT.release, mark: 'release', fn: (p) => p.evaluate(() => window.__robotMode.handle.release()) },
+        { t: AT.jumpspin, mark: 'jumpspin', fn: press('power_jumpspin') },
+        { t: AT.backflip, mark: 'backflip', fn: press('power_backflip') },
       ],
       probe: () => {
         const s = window.__robotMode.handle.getState();

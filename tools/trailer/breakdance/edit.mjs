@@ -95,11 +95,16 @@ const BAR = 4 * B;
 
 /**
  * In Robot Mode, seconds from the frame a policy starts running (runStart) to its toprock's first
- * step and its one-claw's freeze: the recorded clips' events less their policy start.
+ * step, its one-claw's freeze and each jump's take-off and landing: the recorded clips' events
+ * less their policy start (the clips are recorded through the same bundle).
  */
 const ROBOT = {
   toprockBeat1: MOVE.toprock.ev.beat1 - MOVE.toprock.ev.policy_start,
   clawHit: MOVE.oneclaw.ev.hit - MOVE.oneclaw.ev.policy_start,
+  jumpspinOff: MOVE.jumpspin.ev.takeoff - MOVE.jumpspin.ev.policy_start,
+  jumpspinLand: MOVE.jumpspin.ev.land - MOVE.jumpspin.ev.policy_start,
+  backflipOff: MOVE.backflip.ev.takeoff - MOVE.backflip.ev.policy_start,
+  backflipLand: MOVE.backflip.ev.land - MOVE.backflip.ev.policy_start,
 };
 
 function plan() {
@@ -119,17 +124,27 @@ function plan() {
   segs.push({ src: 'card-logo', in: 1.3, t0: T(5), end: T(8) });
   sfx.push(['sfx-beacon', T(5) + 0.02, 0.35]);
 
-  // 2. Robot Mode, one bar a move: toprock (a step on every beat), six-step, the one-claw freeze, the spin.
+  // 2. Robot Mode, one bar a move: toprock (a step on every beat), six-step, the one-claw freeze, the
+  //    spin; then the 720 and the back flip share a bar, live, the 720 landing on its second beat and
+  //    the back flip on its fourth.
   const r0 = T(8);
   place('robot', runStart('robot', 'break_toprock') + ROBOT.toprockBeat1 + B, r0, r0, r0 + BAR);
   place('robot', runStart('robot', 'break_sixstep') + 0.9, r0 + BAR, r0 + BAR, r0 + 2 * BAR);
   place('robot', runStart('robot', 'break_oneclaw') + ROBOT.clawHit, r0 + 2 * BAR + 2 * B, r0 + 2 * BAR, r0 + 3 * BAR);
   place('robot', runStart('robot', 'power_spin') + 1.0, r0 + 3 * BAR, r0 + 3 * BAR, r0 + 4 * BAR);
   for (let k = 0; k < 4; k++) sfx.push(['sfx-servo-whir', r0 + k * BAR + 0.02, 0.22]);
+  const rj = r0 + 4 * BAR;
+  const rjLand = rj + B;
+  const rfLand = rj + 3 * B;
+  place('robot', runStart('robot', 'power_jumpspin') + ROBOT.jumpspinLand, rjLand, rj, rj + 2 * B);
+  place('robot', runStart('robot', 'power_backflip') + ROBOT.backflipLand, rfLand, rj + 2 * B, rj + BAR);
+  sfx.push(['sfx-servo-whir', rjLand - (ROBOT.jumpspinLand - ROBOT.jumpspinOff) - 0.15, 0.3], ['sfx-footstep-stone', rjLand, 0.6],
+    ['sfx-servo-whir', rfLand - (ROBOT.backflipLand - ROBOT.backflipOff) - 0.12, 0.3], ['sfx-footstep-stone', rfLand, 0.7]);
+  hits.push({ t: rjLand, kind: 'impact', vel: 0.4 }, { t: rfLand, kind: 'impact', vel: 0.5 });
 
   // 3. The routine in the game, one bar a move, alternating the two takes; the 720 and the back
   //    flip share a bar, the back flip landing on its third beat.
-  const g0 = r0 + 4 * BAR;
+  const g0 = r0 + 5 * BAR;
   place('routine-a', atMove('routine-a', 'toprock', 'beat2'), g0, g0, g0 + BAR, { tag: 'tag-toprock' });
   // The six-step from overhead once its turn is steady, the spin from 0.8 s into it.
   place('routine-b', atMove('routine-b', 'sixstep', 'steady_from'), g0 + BAR, g0 + BAR, g0 + 2 * BAR, { tag: 'tag-sixstep' });
@@ -175,7 +190,7 @@ function plan() {
   const captions = [
     ['hook', 0.25, T(4) - 0.1],
     ['robot', r0 + 0.2, r0 + 2 * BAR - 0.2],
-    ['ours', r0 + 2 * BAR + 0.15, r0 + 4 * BAR - 0.2],
+    ['ours', r0 + 2 * BAR + 0.15, r0 + 5 * BAR - 0.2],
     ['press', g0 + 0.2, g0 + 2 * BAR - 0.2],
     ['replay', s0 + 0.2, s0 + 2 * BAR - 0.2],
     ['finale', e0 + 0.2, e0 + 3 * BAR - 0.25],
@@ -193,7 +208,7 @@ function plan() {
     sections: [
       { style: 'hook', bars: 1 },
       { style: 'drop', bars: 1 },
-      { style: 'grooveA', bars: 4 },
+      { style: 'grooveA', bars: 5 },
       { style: 'grooveB', bars: 5 },
       { style: 'half', bars: 2 },
       { style: 'finale', bars: 3 },
