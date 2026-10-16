@@ -56,6 +56,8 @@ procedurally by `tools/art/audio_build.py` and are ours. Per-file credits are al
 
 The music of the breakdance video is not a file in this repository: `tools/trailer/breakdance/beat.py`
 synthesises it from sine waves, noise and filters (no samples, no third-party audio) each time the
-video is cut, and it is ours like the rest of the project.
+video is cut, and it is ours like the rest of the project. The same generator, arranged on Robot
+Mode's live routine by `tools/robot-routine-music.mjs`, made `public/audio/music-breaking.ogg` and
+`.mp3`; they are ours too (Apache-2.0).
 
 Every asset added to this repository must get a row here (source URL, author, license).

@@ -73,6 +73,23 @@ the robot wakes, the page proves it agrees with the bundle: it replays `referenc
 the controller (24 frames, observation diff 0, target diff 2.2e-8), compares the policy outputs
 with the recorded actions (max diff 8.3e-7) and checks 71 bundle files against their SHA-256.
 
+**The whole breakdance, live, on the beat.** Press <kbd>P</kbd> in Robot Mode (or Routine in the
+dock) and the robot performs the routine as one set: toprock, six-step, spin, 720, back flip and the
+one-claw freeze, each move its own policy running live under the bundle's controller, to an original
+beat at the toprock's 107.14 bpm. Nothing is recorded or spliced in. The page presses the bundle's
+own switches (<kbd>Shift</kbd> + 1, 2, 5, 6, 7, 4), says every press in the log, and times them in
+simulated time so that each policy starts on the downbeat of its bar: a press has to come early by
+the controller's ramp to the move's home pose (0.59 to 0.83 s), which the page predicts from how far
+the joints are from that pose. Every move hands the robot back to walking before the next press, the
+spin is ended by its own switch on a beat, the 720 and the back flip by the page's press after the
+landing, and the freeze lands on the downbeat of the final stab. In 10 headless runs from standing,
+walking, turning, strafing and just after a move, all 10 completed without a Safe Hold and ended
+walking upright, the power moves started within 15 ms of their downbeats and the tracked moves within
+60 ms. Any robot control, the gamepad or <kbd>P</kbd> again stops it and hands the robot back to
+walking. The music is the breakdance video's synthesised beat arranged on the routine's 17 bars, and
+the page keeps it in step with the simulation (within 25 ms in Chrome). This is the simulation again:
+the routine has not run on a physical Jumper.
+
 **Same policy, any appearance.** Press <kbd>T</kbd> in Robot Mode to switch between the bare robot and
 the crab you created, gear, weapon and LED face included, posed every frame from the same live
 simulation. The crab's skeleton is Jumper's URDF, so its links sit on the physics bodies (within 0.0013 mm).
@@ -177,7 +194,7 @@ and, after <kbd>T</kbd>, as the bare robot.
 | <kbd>R</kbd> twice | Open Robot Mode (resets quest progress) |
 
 **In Robot Mode** (the bundle's own bindings from its `controller.toml` and manual; <kbd>Q</kbd>
-<kbd>E</kbd>, <kbd>T</kbd>, <kbd>C</kbd> and <kbd>R</kbd> are added by the page)
+<kbd>E</kbd>, <kbd>T</kbd>, <kbd>C</kbd>, <kbd>P</kbd> and <kbd>R</kbd> are added by the page)
 
 | Input | Action |
 |---|---|
@@ -191,6 +208,7 @@ and, after <kbd>T</kbd>, as the bare robot.
 | <kbd>Shift</kbd> + <kbd>1</kbd> to <kbd>4</kbd> | Breaking: toprock, six-step, claw stand, one-claw freeze |
 | <kbd>Shift</kbd> + <kbd>5</kbd> | Spin; press again to stop |
 | <kbd>Shift</kbd> + <kbd>6</kbd> <kbd>7</kbd> | 720 jump spin, back flip; back to walking by themselves after the landing |
+| <kbd>P</kbd> | The whole breakdance routine, live on the beat, with its music; <kbd>P</kbd> again or any robot control stops it |
 | <kbd>V</kbd> <kbd>B</kbd> | Left or right claw mode |
 | <kbd>Ctrl</kbd> | End a gesture, dance, skill or breaking move early |
 | <kbd>Esc</kbd> | Let go of every control |
@@ -310,6 +328,10 @@ flowchart LR
   `set_state, operator input, tick, infer, positions/kp/kd` every 5 ms with the robot's servo law
   (PD torque clipped to the measured torque-speed curve and thermal budget). The page renders about
   120 pose frames a second on the TVC-style desk and hands your keys and gamepad to the controller.
+  The live routine (`src/robot/sim/routine.ts`) runs inside that same control tick, in simulated
+  time: it presses the bundle's switches through the path the keyboard takes, and the page's music
+  (`public/audio/music-breaking.*`, arranged by `tools/robot-routine-music.mjs`) follows the
+  simulation's clock rather than the other way round.
 - **World and game.** `src/world/` builds Clawhaven and the Brine Shore from code plus the Quaternius
   kits; `src/game/` runs quests, combat, AI, the boss, effects, music and the HUD.
 
@@ -321,9 +343,9 @@ flowchart LR
 | The six skill policies track their moves | evaluation in each task's own environment, from the standing pose | 0 falls in 84 rollouts; joint RMS over the move 0.26 to 1.54 deg without domain randomisation, 0.42 to 1.68 deg with it (standing still: 11.2 to 39.4 deg) |
 | Crab model is kinematically Jumper | `tools/check_crab_fk.py` | 41 bodies x 13 poses vs MuJoCo: max position error 0.000534 mm |
 | The breakdance policies | evaluation in each task's own environment, from the standing pose | tracked moves: 0 falls in 56 rollouts, joint RMS over the move 0.65 to 2.76 deg with domain randomisation (standing still: 10.1 to 32.8 deg); the six-step turns 345.9 of 360 deg. Power moves, 32 rollouts each with randomisation, the jumps from the controller's handover: spin 2.32 turns/s; 720 jump spin 735 deg in the air, 32 of 32 upright; back flip 385 deg in the air, 31 of 32 upright |
-| Robot Mode simulation, headless | `node tools/robot-sim-check.ts` | 21.65 m in 30 s of walking without a fall, max tilt 1.88 deg, jump apex 0.228 m; each of the six skills and the five breaking modes entered on its key, played out (the spin held 4 s at 2.02 turns/s, then let go) and handed back to walking (max tilt 35.0 deg, the one-claw freeze); the 720 and the back flip, each from standing and from walking, take off, land (tilt under 3 deg 0.3 s after touchdown, never in `safe`) and are handed back by the page's own press: 720 612 and 657 deg in the air at 0.25 m of rise, flip 385 and 386 deg nose-up |
+| Robot Mode simulation, headless | `node tools/robot-sim-check.ts` | 21.65 m in 30 s of walking without a fall, max tilt 1.88 deg, jump apex 0.228 m; each of the six skills and the five breaking modes entered on its key, played out (the spin held 4 s at 2.02 turns/s, then let go) and handed back to walking (max tilt 35.0 deg, the one-claw freeze); the 720 and the back flip, each from standing and from walking, take off, land (tilt under 3 deg 0.3 s after touchdown, never in `safe`) and are handed back by the page's own press: 720 612 and 657 deg in the air at 0.25 m of rise, flip 385 and 386 deg nose-up; the live routine, 5 runs (10 with `--routine 10`) from standing, walking, turning, strafing and after a move: every run completes, every move entered and handed back, no Safe Hold, ending walking upright, policies starting within 15 ms (power moves) and 60 ms (tracked moves) of their downbeats |
 | Robot Mode start-up checks, in the page | open `/?screen=robot` | `reference.json` replay 24 frames, observation diff 0, target diff 2.2e-8; policy outputs vs recorded actions 8.3e-7; 71 bundle files match their SHA-256 |
-| The breakdance, in the page | `node tools/breakdance-check.mjs` (dev server running) | <kbd>B</kbd> plays all six moves in order and ends completed, walking ends it early; in Robot Mode each of the seven breaking modes runs live and hands back to walking, the two jumps by the page's own press and never through the Safe Hold; 0 console errors |
+| The breakdance, in the page | `node tools/breakdance-check.mjs` (dev server running) | <kbd>B</kbd> plays all six moves in order and ends completed, walking ends it early; in Robot Mode each of the seven breaking modes runs live and hands back to walking, the two jumps by the page's own press and never through the Safe Hold; <kbd>P</kbd> plays the live routine to the end on its downbeats with the page's presses logged and the music within 25 ms of the simulation, and <kbd>P</kbd> again stops it back to walking; 0 console errors |
 | Crab drawn on the live simulation | `node tools/robot-skin-shots.mjs <app url> <out dir>` | All 41 crab links within 0.0013 mm of the physics bodies while standing, walking and dancing |
 | Whole game, end to end | `pnpm dev --port 5206` in one terminal, `node tools/playtest.mjs` in another | Warrior, Mage and Priest each play every quest, the boss and the ending with 0 console errors |
 
@@ -366,6 +388,12 @@ requirements/       the original requirements
 - The 720 and the back flip have no end of their own. Robot Mode presses their switch again at a
   fixed time after the handover (1.4 s, 1.2 s), measured on the game's recordings, rather than
   detecting the landing.
+- The live routine's presses are timed from a model of the controller's ramp fitted on this
+  simulation (`src/robot/sim/routine.ts`); the tracked moves' ramps vary in ways the model does not
+  explain, so they start up to about 60 ms off the downbeat. The routine moves the robot up to about
+  0.4 m and the desk has toys and books on it: started next to them, a move can land on one. It
+  waits a bar (and logs it) when the robot is not walking when a move is due, and stops if that goes
+  on for four bars.
 - The bundle has no get-up policy. If the robot tips over in Robot Mode it holds in `safe`, and the
   page stands it back up after 3 s.
 - The bundle marks its web controller as not verified by the consumer; Robot Mode shows that notice
@@ -374,7 +402,7 @@ requirements/       the original requirements
   Apple M4 Pro Mac in Chrome. Other hardware has not been measured; the Esc menu has a Low quality
   setting.
 - The music and sound effects were not checked by listening; they are built by script from CC0
-  sources.
+  sources, and the live routine's beat is synthesised by `tools/trailer/breakdance/beat.py`.
 
 ## Credits
 
