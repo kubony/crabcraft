@@ -46,12 +46,14 @@ it is the finale while the town cheers. Seven more new Jumper tasks, in [`jumper
 four tracked moves, `jumper.break_toprock` (an 8-count at 107 bpm), `break_sixstep` (footwork
 round the claws), `break_clawstand` and `break_oneclaw` (freezes held nose-down on the claws), and
 three reward-driven power moves, `jumper.power_spin_feet` (2.3 turns a second on its feet),
-`power_jumpspin720` (679 degrees in the air on average, 32 of 32 landings upright with domain
-randomisation, trained with its joint targets clamped at the stops) and `power_backflip` (a whole
-back flip, 32 of 32 landing on its feet and coming to rest level near the standing pose), both
-jumping from the pose the controller hands a new mode and standing still once they have landed. The routine plays six of them in a row (the claw stand is in Robot Mode) at the policies' own pace and carries each move's travel and turn over
+`power_jumpspin720` (716 and 719 degrees in the air on average over two seeds, 64 of 64 landings
+upright with domain randomisation) and `power_backflip` (a whole back flip, 32 of 32 landing on its
+feet), the two jumps taking off from the pose the controller hands a new mode and coming to rest
+level near the standing pose once they have landed. All three, like every other mode, keep their
+joint targets within the joint stops: the spin and the 720 were trained with their targets clamped
+there, as the controller clamps them. The routine plays six of them in a row (the claw stand is in Robot Mode) at the policies' own pace and carries each move's travel and turn over
 to the crab, so the six-step that comes out 2 degrees short of a full turn and the 720, which has
-turned 751 degrees by its landing, leave the crab facing where the policy left the robot. These are
+turned 786 degrees by its landing, leave the crab facing where the policy left the robot. These are
 simulation results: none of the seven has run on a physical Jumper. The six-step closes its turn,
 357.7 of 360 degrees, because its policy sees how far its heading has fallen behind the recording's,
 a term the controller builds from the IMU's yaw since the move began; whether a physical Jumper's
@@ -68,14 +70,13 @@ while walking). Keys 5 6 7 8 9 0 swipe, slam, cast, flinch, power down and sit, 
 to walking; <kbd>Shift</kbd> + 1 2 3 4 toprock, six-step, claw stand and one-claw freeze the same
 way, and <kbd>Shift</kbd> + 5 spins until pressed again (2.3 turns a second on the browser's
 physics). <kbd>Shift</kbd> + 6 is the 720 and <kbd>Shift</kbd> + 7 the back flip: on the browser's
-physics, 12 times each from standing and from walking, the 720 turns 682 to 750 degrees in the air
-and the flip 375 to 383 degrees nose-up, and both land and come to rest, the 720 about 10 degrees
-nose-up on its rear legs and the flip within a degree of level near its standing pose. Neither has
-an end of its own, so the page presses its switch again once it is at rest (1.4 s and 1.2 s after
-the controller hands over, at least 0.26 s after the latest rest), and says so in the log; the
-hand-back brings the 720 level. The spin sends its joint targets up to 1.7 rad past the joint
-stops, as it trained; the 720, trained again with its targets clamped at the stops, sends none past
-them (see Known limits). Before
+physics, 12 times each from standing and from walking, the 720 turns 721 to 753 degrees in the air
+and the flip 375 to 383 degrees nose-up, and both land and come to rest within a degree of level
+near the standing pose. Neither has an end of its own, so the page presses its switch again once it
+is at rest (1.4 s and 1.2 s after the controller hands over, at least 0.26 s after the latest rest),
+and says so in the log. Every mode keeps its joint targets within the joint stops: the bundle sets
+no `target_margin`, and the spin and the 720 were trained again with their targets clamped at the
+stops (see Known limits). Before
 the robot wakes, the page proves it agrees with the bundle: it replays `reference.json` through
 the controller (24 frames, observation diff 0, target diff 0), compares the policy outputs
 with the recorded actions (max diff 8.3e-7) and checks 71 bundle files against their SHA-256.
@@ -349,8 +350,8 @@ flowchart LR
 | Motion host agrees with the bundle | `tools/motion/check_bundle.py [--bundle <crabcraft bundle>]` | Controller replay of `reference.json`: observation diff 0; target diff 0 (example bundle and crabcraft bundle). ONNX vs recorded actions: max diff 9.5e-07 (example bundle), 0 (crabcraft bundle) |
 | The six skill policies track their moves | evaluation in each task's own environment, from the standing pose | 0 falls in 84 rollouts; joint RMS over the move 0.26 to 1.54 deg without domain randomisation, 0.42 to 1.68 deg with it (standing still: 11.2 to 39.4 deg) |
 | Crab model is kinematically Jumper | `tools/check_crab_fk.py` | 41 bodies x 13 poses vs MuJoCo: max position error 0.000534 mm |
-| The breakdance policies | evaluation in each task's own environment, from the standing pose | tracked moves: 0 falls in 70 rollouts, joint RMS over the move 0.65 to 2.68 deg with domain randomisation (standing still: 10.1 to 32.8 deg); the six-step turns 357.7 of 360 deg (355.5 to 359.4 with randomisation). Power moves, 32 rollouts each with randomisation, the jumps from the controller's handover: spin 2.32 turns/s; 720 jump spin 679 deg in the air, 32 of 32 upright, its targets clamped at the stops; back flip 384 deg in the air, 32 of 32 upright; from 0.5 s after the landing their joints move at 0.04 and 0.03 rad/s RMS (`tools/eval_calm.py`, 16 rollouts) |
-| Robot Mode simulation, headless | `node tools/robot-sim-check.ts` | 21.65 m in 30 s of walking without a fall, max tilt 1.88 deg, jump apex 0.228 m; each of the six skills and the five breaking modes entered on its key, played out (the spin held 4 s at 2.36 turns/s, then let go; the six-step turning 357.7 deg under its policy, the check asks for 350) and handed back to walking (max tilt 35.0 deg, the one-claw freeze); the 720 and the back flip, each from standing and from walking, take off, land upright (never in `safe`; tilt 0.3 s after touchdown 10.2 and 10.1 deg for the 720, the pose it rests in, 2.9 and 2.1 for the flip) and are handed back by the page's own press: 720 680 and 686 deg in the air at 0.33 m of rise, flip 384 and 374 deg nose-up (the check asks for 660 and 330 at least); the live routine, 5 runs (10 with `--routine 10`) from standing, walking, turning, strafing and after a move: every run completes, every move entered and handed back, no Safe Hold, ending walking upright, policies starting within 15 ms (power moves) and 60 ms (tracked moves) of their downbeats |
+| The breakdance policies | evaluation in each task's own environment, from the standing pose | tracked moves: 0 falls in 70 rollouts, joint RMS over the move 0.65 to 2.68 deg with domain randomisation (standing still: 10.1 to 32.8 deg); the six-step turns 357.7 of 360 deg (355.5 to 359.4 with randomisation). Power moves, 32 rollouts each with randomisation, the jumps from the controller's handover, every target clamped at the stops: spin 2.29 turns/s; 720 jump spin 719 and 716 deg in the air over two seeds, 64 of 64 upright; back flip 384 deg in the air, 32 of 32 upright; from 0.5 s after the landing their joints move at 0.02 and 0.03 rad/s RMS (`tools/eval_calm.py`, 16 rollouts) |
+| Robot Mode simulation, headless | `node tools/robot-sim-check.ts` | 21.65 m in 30 s of walking without a fall, max tilt 1.88 deg, jump apex 0.228 m; each of the six skills and the five breaking modes entered on its key, played out (the spin held 4 s at 2.31 turns/s, then let go; the six-step turning 357.7 deg under its policy, the check asks for 350) and handed back to walking (max tilt 35.0 deg, the one-claw freeze); the 720 and the back flip, each from standing and from walking, take off, land upright (never in `safe`; tilt 0.3 s after touchdown 0.7 and 1.3 deg for the 720, 1.8 and 2.1 for the flip) and are handed back by the page's own press: 720 728 and 745 deg in the air at 0.36 and 0.37 m of rise, flip 387 and 374 deg nose-up (the check asks for 700 and 330 at least); no mode in the bundle sets `target_margin` (the check fails on one); the live routine, 5 runs (10 with `--routine 10`) from standing, walking, turning, strafing and after a move: every run completes, every move entered and handed back, no Safe Hold, ending walking upright, policies starting within 15 ms (power moves) and 60 ms (tracked moves) of their downbeats |
 | Robot Mode start-up checks, in the page | open `/?screen=robot` | `reference.json` replay 24 frames, observation diff 0, target diff 0; policy outputs vs recorded actions 8.3e-7; 71 bundle files match their SHA-256 |
 | The breakdance, in the page | `node tools/breakdance-check.mjs` (dev server running) | <kbd>B</kbd> plays all six moves in order and ends completed, walking ends it early; in Robot Mode each of the seven breaking modes runs live and hands back to walking, the two jumps by the page's own press and never through the Safe Hold; <kbd>P</kbd> plays the live routine to the end on its downbeats with the page's presses logged and the music within 30 ms of the simulation, and <kbd>P</kbd> again stops it back to walking; 0 console errors |
 | Crab drawn on the live simulation | `node tools/robot-skin-shots.mjs <app url> <out dir>` | All 41 crab links within 0.0013 mm of the physics bodies while standing, walking and dancing |
@@ -393,17 +394,22 @@ requirements/       the original requirements
   run on a physical Jumper. The back flip's mode lifts the controller's 50-degree tilt fallback while
   it runs; on a robot, a flip that went wrong would not be caught by it.
 - The 720 and the back flip have no end of their own. Robot Mode presses their switch again at a
-  fixed time after the handover (1.4 s, 1.2 s), 0.28 s and 0.275 s after the latest either came to
+  fixed time after the handover (1.4 s, 1.2 s), 0.31 s and 0.275 s after the latest either came to
   rest through the bundle's controller, rather than detecting the landing.
-- The spin lets its joint targets go up to 1.7 rad past the joint stops (`target_margin` on its
-  mode; every other mode is clamped at the stops), as its training did: clamped, it spins 0.3 turns
-  a second slower. On a robot a joint at its stop would be held against it at up to 1.746 N m for as
-  long as its target points past it, and the target sent can reach about 6.45 rad. That has not been
-  tried on a physical Jumper.
-- The 720 needed the same margin until it was trained again with its targets clamped at the stops.
-  It now sends every target within them, and that cost it something: it rises 0.35 m rather than
-  0.39, rests about 10 degrees nose-up after landing, and with the training's randomisation one
-  landing in 32 tilted 49.1 degrees, close to the controller's 50-degree fallback.
+- Every mode keeps its joint targets within the joint stops; the bundle sets no `target_margin`. The
+  spin and the 720 first trained with nothing clamping their targets and shipped with them let 1.7
+  rad past the stops; both were trained again with the targets clamped there, as the controller
+  clamps them. Through the bundle's controller the spin sends 2.58 rad at most and the 720 3.67, and
+  no target past a stop. None of it has been tried on a physical Jumper.
+- The spin within the stops spins 2.29 to 2.30 turns a second through the controller, against 2.33
+  and 2.34 with its margin, and leans on more of its body to do it: a calf, a claw palm or the shell touches
+  the floor in 43% of its steps, against 33 to 35% before (simulation without randomisation). With
+  those parts' grip on the floor taken down from 1.0 to 0.4 it spins 2.15 turns a second.
+- The 720 within the stops turns 719 to 744 degrees in the air through the controller (24 trials
+  from standing and walking) and rises 0.35 to 0.37 m, against 0.39 when it needed the margin. It
+  rests within a degree of level near its standing pose and walks again 0.44 s after its switch. The
+  turn still leans the body: 35 degrees at most through the controller, and with the training's
+  randomisation 42.9 at the worst of 128 flights, under the controller's 50-degree fallback.
 - The six-step's turn closes on the IMU's yaw, counted from the moment the move begins. Whether a
   physical Jumper's AHRS yaw follows its gyro has not been checked; if it held still, the policy
   would see its turn falling behind and push to catch up.

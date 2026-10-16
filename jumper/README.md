@@ -37,7 +37,7 @@ turns instead of one).
 
 | file | size | contents |
 |---|---|---|
-| `crabcraft-tasks.patch` | 975 KB | the tasks (`tasks/jumper/skill_*`, `break_*`, `power_*`, the reference clips in `media/`, the jumps' settling terms in `power_jumpspin/mdp/calm.py`, the 720's targets decoded within the stops in `power_jumpspin/mdp/stops.py`, the six-step's heading error in `break_sixstep/observations.py`); the controller building that heading error (`deploy/fsm/src/obs.rs`); `tools/widen_actor_input.py` and `tools/distill_rest.py`; `tools/author_skill_clips.py` and `tools/author_breaking_clips.py` (author the clips and run the feasibility checks); `tools/eval_skill.py`, `tools/eval_power.py` and `tools/eval_calm.py` (the acceptance checks, the last how still a jump stands after its landing) and `tools/cap_noise.py`; `deploy/crabcraft.manifests.json` and `deploy/crabcraft.controller.toml` (the example bundle plus the six skills and all seven breakdance moves); a mode's `target_margin` in the controller (`deploy/fsm/src/config.rs`, `control.rs`) and `scripts/deploy.py` carrying a manifest mode's `skip_tilt_check` and `target_margin` into its state (with `deploy/BUNDLE.md` and tests in `tests/test_deploy_hook.py` and the crate); the controller vocabulary for keys 5 to 0; `tests/test_power_handover.py`, `tests/test_power_settle.py` and the test list entries; `docs/CRABCRAFT_SKILLS.md`, `docs/CRABCRAFT_BREAKING.md`, `docs/CRABCRAFT_POWER.md` |
+| `crabcraft-tasks.patch` | 1028 KB | the tasks (`tasks/jumper/skill_*`, `break_*`, `power_*`, the reference clips in `media/`, the jumps' settling terms in `power_jumpspin/mdp/calm.py`, the 720's and the spin's targets decoded within the stops in `power_jumpspin/mdp/stops.py`, the 720's charge on leaning past 30 degrees in `power_jumpspin/mdp/rewards.py`, the six-step's heading error in `break_sixstep/observations.py`); the controller building that heading error (`deploy/fsm/src/obs.rs`); `tools/widen_actor_input.py` and `tools/distill_rest.py`; `tools/author_skill_clips.py` and `tools/author_breaking_clips.py` (author the clips and run the feasibility checks); `tools/eval_skill.py`, `tools/eval_power.py` and `tools/eval_calm.py` (the acceptance checks, the last how still a jump stands after its landing) and `tools/cap_noise.py`; `deploy/crabcraft.manifests.json` and `deploy/crabcraft.controller.toml` (the example bundle plus the six skills and all seven breakdance moves); a mode's `target_margin` in the controller (`deploy/fsm/src/config.rs`, `control.rs`) and `scripts/deploy.py` carrying a manifest mode's `skip_tilt_check` and `target_margin` into its state (with `deploy/BUNDLE.md` and tests in `tests/test_deploy_hook.py` and the crate); the controller vocabulary for keys 5 to 0; `tests/test_power_handover.py`, `tests/test_power_settle.py` and the test list entries; `docs/CRABCRAFT_SKILLS.md`, `docs/CRABCRAFT_BREAKING.md`, `docs/CRABCRAFT_POWER.md` |
 | `crabcraft-tasks-exports.patch` | 20.0 MB | the 13 trained policies as exported by `scripts/export.py`: `tasks/jumper/*/out/crabcraft/` (`actor.onnx`, `layout.json`, the trajectory for a tracked move, README), without the checkpoints |
 
 The ONNX policies of the six skills and of all seven breakdance moves ship in this game, in the
@@ -75,7 +75,10 @@ stages, and then the two jumps 1,250 (the 720) and 1,900 (the flip, its last 950
 laptop GPU) more to come to rest after their landing. Since then the six-step trained 2,000 more
 seeing its heading (on an RTX 5080), the 720 3,800 more with its targets clamped at the joint stops
 (the RTX 5090 laptop GPU, then the RTX 5080), and the flip about 2,000 more and a distillation
-step to come to rest near `HOME`, level (the RTX 5090 laptop GPU).
+step to come to rest near `HOME`, level (the RTX 5090 laptop GPU). Last, the spin 2,800 more with
+its targets clamped at the joint stops (the RTX 5090 laptop GPU), and the 720 a distillation step
+and about 3,750 more to come to rest near `HOME`, level, and to lean less in the air (the RTX 5090
+laptop GPU, then the RTX 5080).
 
 ## How good they are
 
@@ -105,30 +108,32 @@ mode is entered and the recording's own `root_quat`. The export before it could 
 and turned 345.9.
 
 The power moves, measured by `tools/eval_power.py` in their own environment (native MuJoCo, 32
-rollouts with the training's randomisation): the spin 2.32 turns a second (2.25 to 2.44), staying
-within 0.28 m of its spot. The two jumps are measured from the handover, the pose a controller
-switching into their mode hands them (each joint up to 0.1 rad off `HOME`, held 0.05 to 1.0 s):
-the 720, trained with its targets clamped at the joint stops as the controller clamps them, turns
-679 degrees in the air on average (525 to 752) at 0.33 m of rise, 32 of 32 landing upright; the
-back flip turns 384 degrees nose-up in the air on average (360 to 395), 32 of 32 landing upright,
-touching down 27 degrees nose-up (median; 38.7 at most). Both then come to rest
-(`tools/eval_calm.py`, from 0.5 s after the landing, 16 rollouts with the randomisation): the
-720's joints move at 0.04 rad/s RMS and the flip's at 0.03, against 1.42 and 3.03 for the jumps
-shipped before the settling, which shook after landing. The 720 rests 9.2 to 10.9 degrees nose-up
-on its rear legs; the flip within 1.5 degrees of level, every gait joint within 0.23 rad of
-`HOME`, until a switch to another mode brings either to that mode's `HOME`.
+rollouts with the training's randomisation, the spin's and the 720's targets clamped at the joint
+stops as the controller clamps them): the spin 2.29 turns a second (2.15 to 2.37), staying within
+0.23 m of its spot. The two jumps are measured from the handover, the pose a controller switching
+into their mode hands them (each joint up to 0.1 rad off `HOME`, held 0.05 to 1.0 s): the 720
+turns 719 and 716 degrees in the air on average over two seeds (643 to 762) at 0.34 m of rise, 64
+of 64 landing upright, leaning 42.4 degrees at the most in the air; the back flip turns 384
+degrees nose-up in the air on average (360 to 395), 32 of 32 landing upright, touching down 27
+degrees nose-up (median; 38.7 at most). Both then come to rest (`tools/eval_calm.py`, from 0.5 s
+after the landing, 16 rollouts with the randomisation): the 720's joints move at 0.02 rad/s RMS
+and the flip's at 0.03, against 1.42 and 3.03 for the jumps shipped before the settling, which
+shook after landing. The 720 rests within 1.4 degrees of level, its worst gait joint 0.16 rad from
+`HOME` at most; the flip within 1.5 degrees, every gait joint within 0.23 rad of `HOME`; a switch
+to another mode brings either to that mode's `HOME`.
 
 Through the crabcraft bundle's own controller (`tools/motion/jumper_sim.py` in this game, the
-mode switched into from standing and from walking, 12 trials each): the 720, its targets clamped
-at the joint stops like every other mode's, took off and landed 24 of 24 times, turning 673 to 749
-degrees in the air at 0.34 to 0.36 m of rise, and was at rest 1.005 to 1.12 s after the handover;
-the back flip landed 24 of 24 with the tilt fallback lifted for its mode (377 to 390 degrees in the
-air) and was at rest 0.82 to 0.925 s after it, and without the lift went to `safe` at the top of
-the flip 4 of 4 times; the six-step turned 357.7 degrees in each of 12 trials and handed back to
-walking. The spin, its targets let past the stops (below), ran 2.33 turns a second (2.29 to 2.36)
-from 2 s to 6 s, against 2.04 clamped. On the game's browser physics the 720 turns 682 to 750
-degrees and the flip 375 to 383 (12 trials each from standing and walking), and the six-step 357.7
-(6 trials). The numbers are in `docs/CRABCRAFT_POWER.md`, "The bundle with the three", and
+mode switched into from standing and from walking), every mode's targets clamped at the joint
+stops: the spin, 12 trials each, ran 2.29 and 2.30 turns a second (2.25 to 2.32) from 2 s to 6 s,
+every target it sent within the stops; the 720, 12 trials each, took off and landed 24 of 24 times,
+turning 719 to 744 degrees in the air at 0.35 to 0.37 m of rise, leaning 35.0 degrees at most, and
+was at rest 1.025 to 1.09 s after the handover, within a degree of level; the back flip landed 24 of
+24 with the tilt fallback lifted for its mode (377 to 390 degrees in the air) and was at rest 0.82
+to 0.925 s after it, and without the lift went to `safe` at the top of the flip 4 of 4 times; the
+six-step turned 357.7 degrees in each of 12 trials and handed back to walking. On the game's
+browser physics the 720 turns 721 to 753 degrees and the flip 375 to 383 (12 trials each from
+standing and walking), and the six-step 357.7 (6 trials). The numbers are in
+`docs/CRABCRAFT_POWER.md`, "The bundle with the three" and "The bundle within the stops", and
 `docs/CRABCRAFT_BREAKING.md`, "The six-step's heading".
 
 ## Not done
@@ -145,26 +150,31 @@ nothing catches a fall while the flip runs: a weak take-off that tips over keeps
 policy until the mode is left. The entering tick is still checked and `feedback_stale` still
 applies. A first try on hardware would want a soft floor and a hand on the release.
 
-**The spin sends targets past the joint stops.** Its training clamped no joint target, and the
-controller clamps every decoded target at its joint's stops, which cost the spin 0.3 turns a second
-through the bundle. Its mode sets `target_margin = 1.7` (rad): the controller lets its targets go
-up to 1.7 rad past a stop, and every other mode keeps the clamp. On a robot this means a joint that
-reaches its stop is held against it at the PD's torque, up to 1.746 N m (1.2 N m once the 0.3 s
-peak budget is spent), for as long as its target points past it and the spin is held, where under
-the clamp the torque fell to zero there (2.4% of the joint-steps in the spin's own environment).
-The transmitted target can reach about 6.45 rad (the shoulders' -4.75 rad stop less 1.7), and
-whether the servos take a position command that far outside their range is not checked against
-their protocol. None of this has run on a physical Jumper.
+**Every mode keeps its targets within the joint stops.** The controller clamps every decoded
+target at its joint's stops unless a mode sets `target_margin`, and no mode in the crabcraft bundle
+does. The spin and the 720 first trained with nothing clamping their targets and shipped with
+`target_margin = 1.7` (rad), which held a joint against its stop at up to 1.746 N m for as long as
+its target pointed past it and could send a target of about 6.45 rad. Both were trained on with
+their targets clamped at the stops as the controller clamps them. Through the bundle the spin now
+sends 2.58 rad at most and the 720 3.67, no target past a stop; the 720 pushes a joint into its
+stop in 0.4% of the joint-steps over the 1.5 s after the handover at a median 0.30 N m, against 6.2%
+at 1.20 N m with the margin, and the spin pushes none. None of this has run on a physical Jumper.
 
-**The 720 keeps within the stops, and what that cost.** It needed the same margin until it was
-trained on with its targets clamped at the stops as the controller clamps them. It now ships with
-no `target_margin`: every target it sends is within the stops (3.40 rad at most, against 4.45),
-and a joint pushes into its stop in 0.4 to 0.5% of the joint-steps over the 1.5 s after the
-handover at a median 0.27 N m, against 6.2% at 1.20 N m with the margin. It turns as far through
-the bundle (715 and 705 degrees on average from standing and walking, against 718 and 705), but
-rises 0.35 m instead of 0.39, rests about 10 degrees nose-up after landing, walks again 0.11 s
-later after the hand-back, and with the training's randomisation one landing in 32 reached 49.1
-degrees of tilt, against the cascade's 50. The back flip keeps the clamp: given the spin's margin
+**What the spin paid for it.** 2.29 and 2.30 turns a second through the bundle, against 2.33 and
+2.34 with the margin and 2.03 to 2.05 for the old policy merely clamped. It leans on more of its
+body: a calf, a claw palm or the shell is on the floor in 43% of its steps, against 33 to 35% for
+the export before (without randomisation; 27% against 14 to 16% with it). With those parts' grip
+on the floor taken down from 1.0 to 0.4 it spins 2.15 turns a second, against 2.24 for the export
+before with its margin: the figure to trust on a floor where its calves slip.
+
+**The 720 within the stops, and at rest.** Clamped, it first turned as far through the bundle (715
+and 705 degrees on average from standing and walking, against 718 and 705 with the margin) but
+rested about 10 degrees nose-up after landing and with the training's randomisation once leaned
+49.3 degrees in the air, against the cascade's 50. Trained on to rest near `HOME`, level, with a
+charge on leaning past 30 degrees, it now turns 727 and 733 on average (719 to 744), rests within
+0.9 degrees of level, walks again 0.44 s after the hand-back (0.775 before), leans 35.0 degrees at
+most through the bundle and 42.9 at the worst of 128 randomised flights. It still rises 0.35 to
+0.37 m, against 0.39 with the margin. The back flip keeps the clamp: given the spin's old margin
 it turned no further and bounced after 17 of 24 landings.
 
 **The six-step reads the IMU's yaw.** Its turn closes on the heading error the controller builds
@@ -175,10 +185,10 @@ behind with every degree it turned, and it would push to catch up. Turn the robo
 the IMU's yaw before running the move on one.
 
 **The 720 and the back flip have no end of their own.** Like the spin they have no recording and no
-clock: each jumps once and then stands still, the 720 nose-up on its rear legs and the flip level
-near `HOME`, until its switch is pressed again, or Menu (Ctrl) on its own. The game's Robot Mode
-presses the switch for the person at a fixed time after the handover, 1.4 s for the 720 and 1.2 s
-for the flip, 0.28 s and 0.275 s after the latest moment either was at rest through this bundle;
+clock: each jumps once and then stands still within a degree of level near `HOME`, until its
+switch is pressed again, or Menu (Ctrl) on its own. The game's Robot Mode presses the switch for
+the person at a fixed time after the handover, 1.4 s for the 720 and 1.2 s for the flip, 0.31 s
+and 0.275 s after the latest moment either was at rest through this bundle;
 it does not detect the landing.
 
 ## License
