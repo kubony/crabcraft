@@ -149,9 +149,11 @@ export async function advance(app, seconds, fps = 60) {
  * Record a shot. `duration` is in shot time (seconds of game time); `speed(t)` slows time down
  * (0.5 = half speed) for ramps, so the output can run longer than `duration`. `events` run at
  * their shot time before the frame is stepped; an event with a `mark` records the output frame
- * it landed on, for the edit. Writes <file>.mp4 and <file>.json.
+ * it landed on, for the edit. `probe`, a function evaluated in the page after every recorded frame,
+ * samples the page's state (a routine's clock, the robot's mode) into the sidecar's `probe` array,
+ * one entry per output frame. Writes <file>.mp4 and <file>.json.
  */
-export async function record(app, file, { duration, fps = 60, speed = null, events = [], stills = [], log = true }) {
+export async function record(app, file, { duration, fps = 60, speed = null, events = [], stills = [], log = true, probe = null }) {
   const rec = new Recorder(`${file}.mp4`, { fps });
   const ev = [...events].sort((a, b) => a.t - b.t);
   const marks = {};
@@ -162,6 +164,7 @@ export async function record(app, file, { duration, fps = 60, speed = null, even
   const stillSet = new Set(stills);
   const sizes = [];
   const blanks = [];
+  const probes = [];
   let lastGood = null;
   // Two frames before the first recorded one: the game culls crabs and places nameplates with the
   // camera of the previous frame, which after a cut is somewhere else entirely.
@@ -200,6 +203,7 @@ export async function record(app, file, { duration, fps = 60, speed = null, even
       if (log) console.log(`  ${file.split('/').pop()} frame ${rec.frames} came out blank: ${fix}`);
     }
     lastGood = buf;
+    if (probe) probes.push(await app.page.evaluate(probe));
     sizes.push(buf.length);
     if (sizes.length > 15) sizes.shift();
     if (stillSet.has(rec.frames)) writeFileSync(`${file}-${String(rec.frames).padStart(4, '0')}.jpg`, buf);
@@ -208,6 +212,7 @@ export async function record(app, file, { duration, fps = 60, speed = null, even
   }
   await rec.close();
   const meta = { frames: rec.frames, fps, duration, marks, times, wallSeconds: (Date.now() - t0) / 1000, blanks, errors: app.errors.slice() };
+  if (probe) meta.probe = probes;
   writeFileSync(`${file}.json`, JSON.stringify(meta));
   if (log) console.log(`  wrote ${file}.mp4: ${rec.frames} frames in ${meta.wallSeconds.toFixed(0)} s${app.errors.length ? `, ${app.errors.length} page errors` : ''}`);
   return meta;

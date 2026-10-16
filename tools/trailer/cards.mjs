@@ -4,7 +4,10 @@
 // layout.
 //
 // Usage: node tools/trailer/cards.mjs --url http://localhost:5213 --out <dir> [--layout land|port]
-//          [--what logo,end,captions]
+//          [--what logo,end,captions] [--captions <file.json>] [--logo-tag <text> --logo-tag-zh <text>]
+//          [--end-note <text> --end-note-zh <text>]
+// --captions defaults to tools/trailer/captions.json; the logo's tagline defaults to the trailer's;
+// --end-note adds a line (and its Chinese) under the end card's handles.
 import { chromium } from 'playwright';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -22,6 +25,16 @@ const outDir = resolve(opt('--out', 'trailer-out'));
 const layout = opt('--layout', 'land');
 const what = opt('--what', 'logo,end,captions').split(',');
 const size = layout === 'port' ? [1080, 1920] : [1920, 1080];
+const captionsFile = resolve(opt('--captions', resolve(here, 'captions.json')));
+const extra = {
+  logo: { tag: opt('--logo-tag'), tagZh: opt('--logo-tag-zh') },
+  end: { note: opt('--end-note'), noteZh: opt('--end-note-zh') },
+};
+const query = (mode) => {
+  const q = new URLSearchParams({ mode, layout });
+  for (const [k, v] of Object.entries(extra[mode] ?? {})) if (v) q.set(k, v);
+  return q;
+};
 const fps = 60;
 mkdirSync(outDir, { recursive: true });
 
@@ -32,7 +45,7 @@ async function card(mode, seconds) {
   const ctx = await browser.newContext({ viewport: { width: size[0], height: size[1] }, deviceScaleFactor: dsf });
   await ctx.routeWebSocket(/./, () => {});
   const page = await ctx.newPage();
-  await page.goto(`${base}/tools/trailer/cards.html?mode=${mode}&layout=${layout}`);
+  await page.goto(`${base}/tools/trailer/cards.html?${query(mode)}`);
   await page.waitForFunction(() => window.__cardsReady === true, null, { timeout: 30000 });
   const cdp = await ctx.newCDPSession(page);
   const file = resolve(outDir, `card-${mode}-${layout}.mp4`);
@@ -54,7 +67,7 @@ async function card(mode, seconds) {
 }
 
 async function captions() {
-  const list = JSON.parse(readFileSync(resolve(here, 'captions.json'), 'utf8'));
+  const list = JSON.parse(readFileSync(captionsFile, 'utf8'));
   const ctx = await browser.newContext({ viewport: { width: size[0], height: size[1] }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   for (const c of list) {

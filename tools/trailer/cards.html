@@ -99,8 +99,8 @@
     const img = el('img', 'logo', wrap);
     img.src = '/art/logo.webp';
     const shine = el('div', 'shine', wrap);
-    const tag = line('en gold', 'Six shells. One tide.', ly + lh / 2 + 18 * u, Math.round(46 * u));
-    const tagZh = line('zh', '六种甲壳，同一片潮汐', ly + lh / 2 + 84 * u, Math.round(28 * u));
+    const tag = line('en gold', q.get('tag') ?? 'Six shells. One tide.', ly + lh / 2 + 18 * u, Math.round(46 * u));
+    const tagZh = line('zh', q.get('tagZh') ?? '六种甲壳，同一片潮汐', ly + lh / 2 + 84 * u, Math.round(28 * u));
     const embers = [];
     for (let i = 0; i < 46; i++) {
       const e = el('div', 'ember', card);
@@ -160,7 +160,12 @@
     add('zh', '在浏览器里直接玩', 30, port ? 86 : 70);
     add('en mono', 'github.com/kubony/crabcraft', 40, port ? 84 : 66, 'font-family:Alegreya,serif;letter-spacing:0.04em;');
     add('en', '#Jumper  #CrabRobot  #OpenSourceRobot', port ? 30 : 30, 48, 'font-weight:600;color:#ffd97a;');
-    add('en', '@KingKong Robotics', 30, port ? 96 : 74, 'font-weight:600;color:#53f2e4;');
+    add('en', '@KingKong Robotics', 30, q.get('note') ? 58 : port ? 96 : 74, 'font-weight:600;color:#53f2e4;');
+    // An optional note under the handles (the breakdance video says it is simulation only).
+    if (q.get('note')) {
+      add('zh', q.get('note'), 26, 38, 'font-family:Alegreya,serif;letter-spacing:0.03em;font-weight:600;color:#f6ead0;');
+      add('zh', q.get('noteZh') ?? '', 24, port ? 80 : 58, 'letter-spacing:0.06em;color:#f6ead0;');
+    }
     add('zh', 'Built on Jumper by KingKong Robotics (Apache-2.0)', 24, 40, 'font-family:Alegreya,serif;letter-spacing:0.04em;font-weight:500;');
     add('zh', '基于 KingKong Robotics 的 Jumper 开发（Apache-2.0）', 22, 40, 'letter-spacing:0.06em;');
     const rule = el('div', 'rule', card);
@@ -188,20 +193,36 @@
     // Lower third by default; 'band' lays a dark gradient band under it for shots whose bottom is
     // busy with the game's own UI, 'top' puts it at the top.
     const pos = q.get('pos');
-    const base = pos === 'top' ? H * 0.06 : port ? H * 0.665 : H * (pos === 'band' ? 0.845 : 0.835);
+    if (pos === 'tag') {
+      // A move's name, top left: English in gold capitals over the Chinese, on a soft shade.
+      const x = (port ? 56 : 84) * u;
+      const y = (port ? 120 : 64) * u;
+      const shade = el('div', '', card);
+      shade.style.cssText = `position:absolute;left:0;top:0;width:${port ? W : W * 0.5}px;height:${y + 150 * u}px;` +
+        'background:radial-gradient(120% 100% at 0% 0%, rgba(5,6,10,0.62), rgba(5,6,10,0.3) 45%, transparent 75%);';
+      const te = el('div', 'en gold', card, en);
+      te.style.cssText += `position:absolute;left:${x}px;top:${y}px;font-size:${Math.round((port ? 62 : 52) * u)}px;line-height:1.1;letter-spacing:0.08em;`;
+      const tz = el('div', 'zh', card, zh);
+      afterFonts = () => {
+        const r = te.getBoundingClientRect();
+        tz.style.cssText += `position:absolute;left:${x + 4 * u}px;top:${r.bottom + 6 * u}px;font-size:${Math.round((port ? 36 : 30) * u)}px;`;
+        requestAnimationFrame(() => (document.body.dataset.ready = '1'));
+      };
+    }
+    const base = pos === 'top' ? H * 0.06 : port ? H * (pos === 'low' ? 0.75 : 0.665) : H * (pos === 'band' ? 0.845 : 0.835);
     if (pos === 'band') {
       const band = el('div', '', card);
       band.style.cssText = `position:absolute;left:0;right:0;top:${H * 0.7}px;bottom:0;` +
         'background:linear-gradient(180deg, rgba(5,6,10,0) 0%, rgba(5,6,10,0.78) 38%, rgba(5,6,10,0.9) 100%);';
     }
-    const shadeEl = el('div', 'cap-shade', card);
+    const shadeEl = pos === 'tag' ? document.createElement('div') : el('div', 'cap-shade', card);
     const w = port ? W * 1.1 : W * 0.62;
     shadeEl.style.cssText += `top:${base - enSize * 1.1}px;width:${w}px;height:${enSize * 4.2}px;margin-left:0;`;
-    const e = el('div', 'cap en', card, en);
+    const e = el('div', 'cap en', pos === 'tag' ? document.createElement('div') : card, en);
     e.style.cssText += `top:${base}px;font-size:${enSize}px;line-height:1.2;padding:0 ${port ? 60 : 120}px;`;
-    const z = el('div', 'cap zh', card, zh);
+    const z = el('div', 'cap zh', pos === 'tag' ? document.createElement('div') : card, zh);
     // Measure the English block once the fonts are in, so a wrapped line pushes the Chinese down.
-    afterFonts = () => {
+    if (pos !== 'tag') afterFonts = () => {
       const r = e.getBoundingClientRect();
       z.style.cssText += `top:${r.bottom + 12 * u}px;font-size:${zhSize}px;line-height:1.3;padding:0 ${port ? 60 : 120}px;`;
       requestAnimationFrame(() => (document.body.dataset.ready = '1'));

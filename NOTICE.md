@@ -54,4 +54,8 @@ Synthesised parts (bells, pads, sparkles, the servo motor, sweeps) and all of `s
 procedurally by `tools/art/audio_build.py` and are ours. Per-file credits are also in
 `public/audio/index.json`.
 
+The music of the breakdance video is not a file in this repository: `tools/trailer/breakdance/beat.py`
+synthesises it from sine waves, noise and filters (no samples, no third-party audio) each time the
+video is cut, and it is ours like the rest of the project.
+
 Every asset added to this repository must get a row here (source URL, author, license).
