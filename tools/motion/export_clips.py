@@ -471,10 +471,9 @@ def break_events(raw: Raw, events: dict, T: np.ndarray) -> dict:
     # next 0.2 s, the 20 gait joints' speeds averaged over 0.1 s stay under 0.2 rad/s RMS, the base's
     # roll and pitch rate so averaged under 5 deg/s and its tilt under 10 degrees, and over the span the
     # joint speed and the roll and pitch rate are under 1.0 rad/s and 15 deg/s RMS. Both jumps come to
-    # rest after their landing: the flip within a degree of level near HOME, 0.82 to 0.94 s after the
-    # handover, and the 720 about 10 degrees nose-up on its rear legs (just under the tilt bound, until
-    # the ramp to locomotion's HOME brings it level), 0.99 to 1.13 s after it, which leaves under 0.3 s
-    # before its let-go at 1.4 s. If it is not found before the let-go, the let-go stands in.
+    # rest after their landing, each within a degree of level near HOME: the flip 0.82 to 0.94 s after
+    # the handover, and the 720 1.0 to 1.09 s after it, which leaves over 0.3 s before its let-go at
+    # 1.4 s. If it is not found before the let-go, the let-go stands in.
     gait = [j for j, name in enumerate(JOINT_NAMES) if name not in ("LF_J4_joint", "RF_J4_joint")]
     qd = np.gradient(raw.q[:, gait], raw.t, axis=0)
     rate = body_rate(raw.quat, raw.t)[:, :2]
