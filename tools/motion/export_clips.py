@@ -640,8 +640,9 @@ def bundle_provenance(raw: Raw) -> dict:
     mjlab = manifest["runtimes"]["mjlab"]
     built = (manifest.get("built_from") or {}).get(raw.meta["source"], {})
     # The skills were recorded through the bundle as feat/crabcraft-skills built it; the breakdance
-    # through the one feat/crabcraft-dance built, which adds its modes, and the two jumps through the
-    # one feat/crabcraft-final built (record_clips.py notes the branch the bundle's checkout is on).
+    # through the one feat/crabcraft-dance built, which adds its modes, and the spin and the two jumps
+    # through the one feat/crabcraft-final built (record_clips.py notes the branch the bundle's
+    # checkout is on).
     branch = raw.meta.get("jumper_branch") or (
         "feat/crabcraft-dance" if raw.meta["kind"] == "break" else "feat/crabcraft-skills")
     return {

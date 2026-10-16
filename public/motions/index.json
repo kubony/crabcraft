@@ -84,11 +84,11 @@
    "source": "power_spin",
    "kind": "break",
    "fps": 50.0,
-   "frameCount": 322,
-   "duration": 6.44,
+   "frameCount": 321,
+   "duration": 6.42,
    "loop": false,
-   "speed": 0.01641,
-   "bytes": 21843
+   "speed": 0.02541,
+   "bytes": 21764
   },
   {
    "id": "break_toprock",

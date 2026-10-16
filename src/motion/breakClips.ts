@@ -44,7 +44,7 @@ export const BREAK_CLIPS = {
     task: 'jumper.power_spin_feet',
     method: 'bundle',
     from: 0.675,
-    to: 5.43,
+    to: 5.415,
     events: { hit: 4.18, policy_end: 4.22, policy_start: 0.675, spin_from: 0.675, spin_to: 4.18 },
   },
   break_toprock: {
