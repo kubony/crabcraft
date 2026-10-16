@@ -11,7 +11,7 @@
   { "id": "b3fix", "en": "Fix: fine-tune it with a small penalty on every motion after the landing.", "zh": "修复：微调训练，落地后的每个多余动作都扣一点分。", "portPos": "low", "font": "plain" },
   { "id": "b4why", "en": "Why: the policy has no clock. Standing at HOME looks exactly like the moment to jump.", "zh": "原因：策略没有时钟。站在 HOME 姿态，看起来就和“该起跳了”一模一样。", "portPos": "low", "font": "plain" },
   { "id": "b4fix", "en": "Fix: teach it to rest near HOME instead. Tilt at rest: 7.7° before, 1.0° after.", "zh": "修复：教它停在 HOME 附近。静止时的倾斜：修复前 7.7 度，修复后 1.0 度。", "portPos": "low", "font": "plain" },
-  { "id": "b5why", "en": "Why: nothing in training stopped it aiming its joints past their stops. The controller clips that: 598°.", "zh": "原因：训练时没有任何限制，它学会把关节目标定到限位之外。控制器会截断这些目标，结果只转了 598 度。", "portPos": "low", "font": "plain" },
+  { "id": "b5why", "en": "Why: nothing in training stopped it aiming its joints past their stops. The controller clips that, and it fell 90 to 120° short.", "zh": "原因：训练时没有任何限制，它学会把关节目标定到限位之外。控制器会截断这些目标，结果少转了 90 到 120 度。", "portPos": "low", "font": "plain" },
   { "id": "b5fix", "en": "Fix: retrain it with its targets clamped at the stops. Still about 710°.", "zh": "修复：在目标被限位截断的条件下重新训练，仍然能转约 710 度。", "portPos": "low", "font": "plain" },
   { "id": "b6why", "en": "Why: the six-step could not see which way it was facing. It stopped at 345.9°.", "zh": "原因：六步看不到自己朝向哪里，停在了 345.9 度。", "portPos": "low", "font": "plain" },
   { "id": "b6fix", "en": "Fix: one more input, its heading error from the IMU. Now it turns 357.7°.", "zh": "修复：多给一个输入，来自 IMU 的朝向误差。现在能转到 357.7 度。", "portPos": "low", "font": "plain" },
