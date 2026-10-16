@@ -320,8 +320,8 @@
       "sha256": "be95c575ad917648c05b4c5155a8b836aa1aaeb4926f3a5bec774abf5953a7ce"
     },
     "controller.toml": {
-      "bytes": 23925,
-      "sha256": "d2915cf81fc1d8045f1e360826958f632f5cfaead393a48832ff59203a0a702e"
+      "bytes": 24468,
+      "sha256": "7448b2a1e4cccd9f233326018decc2158c47efb645ce59cca3ccbd9dd9ca88dc"
     },
     "dance_brazilian.json": {
       "bytes": 7107,
@@ -457,11 +457,11 @@
     },
     "models/power_jumpspin.onnx": {
       "bytes": 1533624,
-      "sha256": "b8fa663726cc90110d657552ec48fc4ba00077fb4ee3947ddb67247f7ccd63ae"
+      "sha256": "dd7cdd6c1b1bb2d68ebd06ce5bfa6ac12112eff8314e1550a6a1250291ed07d4"
     },
     "models/power_spin.onnx": {
       "bytes": 1533624,
-      "sha256": "e9e9d5692f525ef8f4cda20e452bbee7d44495c1a98848c9f865e59771f022d2"
+      "sha256": "64c04fd406ee99f61b15c7b4039ed5bae6e47b43ff6b230c98df112a78e6f7c0"
     },
     "models/skill_cast.onnx": {
       "bytes": 1129112,
@@ -501,11 +501,11 @@
     },
     "power_jumpspin.json": {
       "bytes": 7435,
-      "sha256": "e60f80e356684f2f8365734c1bb7028d118ad71059566b84254bbe157428e587"
+      "sha256": "50dabd4daf017b778c67b3e6615afc62e355c9bf325878809ce918a8347d6b1e"
     },
     "power_spin.json": {
-      "bytes": 7419,
-      "sha256": "ecc01c4935ee67d0bab774ab46a40f923c3960e2fee4558d708f2756fdd315ad"
+      "bytes": 7429,
+      "sha256": "e6093bfe3912e0a5d7190138073af4eea4447060da9746917ceccb17fee9ac9c"
     },
     "powerdown.motion.trajectory.json": {
       "bytes": 103432,
@@ -1151,9 +1151,8 @@
     },
     "power_spin": {
       "task": "jumper.power_spin_feet",
-      "from": "logs/jumper/jumper.power_spin/2026-10-15_13-26-45/model_2998.pt",
+      "from": "logs/jumper/jumper.power_spin_feet/2026-10-17_00-00-17/model_5800.pt",
       "export": "tasks/jumper/power_spin_feet/out/crabcraft",
-      "target_margin": 1.7,
       "pad": {
         "button": "LB",
         "on": "toggle",
@@ -1176,7 +1175,7 @@
     },
     "power_jumpspin": {
       "task": "jumper.power_jumpspin720",
-      "from": "logs/jumper/jumper.power_jumpspin720/2026-10-16_21-48-22/model_11048.pt",
+      "from": "logs/jumper/jumper.power_jumpspin720/2026-10-17_02-12-11/model_14800.pt",
       "export": "tasks/jumper/power_jumpspin720/out/crabcraft",
       "pad": {
         "button": "RB",

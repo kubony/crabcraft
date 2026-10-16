@@ -60,16 +60,21 @@ exclusive = true
 # The breaking moves, from their clips (docs/CRABCRAFT_BREAKING.md, tilt at
 # most): toprock 4.6, six-step 0.0, and the two freezes 34.4 -- held for 1.68 s
 # with 15.6 degrees to spare, and the policies hold them at 34.3 to 34.8. The
-# spin has no clip; measured on its policy (native MuJoCo, no randomisation,
-# docs/CRABCRAFT_POWER.md): 9.0 degrees.
+# spin has no clip; measured through this controller (docs/CRABCRAFT_POWER.md,
+# "The bundle within the stops", 24 trials from standing and walking, its
+# targets clamped at the stops): 7.2 to 9.2 degrees at most. The export before
+# it, on its own policy (native MuJoCo, no randomisation): 9.0.
 #
 # The 720 jump spin, measured through this controller (docs/CRABCRAFT_POWER.md,
-# "The bundle with the three", 24 trials from standing and walking, its targets
-# clamped at the stops like every other mode's): 35.8 to 42.7 degrees at most,
-# at its landing. Closer than any other move: in its own environment, with the
-# training's randomisation, one landing of 32 reached 49.1 ("Within the
-# stops"). The export before it, its targets let 1.7 rad past the stops, peaked
-# at 31.7 to 40.8 through this controller ("The final bundle").
+# "The 720 at rest", 24 trials from standing and walking, its targets clamped at
+# the stops like every other mode's, and the same again in "The bundle within
+# the stops"): 30.8 to 35.0 degrees at most, in the air,
+# where it leans as it turns. In its own environment, with the training's
+# randomisation, 42.4 at the most of 64 flights (two seeds). It now charges that
+# lean past 30 degrees (`tilt_past`); the export before it peaked at 35.8 to 42.7
+# through this controller and at 49.3 in its own environment ("Within the
+# stops"), and the one before that, its targets let 1.7 rad past the stops, at
+# 31.7 to 40.8 here ("The final bundle").
 #
 # The back flip (`jumper.power_backflip`) does not fit under this number and is
 # not meant to: it passes 177 degrees in the air. Under this rule it went to
@@ -231,7 +236,10 @@ enter = "skill_sit"
 # jump jumps once and stands, until its switch is pressed again or Menu (Ctrl)
 # lets go of it. Same place in the order and for the same reason: asked for,
 # never while the robot is tilted or blind -- which holds for the back flip too,
-# since `skip_tilt_check` spares only the ticks after the one that enters.
+# since `skip_tilt_check` spares only the ticks after the one that enters. No
+# state in this bundle sets `target_margin`, so the controller clamps every
+# mode's targets at the joint stops; the spin and the 720 trained under that
+# clamp (the manifest's `_stops`).
 [[fsm.rule]]
 when = "button:break_toprock"
 enter = "break_toprock"
@@ -848,7 +856,6 @@ task = "jumper.power_jumpspin720"
 name = "power_spin"
 model = "power_spin.onnx"
 task = "jumper.power_spin_feet"
-target_margin = 1.7
 
 [[fsm.state]]
 name = "skill_cast"
