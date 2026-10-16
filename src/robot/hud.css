@@ -358,3 +358,11 @@
 .rm-btn.routine { border-color: rgba(255, 74, 87, 0.45); }
 .rm-btn.routine .kb { color: var(--rm-red-hi); }
 .rm-btn.routine.on .kb { color: rgba(255, 255, 255, 0.85); }
+@media (max-height: 860px) {
+  .rm.rm-routine-on .rm-log { top: 462px; }
+}
+/* Smaller windows: the appearance card would cover the routine's line and the log, so it steps
+   aside while the routine runs (T still switches the look) and comes back when it ends. */
+@media (max-width: 1560px), (max-height: 860px) {
+  .rm.rm-routine-on .rm-look { display: none; }
+}
