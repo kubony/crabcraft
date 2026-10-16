@@ -16,6 +16,9 @@ grooveB (busier, horns, scratch fills), half (half-time for slow motion), finale
 outro (one bar of groove, a final stab that rings out over `tail` seconds), rest (nothing but the
 crackle: another track plays there, the live routine's own music in the showcase reel).
 
+Hits: impact, crash, riser and rcym (with `d`, seconds), scratch, and sad (four falling horn notes,
+the making-of's blooper punchline), each at `t` seconds.
+
 Usage: uv run --with numpy --with scipy python tools/trailer/breakdance/beat.py <arrangement.json> <out.wav>
 Writes 48 kHz stereo 32-bit float WAV (not loudness-normalised: the edit does that).
 """
@@ -220,6 +223,26 @@ def scratch(pattern, beats=1.0):
         pos = p[-1]
     out = filt(out, 'band', (300, 7000))
     return np.tanh(1.6 * out) * 0.38
+
+
+def sad_horn(vel=1.0):
+    """Four falling horn notes, the last held and wobbling under a plunger: 'wah wah wah wahhh',
+    the making-of's punchline for a jump that does not jump."""
+    seq = [('D4', 0.30), ('C#4', 0.30), ('C4', 0.30), ('B3', 1.15)]
+    parts = []
+    for i, (name, d) in enumerate(seq):
+        f = note(name)
+        t = t_axis(d + 0.06)
+        last = i == len(seq) - 1
+        wob = np.clip((t - 0.15) / 0.2, 0, 1) * np.sin(2 * np.pi * 5.5 * t) if last else np.zeros(len(t))
+        ph = 2 * np.pi * np.cumsum(f * (1 + 0.012 * wob)) / SR
+        # The plunger: the tone opens after the attack and closes towards the note's end.
+        open_ = np.clip(t / 0.08, 0, 1) * (1 - 0.6 * np.clip((t - 0.5 * d) / (0.5 * d), 0, 1)) * (1 + 0.3 * wob)
+        y = sum((0.25 + 0.7 * np.clip(open_, 0, 1)) ** (h - 1) / h ** 0.6 * np.sin(h * ph) for h in range(1, 14))
+        e = np.clip(t / 0.03, 0, 1) * np.where(t < d, 1.0, np.exp(-(t - d) / 0.05))
+        parts.append((y * e)[: int(d * SR)] if not last else y * e)
+    x = np.concatenate(parts)
+    return np.tanh(1.2 * x / np.max(np.abs(x))) * vel * 0.4
 
 
 def impact(vel=1.0):
@@ -457,6 +480,8 @@ def render(arr):
             S.put('drums', reverse_cymbal(h['d'], h.get('vel', 0.9)), h['t'] - h['d'])
         elif h['kind'] == 'scratch':
             S.put('music', scratch([(0, 0.25, 1), (0.25, 0.25, -1), (0.5, 0.25, 1), (0.75, 0.25, -1)], 1), h['t'])
+        elif h['kind'] == 'sad':
+            S.put('music', sad_horn(h.get('vel', 1.0)), h['t'], send=0.3)
 
     # Mix: sidechain the music under the kick, a stereo room on the send, gentle glue.
     duck = 1 - 0.3 * np.clip(S.duck, 0, 1)
