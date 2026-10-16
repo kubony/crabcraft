@@ -37,11 +37,11 @@ turns instead of one).
 
 | file | size | contents |
 |---|---|---|
-| `crabcraft-tasks.patch` | 693 KB | the tasks (`tasks/jumper/skill_*`, `break_*`, `power_*`, the reference clips in `media/`); `tools/author_skill_clips.py` and `tools/author_breaking_clips.py` (author the clips and run the feasibility checks); `tools/eval_skill.py` and `tools/eval_power.py` (the acceptance checks); `deploy/crabcraft.manifests.json` and `deploy/crabcraft.controller.toml` (the example bundle plus the skills and the breakdance moves its controller can run); the controller vocabulary for keys 5 to 0; the test list entries; `docs/CRABCRAFT_SKILLS.md`, `docs/CRABCRAFT_BREAKING.md`, `docs/CRABCRAFT_POWER.md` |
+| `crabcraft-tasks.patch` | 762 KB | the tasks (`tasks/jumper/skill_*`, `break_*`, `power_*`, the reference clips in `media/`); `tools/author_skill_clips.py` and `tools/author_breaking_clips.py` (author the clips and run the feasibility checks); `tools/eval_skill.py` and `tools/eval_power.py` (the acceptance checks); `deploy/crabcraft.manifests.json` and `deploy/crabcraft.controller.toml` (the example bundle plus the six skills and all seven breakdance moves); `scripts/deploy.py` carrying a manifest mode's `skip_tilt_check` into its state (with `deploy/BUNDLE.md` and a test in `tests/test_deploy_hook.py`); the controller vocabulary for keys 5 to 0; `tests/test_power_handover.py` and the test list entries; `docs/CRABCRAFT_SKILLS.md`, `docs/CRABCRAFT_BREAKING.md`, `docs/CRABCRAFT_POWER.md` |
 | `crabcraft-tasks-exports.patch` | 20.0 MB | the 13 trained policies as exported by `scripts/export.py`: `tasks/jumper/*/out/crabcraft/` (`actor.onnx`, `layout.json`, the trajectory for a tracked move, README), without the checkpoints |
 
-The skills' ONNX policies, the four tracked breaking moves' and the spin's ship in this game at
-`public/robot/bundle/models/`. The 720 and the back flip are not in the bundle (below).
+The ONNX policies of the six skills and of all seven breakdance moves ship in this game, in the
+crabcraft bundle at `public/robot/bundle/`.
 
 ## Apply
 
@@ -53,7 +53,7 @@ git apply /path/to/crabcraft/jumper/crabcraft-tasks-exports.patch   # optional, 
 ```
 
 The exports live under `out/`, which Jumper's `.gitignore` ignores; use `git add -f` if you commit
-them. Both patches applied to a fresh `78966f4` reproduce our branch file for file (1073 files,
+them. Both patches applied to a fresh `78966f4` reproduce our branch file for file (1077 files,
 `diff -r` empty).
 
 ## Train, check, bundle
@@ -98,9 +98,18 @@ cannot see its heading, so the turn is open loop. It did not pass the check we w
 
 The power moves, measured by `tools/eval_power.py` in their own environment (native MuJoCo, 32
 rollouts with the training's randomisation): the spin 2.32 turns a second (2.25 to 2.44), staying
-within 0.28 m of its spot; the 720 turns 708 degrees in the air on average (635 to 756), 32 of 32
-landing upright; the back flip turns 413 degrees in the air (359 to 424) and lands 32 of 32
-upright, touching down 8 to 57 degrees nose-up.
+within 0.28 m of its spot. The two jumps are measured from the handover, the pose a controller
+switching into their mode hands them (each joint up to 0.1 rad off `HOME`, held 0.05 to 1.0 s):
+the 720 turns 735 degrees in the air on average (664 to 802) at 0.34 m of rise, 32 of 32 landing
+upright; the back flip turns 385 degrees nose-up in the air on average over all 32 (376 to 401 in
+the 31 that landed upright; the other was a weak take-off, 115 degrees, that tipped onto its rear
+feet), touching down 31 degrees nose-up (median; 36.6 at most).
+
+Through the crabcraft bundle's own controller (`tools/motion/jumper_sim.py` in this game, the
+mode switched into from standing, walking or turning): the 720 took off and landed 20 of 20
+times, turning 512 to 674 degrees in the air; the back flip landed 12 of 12 with the tilt fallback
+lifted for its mode (385 to 393 degrees in the air, under 2.7 degrees of tilt 0.3 s after the
+touchdown) and 0 of 12 without it (the controller dropped it to `safe` at the top of the flip).
 
 ## Not done
 
@@ -108,13 +117,19 @@ upright, touching down 8 to 57 degrees nose-up.
 has the browser and MuJoCo hosts but no board controller and no `.rknn` models. The power moves and
 the six-step are results in simulation only.
 
-**The 720 and the back flip only start from their training environment's reset.** Their policies
-see no clock and no command, and every training episode began at a reset whose first observation
-shows the servos' torque at their limit; held standing at `HOME` for half a second first, neither
-jumps. A controller switching into a mode hands the policy exactly that standing robot, so these two
-are not modes of the bundle and are not in Robot Mode; the game plays them from rollouts in their
-own environment (`tools/motion/record_rollouts.py`). The back flip would also need the real
-controller's 50-degree tilt fallback disabled: it passes 178 degrees in the air.
+**The back flip's mode lifts the controller's tilt fallback.** The flip turns upside down in the air
+(177 degrees of tilt), and the cascade's 50-degree `tilted` rule would drop it to `safe`, damping
+only, at the top of the flip. So `power_backflip` sets `skip_tilt_check` in the manifest, which
+`scripts/deploy.py` now writes into that mode's state and no other. On a physical robot this means
+nothing catches a fall while the flip runs: a weak take-off that tips over keeps running the flip's
+policy until the mode is left. The entering tick is still checked and `feedback_stale` still
+applies. A first try on hardware would want a soft floor and a hand on the release.
+
+**The 720 and the back flip have no end of their own.** Like the spin they have no recording and no
+clock: each jumps once and then stands at `HOME` until its switch is pressed again, or Menu (Ctrl)
+on its own. The game's Robot Mode presses the switch for the person at a fixed time after the
+handover, 1.4 s for the 720 and 1.2 s for the flip, measured on the game's recordings of both
+moves through this bundle; it does not detect the landing.
 
 ## License
 

@@ -67,18 +67,45 @@ index f4bd8f4..5dae722 100644
      "The arrows cost the viewer less: left and right step a paused scene.",
      "",
      "**MuJoCo's viewer reports a key's press and nothing else.** The callback is",
+diff --git a/deploy/BUNDLE.md b/deploy/BUNDLE.md
+index 92561af..998cba6 100644
+--- a/deploy/BUNDLE.md
++++ b/deploy/BUNDLE.md
+@@ -211,7 +211,7 @@ an export inside the repository:
+ | `files` | {path: {`bytes`, `sha256`}} | every file in the bundle except `bundle.json` itself, by its path inside it, `README.md` and the manuals included. SHA-256 in lowercase hex |
+ | `reference` | string \| null | `"reference.json"`, or `null` when there is none |
+ | `manuals` | {language: file} | `en`, `"manual.en.json"`, always; a translation adds its own — `zh`, `"manual.zh.json"` |
+-| `built_from` | object | manifest builds only. Per mode: `task`; `from`, the checkpoint the export recorded (`_checkpoint.path`) or `"(the export records no checkpoint)"`; `export`, repository-relative when it is inside it; `hook` when the mode carries one; and the mode's `pad` and `keys` switches, as the manifest writes them, where it has them |
++| `built_from` | object | manifest builds only. Per mode: `task`; `from`, the checkpoint the export recorded (`_checkpoint.path`) or `"(the export records no checkpoint)"`; `export`, repository-relative when it is inside it; `hook` when the mode carries one; `skip_tilt_check`, `true`, when the mode lifts the tilt fallback; and the mode's `pad` and `keys` switches, as the manifest writes them, where it has them |
+ 
+ `runtimes`, per host:
+ 
+@@ -376,7 +376,10 @@ then `[[fsm.button]]` entries — for each entry of the manifest's `buttons`, wi
+ `keys` switches, named after the mode — one for a `pad` switch's button and one per key of
+ a `keys` switch, each with the switch's `on` (`toggle` when it gives none), `with` and
+ `from`; and one `[[fsm.state]]` with `model = "<mode>.onnx"` and `task = "<task>"` per mode,
+-modes sorted, plus the mode's `hook` as an inline table when the manifest gives one. The
++modes sorted, plus the mode's `hook` as an inline table when the manifest gives one, and
++`skip_tilt_check = true` when the manifest's mode says `"skip_tilt_check": true` (a JSON
++boolean; anything else is refused, and left out it is `false`). That is the only way a
++mode gets it: the
+ `fsm` file may declare no button, no `[fsm.keyboard]` and no state with a model — the
+ bundler refuses one that does, so the two halves cannot name the same control.
+ 
 diff --git a/deploy/crabcraft.controller.toml b/deploy/crabcraft.controller.toml
 new file mode 100644
-index 0000000..ba3cd83
+index 0000000..92d811e
 --- /dev/null
 +++ b/deploy/crabcraft.controller.toml
-@@ -0,0 +1,261 @@
+@@ -0,0 +1,278 @@
 +# The crabcraft bundle's state machine: the jumper bundle's cascade
 +# (`jumper.controller.toml`, which this copies rule for rule and number for
 +# number) plus the six skills "World of Crabcraft" plays, `jumper.skill_*`
 +# (docs/CRABCRAFT_SKILLS.md), and its breakdance: the four tracked breaking
-+# moves, `jumper.break_*` (docs/CRABCRAFT_BREAKING.md), and the spin,
-+# `jumper.power_spin_feet` (docs/CRABCRAFT_POWER.md). A copy rather than an include: the crate reads
++# moves, `jumper.break_*` (docs/CRABCRAFT_BREAKING.md), and the three power
++# moves, the spin, `jumper.power_spin_feet`, the 720 jump spin,
++# `jumper.power_jumpspin720`, and the back flip, `jumper.power_backflip`
++# (docs/CRABCRAFT_POWER.md). A copy rather than an include: the crate reads
 +# one file, and a change to the jumper bundle's cascade is a decision to make
 +# here too, not one to inherit without reading.
 +#
@@ -133,17 +160,22 @@ index 0000000..ba3cd83
 +# spin has no clip; measured on its policy (native MuJoCo, no randomisation,
 +# docs/CRABCRAFT_POWER.md): 9.0 degrees.
 +#
-+# The back flip (`jumper.power_backflip`) would not fit under this number: it
-+# passes 178 degrees in the air and lands at up to 57, so running it needs
-+# `skip_tilt_check` on its state, which a mode composed from a manifest cannot
-+# set. It is not in this bundle, and nor is the 720 jump spin, for a reason of
-+# their own: neither takes off from a robot standing at HOME
-+# (docs/CRABCRAFT_POWER.md, "Under the controller").
++# The 720 jump spin, measured through this controller (docs/CRABCRAFT_POWER.md,
++# "Through the bundle's controller", 20 trials from standing, walking and
++# turning): 35.3 to 44.1 degrees at most, at its landing.
++#
++# The back flip (`jumper.power_backflip`) does not fit under this number and is
++# not meant to: it passes 177 degrees in the air. Under this rule it went to
++# `safe` at the top of the flip, 0.22 s after the handover, and came down limp.
++# So its mode, and only its mode, sets `skip_tilt_check` -- in the manifest
++# (`"skip_tilt_check": true`), which composes its state; the manifest's note on
++# `power_backflip` says what that costs on a robot. While the flip runs nothing
++# here catches a tilt; the tick that enters it is still checked.
 +#
 +# So the limit is not sized to let a motion through -- it is where an attitude
 +# stops being one the robot chose.
 +#
-+# No state sets `skip_tilt_check`, so this applies during the jump as well.
++# Every other state, the jump included, is under this rule.
 +tilt_limit = 0.873
 +
 +# Feedback older than this is not feedback. 100 ms is five control periods at
@@ -288,9 +320,11 @@ index 0000000..ba3cd83
 +
 +# The breakdance. The four tracked moves are recordings like the skills, ending
 +# by themselves and left early the same way (Menu, or Ctrl, on its own). The
-+# spin has no recording and no clock: it spins until its switch is pressed
-+# again or Menu (Ctrl) lets go of it. Same place in the order and for the same
-+# reason: asked for, never while the robot is tilted or blind.
++# spin and the two jumps have no recording and no clock: the spin spins, and a
++# jump jumps once and stands, until its switch is pressed again or Menu (Ctrl)
++# lets go of it. Same place in the order and for the same reason: asked for,
++# never while the robot is tilted or blind -- which holds for the back flip too,
++# since `skip_tilt_check` spares only the ticks after the one that enters.
 +[[fsm.rule]]
 +when = "button:break_toprock"
 +enter = "break_toprock"
@@ -310,6 +344,14 @@ index 0000000..ba3cd83
 +[[fsm.rule]]
 +when = "button:power_spin"
 +enter = "power_spin"
++
++[[fsm.rule]]
++when = "button:power_jumpspin"
++enter = "power_jumpspin"
++
++[[fsm.rule]]
++when = "button:power_backflip"
++enter = "power_backflip"
 +
 +# The claw, carried on either side: one jumper.five_foot export, two modes, the
 +# side in each one's hook. Below the recordings, and that is not only habit:
@@ -336,41 +378,42 @@ index 0000000..ba3cd83
 +enter = "locomotion"
 diff --git a/deploy/crabcraft.manifests.json b/deploy/crabcraft.manifests.json
 new file mode 100644
-index 0000000..7730275
+index 0000000..6f6f9b2
 --- /dev/null
 +++ b/deploy/crabcraft.manifests.json
-@@ -0,0 +1,225 @@
+@@ -0,0 +1,242 @@
 +{
 +  "schema": "kk-deploy-manifests/1",
 +  "_source": "Maintained by hand, as deploy/manifests.json is. `python scripts/deploy.py --manifests deploy/crabcraft.manifests.json` builds the bundle in it.",
 +  "_why": [
 +    "World of Crabcraft's bundle: the jumper bundle, the six skills that game plays,",
 +    "jumper.skill_* (docs/CRABCRAFT_SKILLS.md), and its breakdance: four tracked moves,",
-+    "jumper.break_* (docs/CRABCRAFT_BREAKING.md), and the spin, jumper.power_spin_feet",
-+    "(docs/CRABCRAFT_POWER.md). In a file of its own so that",
++    "jumper.break_* (docs/CRABCRAFT_BREAKING.md), and its three power moves, the spin,",
++    "jumper.power_spin_feet, the 720 jump spin, jumper.power_jumpspin720, and the back flip,",
++    "jumper.power_backflip (docs/CRABCRAFT_POWER.md). In a file of its own so that",
 +    "deploy/manifests.json keeps the one bundle `python scripts/deploy.py` builds without",
 +    "being told which. Read deploy/manifests.json's `_controls` and `_hooks` first: they",
 +    "hold for this file word for word."
 +  ],
 +  "bundles": {
 +    "crabcraft": {
-+      "description": "The jumper bundle (every mode, switch and leave as it has them) plus the six skills \"World of Crabcraft\" plays, jumper.skill_*: on Menu + A, X, Y, LB, RB and L3 on the pad, and 5 6 7 8 9 0 on the keyboard (either row), from locomotion; and its breakdance, the toprock, the six-step, the claw stand, the one-claw freeze and the spin: on Home + A, X, Y, L3 and LB on the pad, and Shift + 1 2 3 4 5 on the keyboard (either row), from locomotion. Menu (Ctrl) on its own leaves a skill or a breaking move as it leaves a dance or a gesture.",
++      "description": "The jumper bundle (every mode, switch and leave as it has them) plus the six skills \"World of Crabcraft\" plays, jumper.skill_*: on Menu + A, X, Y, LB, RB and L3 on the pad, and 5 6 7 8 9 0 on the keyboard (either row), from locomotion; and its breakdance, the toprock, the six-step, the claw stand, the one-claw freeze, the spin, the 720 jump spin and the back flip: on Home + A, X, Y, L3, LB, RB and d-pad up on the pad, and Shift + 1 2 3 4 5 6 7 on the keyboard (either row), from locomotion. Menu (Ctrl) on its own leaves a skill or a breaking move as it leaves a dance or a gesture; the spin and the two jumps, which have no recording, also end on their own switch pressed again. The back flip's mode lifts the cascade's tilt fallback while it is active.",
 +      "fsm": "crabcraft.controller.toml",
 +      "_why": "A bundle of its own rather than six modes added to `jumper`, which is laid out as the robot's operator guide, Control-agent 3.1, and has no skills in it. The modes copied from `jumper` carry its fields without its comments; the `jumper` bundle in deploy/manifests.json is where each one is explained.",
-+      "_reached_by": "The skills sit on Menu chords because every pad button alone is taken in locomotion (A the jump, LB and RB the claws, B the release, R3 the posture's shift) and the d-pad is the gestures'. While Menu is held the button answers only the chord. X and Y carry the dictionary's `unresolved` note: which physical button each is has not been pressed to settle. The keyboard's 5 6 7 8 9 0 sit next to the gestures' 1 2 3 4. The breaking moves sit on Home chords, on the skills' buttons held with the other button the pad has spare, and while Home is held the button answers only the chord (B stays the release's: the bundle check refuses a switch on a control locomotion reads); on the keyboard on Shift + 1 to 5, a row of their own beside the gestures' 1 to 4 and the dances' Ctrl + 1 to 4. Two of the game's power moves are not in this bundle. The 720 jump spin (jumper.power_jumpspin720) and the back flip (jumper.power_backflip) take off only from their training environment's reset, whose first observation shows 18 of the 20 joints' torque at the servo's limit; from a robot standing at HOME, which is where a mode switch leaves one, neither jumps (docs/CRABCRAFT_POWER.md, \"Under the controller\"). The back flip would also need the cascade's 50-degree `tilt_limit` lifted: it passes 178 degrees in the air and lands at up to 57.",
++      "_reached_by": "The skills sit on Menu chords because every pad button alone is taken in locomotion (A the jump, LB and RB the claws, B the release, R3 the posture's shift) and the d-pad is the gestures'. While Menu is held the button answers only the chord. X and Y carry the dictionary's `unresolved` note: which physical button each is has not been pressed to settle. The keyboard's 5 6 7 8 9 0 sit next to the gestures' 1 2 3 4. The breaking moves sit on Home chords, on the skills' buttons held with the other button the pad has spare, and while Home is held the button answers only the chord (B stays the release's: the bundle check refuses a switch on a control locomotion reads); on the keyboard on Shift + 1 to 7, a row of their own beside the gestures' 1 to 4 and the dances' Ctrl + 1 to 4. The 720 jump spin takes the last of the skills' buttons, RB; the back flip goes on d-pad up held with Home, a layer of its own beside the gestures' d-pad alone and the dances' Menu + d-pad. Both jumps take off from the robot a mode switch hands over, standing at HOME (docs/CRABCRAFT_POWER.md, \"The handover start\").",
 +      "leave": [
 +        {
 +          "name": "leave_motion",
-+          "leaves": ["dance_crab", "dance_brazilian", "dance_maze", "dance_dream_wings", "gesture_hello", "gesture_bow", "gesture_paw", "gesture_salute", "skill_swipe", "skill_slam", "skill_cast", "skill_flinch", "skill_powerdown", "skill_sit", "break_toprock", "break_sixstep", "break_clawstand", "break_oneclaw", "power_spin"],
++          "leaves": ["dance_crab", "dance_brazilian", "dance_maze", "dance_dream_wings", "gesture_hello", "gesture_bow", "gesture_paw", "gesture_salute", "skill_swipe", "skill_slam", "skill_cast", "skill_flinch", "skill_powerdown", "skill_sit", "break_toprock", "break_sixstep", "break_clawstand", "break_oneclaw", "power_spin", "power_jumpspin", "power_backflip"],
 +          "pad": {
 +            "button": "menu",
 +            "on": "fall",
-+            "from": ["dance_crab", "dance_brazilian", "dance_maze", "dance_dream_wings", "gesture_hello", "gesture_bow", "gesture_paw", "gesture_salute", "skill_swipe", "skill_slam", "skill_cast", "skill_flinch", "skill_powerdown", "skill_sit", "break_toprock", "break_sixstep", "break_clawstand", "break_oneclaw", "power_spin"]
++            "from": ["dance_crab", "dance_brazilian", "dance_maze", "dance_dream_wings", "gesture_hello", "gesture_bow", "gesture_paw", "gesture_salute", "skill_swipe", "skill_slam", "skill_cast", "skill_flinch", "skill_powerdown", "skill_sit", "break_toprock", "break_sixstep", "break_clawstand", "break_oneclaw", "power_spin", "power_jumpspin", "power_backflip"]
 +          },
 +          "keys": {
 +            "key": ["ctrl"],
 +            "on": "fall",
-+            "from": ["dance_crab", "dance_brazilian", "dance_maze", "dance_dream_wings", "gesture_hello", "gesture_bow", "gesture_paw", "gesture_salute", "skill_swipe", "skill_slam", "skill_cast", "skill_flinch", "skill_powerdown", "skill_sit", "break_toprock", "break_sixstep", "break_clawstand", "break_oneclaw", "power_spin"]
++            "from": ["dance_crab", "dance_brazilian", "dance_maze", "dance_dream_wings", "gesture_hello", "gesture_bow", "gesture_paw", "gesture_salute", "skill_swipe", "skill_slam", "skill_cast", "skill_flinch", "skill_powerdown", "skill_sit", "break_toprock", "break_sixstep", "break_clawstand", "break_oneclaw", "power_spin", "power_jumpspin", "power_backflip"]
 +          }
 +        }
 +      ],
@@ -560,6 +603,22 @@ index 0000000..7730275
 +          "policy": "tasks/jumper/power_spin_feet/out/crabcraft",
 +          "pad": {"button": "LB", "with": "home", "on": "toggle", "from": ["locomotion"]},
 +          "keys": {"key": ["key_5", "keypad_5"], "with": "shift", "on": "toggle", "from": ["locomotion"]}
++        },
++        "power_jumpspin": {
++          "task": "jumper.power_jumpspin720",
++          "_note": "crabcraft's 720 jump spin: jumps and turns about two turns counter-clockwise in the air, landing on its feet (docs/CRABCRAFT_POWER.md). Reward-driven, with no recording and no clock, so it does not end by itself: it takes off 0.21 to 0.23 s after the handover and lands about 0.65 s after it; left running it stands at HOME and does not jump again, and its switch pressed again, or Menu (Ctrl) on its own, hands back -- any time after the landing. 200 Hz at kp 20. Through this controller, from standing, walking and turning: 20 of 20 landed, 512 to 674 degrees in the air, 0.21 to 0.28 m of rise. The export is this machine's: tasks/jumper/power_jumpspin720/out/crabcraft (pw-jspin720-ho model_5996), committed without its checkpoint copy.",
++          "policy": "tasks/jumper/power_jumpspin720/out/crabcraft",
++          "pad": {"button": "RB", "with": "home", "on": "toggle", "from": ["locomotion"]},
++          "keys": {"key": ["key_6", "keypad_6"], "with": "shift", "on": "toggle", "from": ["locomotion"]}
++        },
++        "power_backflip": {
++          "task": "jumper.power_backflip",
++          "_note": "crabcraft's back flip: jumps and flips nose-up through a whole turn in the air, landing on its feet (docs/CRABCRAFT_POWER.md). Reward-driven, with no recording and no clock, so it does not end by itself: it takes off about 0.16 s after the handover and lands about 0.46 s after it; left running it stands at HOME, and its switch pressed again, or Menu (Ctrl) on its own, hands back -- any time after the landing. 200 Hz at kp 20. The export is this machine's: tasks/jumper/power_backflip/out/crabcraft (pw-flip-brc model_3997), committed without its checkpoint copy.",
++          "_skip_tilt_check": "Why: a flip passes upside down (177 degrees through this controller) and the cascade's `tilted` rule, 50 degrees, sends it to `safe`, damping only, at the top of the flip, 0.22 s after the handover -- it then comes down limp, 62 to 67 degrees tilted 0.3 s after touching down (docs/CRABCRAFT_POWER.md, \"Through the bundle's controller\"). With the fallback lifted for this mode only it landed 12 of 12 in simulation, under 2.7 degrees of tilt 0.3 s after the touchdown. What it costs: while this mode is the state nothing catches a tilt -- a weak takeoff that tips onto its back, or a robot knocked over mid-move, keeps running the flip's policy instead of dropping to damping, until the mode is left (its switch, Menu or Ctrl, or no operator input for `command_timeout_ms`, which releases every latch). `feedback_stale` still applies, and the tick that enters is still checked, so a robot already tilted cannot be switched into it. None of this has run on a physical Jumper: the policy was trained and measured only in MuJoCo, and a first try on a robot wants a soft floor and a hand on the release.",
++          "policy": "tasks/jumper/power_backflip/out/crabcraft",
++          "skip_tilt_check": true,
++          "pad": {"button": "dpad_up", "with": "home", "on": "toggle", "from": ["locomotion"]},
++          "keys": {"key": ["key_7", "keypad_7"], "with": "shift", "on": "toggle", "from": ["locomotion"]}
 +        }
 +      }
 +    }
@@ -1029,10 +1088,10 @@ index 0000000..85567aa
 +
 diff --git a/docs/CRABCRAFT_POWER.md b/docs/CRABCRAFT_POWER.md
 new file mode 100644
-index 0000000..7eb2f26
+index 0000000..4fbcbb8
 --- /dev/null
 +++ b/docs/CRABCRAFT_POWER.md
-@@ -0,0 +1,419 @@
+@@ -0,0 +1,701 @@
 +# Crabcraft power moves: a spin, a jump spin and a back flip
 +
 +"World of Crabcraft" wants a routine that could win a breaking battle. The footwork,
@@ -1051,10 +1110,13 @@ index 0000000..7eb2f26
 +
 +"World of Crabcraft" ships three of the policies below, each exported against a task of
 +its own ("Shipped"): the spin that keeps to its feet, `pw-spin-c20L`, as
-+`jumper.power_spin_feet`; the double jump spin, `pw-jspin720`, as
-+`jumper.power_jumpspin720`; and the back flip, `pw-flip-T`, as `jumper.power_backflip`.
-+Only the spin runs under the bundle's controller; the two jumps take off only from their
-+training environment's reset ("Under the controller").
++`jumper.power_spin_feet`; the double jump spin, `pw-jspin720-ho`, as
++`jumper.power_jumpspin720`; and the back flip, `pw-flip-brc`, as `jumper.power_backflip`.
++The two jumps were first trained, as `pw-jspin720` and `pw-flip-T`, from an episode
++start no controller gives a robot, and took off from nothing else ("Under the
++controller"); `pw-jspin720-ho` and `pw-flip-brc` are those policies trained on from the start
++the bundle's controller does give ("The handover start"). All three are modes of the `crabcraft`
++bundle, the flip's with the cascade's tilt fallback lifted for it alone ("In the bundle").
 +
 +## What all three share
 +
@@ -1267,6 +1329,10 @@ index 0000000..7eb2f26
 +robot, `deploy/jumper.controller.toml` drops to `safe` at 50 degrees in every mode, so a
 +flip mode would need that guard lifted, and its landings tilt past 50 (below).
 +
++Since the handover start the task also takes back in-air turn that did not make a flip
++(`turn_clawback`) and bridges from mjlab's reset for its first 900 iterations; the runs
++below came before both ("The handover start").
++
 +### Runs
 +
 +| run | job | commit | iterations | wall | peak GPU memory | final mean reward |
@@ -1332,9 +1398,25 @@ index 0000000..7eb2f26
 +| jump spin, half a turn | `pw-jspin180L` `model_2498` | `power_jumpspin_180.mp4`, `..._slow4x.mp4` |
 +| back flip | `pw-flip-T` `model_2498` | `power_backflip_best.mp4`, `..._slow4x.mp4` |
 +
++From the handover ("The handover start"), under the worktree's ignored `out/review/`:
++`scripts/play.py --video` in replay, which holds 0.5 s at `HOME` before the go (3 s,
++rendered at 200 frames a second, encoded at 60 and as a 4x slow-motion copy at 50); and
++through the bundle's controller, rendered from crabcraft's `jumper_sim.Host` at 4x slow
++motion, the mode switched into while walking and left 2 s after the handover.
++
++| move | checkpoint | file |
++|---|---|---|
++| jump spin, two turns, from the handover | `pw-jspin720-ho` `model_5996` | `jumpspin720_handover.mp4`, `..._slow4x.mp4` |
++| the same through the controller, from walking | `pw-jspin720-ho` `model_5996` | `jumpspin720_controller_from_walk_slow4x.mp4` |
++| back flip, from the handover | `pw-flip-brc` `model_3997` | `backflip_handover.mp4`, `..._slow4x.mp4` |
++| the same through the controller, from walking, `skip_tilt_check` on its state | `pw-flip-brc` `model_3997` | `backflip_controller_no_tilt_check_from_walk_slow4x.mp4` |
++| the same through the controller as it ships: `safe` mid-flip | `pw-flip-brc` `model_3997` | `backflip_controller_stock_tilt_fallback_slow4x.mp4` |
++| the jumps that came before, from the handover: standing still | `pw-jspin720` `model_3997`, `pw-flip-T` `model_2498` | `old_jumpspin720_handover.mp4`, `old_backflip_handover.mp4` |
++
 +The checkpoints themselves stay on the cluster, under
-+`~/crabcraft-train/runs/<run>/logs/jumper/<task>/<date-time>/`, and in `out/power/ckpt/` on
-+the Mac; none is committed. The three shipped ones are exported ("Shipped").
++`~/crabcraft-train/runs/<run>/logs/jumper/<task>/<date-time>/`, and in `out/power/ckpt/` or
++`logs/jumper/<task>/<date-time>/` on the Mac; none is committed. The three shipped ones are
++exported ("Shipped").
 +
 +## Shipped
 +
@@ -1346,11 +1428,13 @@ index 0000000..7eb2f26
 +| task | what it changes | run | checkpoint | job |
 +|---|---|---|---|---|
 +| `jumper.power_spin_feet` | `illegal_contact` -20 (4af8af8) | `pw-spin-c20L` | `model_2998` | 248837 |
-+| `jumper.power_jumpspin720` | the tent and the in-air rate capped at two turns (543ed55) | `pw-jspin720` | `model_3997` | 249232 |
-+| `jumper.power_backflip` | nothing: the task above | `pw-flip-T` | `model_2498` | 248991 |
++| `jumper.power_jumpspin720` | the tent and the in-air rate capped at two turns (543ed55), and the handover start | `pw-jspin720-ho` | `model_5996` | 250130 |
++| `jumper.power_backflip` | nothing beyond the task above, which now has the handover start, `turn_clawback` and the bridge | `pw-flip-brc` | `model_3997` | 250900 |
 +
-+Both runs trained under their parents' ids, which their logs and `layout.json`'s
-+`_checkpoint` paths keep. Measured again under the new ids (`tools/eval_power.py --task
++What shipped before the handover start was `pw-jspin720`'s `model_3997` (job 249232) and
++`pw-flip-T`'s `model_2498` (248991); the rest of this section is about those exports.
++`pw-spin-c20L` and `pw-jspin720` trained under their parents' ids, which their logs and
++`layout.json`'s `_checkpoint` paths keep. Measured again under the new ids (`tools/eval_power.py --task
 +spin_feet` and `--task jumpspin720`, native:cpu, DR off, 4 envs, Apple M4 Pro): the spin
 +2.33 rev/s (2.31 to 2.37), within 0.15 m of its spot; the 720 turns 730 degrees in the
 +air at 0.268 m of rise and lands 4 of 4; the flip turns 417 in the air and lands 4 of 4
@@ -1367,10 +1451,19 @@ index 0000000..7eb2f26
 +| export's random observations | 1.31e-06 | 1.79e-06 | 1.55e-06 |
 +| a rollout's observations (steps) | 1.55e-06 (1199) | 4.77e-06 (499) | 1.05e-05 (499) |
 +
++Re-exported the same way from the handover start's runs, the rollout now replay's, the
++0.5 s hold at `HOME` included:
++
++| | jumpspin720, `pw-jspin720-ho` `model_5996` | backflip, `pw-flip-brc` `model_3997` |
++|---|---|---|
++| export's random observations | 3.34e-06 | 5.72e-06 |
++| a rollout's observations (steps) | 6.91e-06 (599) | 9.54e-06 (599) |
++
 +## Under the controller
 +
 +The `crabcraft` bundle (`deploy/crabcraft.manifests.json`) carries the spin as
-+`power_spin`, on Home + LB on the pad and Shift + 5 on the keyboard, from locomotion. It
++`power_spin`, on Home + LB on the pad and Shift + 5 on the keyboard, from locomotion (and,
++since the handover start, the two jumps: "In the bundle"). It
 +has no recording and no clock, so nothing ends it but its switch pressed again or Menu
 +(Ctrl) on its own. Through the bundle's controller, entered from walking after the
 +switch-in ramp: 2.06 rev/s over the last 2 s of 3.5 s held, 2632 degrees from the policy's
@@ -1380,29 +1473,263 @@ index 0000000..7eb2f26
 +`tools/robot-sim-check.ts`). Both are slower than the 2.33 rev/s of its own environment. Let go, the controller's ramp stands it up and hands back to
 +walking within 1.1 s.
 +
-+**The two jumps are not in the bundle: they take off only from their training
++**Until the handover start, the two jumps took off only from their training
 +environment's reset.** Their actor sees no clock and no command, so what starts the jump
-+has to be in what it does see, and in training every episode begins at mjlab's reset,
++has to be in what it does see, and in training every episode began at mjlab's reset,
 +whose first observation shows `joint_torque` at the servo's limit, 1.746 N*m, on 18 of the
 +20 joints, in all five frames of the history: the actuator's PD toward a target of zero
 +before the first action, saturated by `HOME`'s offsets (the other two, the middle legs'
 +`J0`, sit 0.0012 rad from zero and read 0.024). A controller switching into the
 +mode hands the policy a robot standing at `HOME` with its real torques. Measured in each
 +task's own environment (native:cpu, play mode, DR off): with the robot held at `HOME` by
-+zero actions for 0.5 s and then handed to the policy, the 720 lifts its base 9 mm and
-+turns 18 degrees in 2.5 s, the flip lifts it 0 mm and turns 0; handed over at the reset
-+itself, as trained, they rise 268 mm and turn 805, and rise 215 mm and turn 362 about
-+pitch. The spin is indifferent: 1996 degrees in 2.5 s after a 0.5 s hold, 2038 without
-+one. Through the bundle's controller the 720 rose 10 mm in 2.6 s; with the reset's
-+torque frames written into its first observations by hand (a diagnosis, not something
-+shipped) it rose 215 mm.
++zero actions for 0.5 s and then handed to the policy, `pw-jspin720` lifted its base 9 mm
++and turned 18 degrees in 2.5 s, `pw-flip-T` lifted it 0 mm and turned 0; handed over at
++the reset itself, as trained, they rose 268 mm and turned 805, and rose 215 mm and turned
++362 about pitch. The spin is indifferent: 1996 degrees in 2.5 s after a 0.5 s hold, 2038
++without one. Through the bundle's controller `pw-jspin720` rose 10 mm in 2.6 s; with the
++reset's torque frames written into its first observations by hand (a diagnosis, not
++something shipped) it rose 215 mm.
 +
-+What would make them deployable is a start the robot can be given: a go command in the
-+observation, or episodes that begin standing at `HOME` for a random while before the
-+jump is paid for. Neither is tried here. The back flip would need the cascade's 50-degree
-+tilt fallback lifted as well, which `skip_tilt_check` does for a state and which a mode
-+composed from a manifest cannot set; "World of Crabcraft" plays both jumps from
-+rollouts in their own environment instead (its `tools/motion/record_rollouts.py`).
++## The handover start
++
++### What the controller hands over
++
++Measured through the bundle's own controller (crabcraft's `tools/motion/jumper_sim.py`
++`Host`, the `controller.so` a bundle carries, a mode switched into from standing): the
++switch-in ramp slides the setpoint to the mode's `HOME` at its own PD (`ramp_kp` 15,
++`ramp_kd` 0.8) and hands over once every joint is within `pose_reach_tol`, 0.10 rad, of
++it -- 0.57 s after the switch. At that tick the worst joint was 0.099 rad off `HOME` (the
++mean 0.029), the fastest moving at 0.20 rad/s, the torques 0.39 N*m at most (0.18 on
++average), and the policy's first observation held that one frame in all five slots of
++every history, its last action zero.
++
++### What changed
++
++`power_jumpspin/mdp/handover.py`, applied to both shipped jumps by
++`power_jumpspin.env_cfg.handover_start`. Every HOME spawn (the half of the episodes not
++spawned on the recording):
++
++- spawns with every gait joint up to `HANDOVER_POSE_RANGE`, 0.10 rad (the controller's
++  `pose_reach_tol`), off `HOME`, a reset event between `HOME` and the reference-state
++  spawns, which overwrite it for their share;
++- is held at `HOME` by `HandoverJointPositionAction` for a hold drawn from
++  `HANDOVER_HOLD_RANGE`, 0.02 to 0.6 s: the target at `HOME` and the raw action zero in
++  the action manager's own buffer, so the actor's `actions` and `action_rate_l2` read
++  zero, as on the robot. The hold is the jump command's go delay, which was zero
++  (`ref_free_jump`'s `GO_DELAY_RANGE`), so the command's own bookkeeping -- a takeoff
++  counts only after the go -- already means what it should;
++- has every observation history emptied at the go by `handover_history`, a step event, so
++  the frame the policy first acts on fills all five slots, as the controller's reset of
++  the history does.
++
++The episode grows by the longest hold, to 3.1 s. Replay (`play=True`) holds 0.5 s from
++`HOME` exactly. The actor's observation is unchanged, 406 wide, and so is the motor model;
++nothing in `rl/` or `tasks/jumper/common/` changed, and the bundle and controller need
++nothing new for it. `jumper.power_jumpspin`, which ships nothing, keeps its own start.
++
++The same moment in the environment (native:cpu, DR off, zero actions, 12 holds from
++0.08 to 0.47 s, the joints spawned up to 0.1 rad off): at the go every gait joint within
++0.021 rad of `HOME`, the fastest at 0.007 to 0.215 rad/s, the torques 0.37 to 0.42 N*m at
++most (0.14 to 0.20 on average), the base at 0.1011 to 0.1021 m against the controller's
++0.1017; the five frames identical and the last action zero. The joints settle under the
++policy's own kp 20 faster than under the ramp's 15, so the environment rarely hands over
++as far off `HOME` as the controller can.
++
++**The back flip needed two more changes.** Resumed on the handover start alone,
++`pw-flip-T` lost the flip before it found a takeoff, and the in-air rate it is paid
++(`flight_turn_rate`, 15 per rad/s, kept whatever the attempt did next) was farmed
++instead. `pw-flip-ho` ended paying 40.8 a second of it against 0.93 of `landed_turn`
++(`pw-flip-T`: 24.1 and 3.54), with tipped and crashed terminations `pw-flip-T` did not
++have, and from the handover its mean policy did not leave the ground (the table below).
++With crashes charged for (`pw-flip-hoc`) it took off 5 to 64 times an episode in hops
++under the 1 cm a flight needs to be the jump, rocking nose-up while its feet were off the
++floor, and was paid 25 to 167 for that against a landed flip's 94 -- without jumping
++once (`model_2950`, from the handover, DR on, 32 environments). So:
++
++- **`turn_clawback`** (`power_backflip/mdp/rewards.py`, weight -15): what
++  `flight_turn_rate` paid a flight is taken back on the step that flight is seen to end
++  without having become the jump, and everything still kept is taken back on the step a
++  failure ends the episode. The rate stays paid only for the one flight that is the jump,
++  and only for a flip still standing. On `pw-flip-ho`'s `model_4497` (from the reset, DR
++  on) every crashed episode nets 0; on `pw-flip-hoc`'s `model_2950` the hopping episodes
++  keep 0 to 9.7 of the 83 to 160 they were paid.
++- **A bridge from mjlab's reset** (`power_backflip/mdp/curriculum.py`): a share of the held
++  HOME spawns starts at mjlab's reset instead, where the flip still lands, so that what
++  the network does after the takeoff keeps being paid while it learns to take off from
++  `HOME`. `RotationJumpCommandCfg.reset_share`, 0.5 until iteration 2700 and down to 0 at
++  3400 (`BRIDGE_SHARE`, `BRIDGE_HOLD_ITERATION`, `BRIDGE_END_ITERATION`), on the run's own
++  iteration count, so 600 of the shipped run's 1500 iterations are the handover alone.
++
++Neither alone was enough. With the clawback and no bridge, `pw-flip-hot` jumped from the
++handover by iteration 2800 but turned 64 degrees there (32 of 32 landed, DR on) and 53 on
++average in training at 3150: a landed hop is paid and a partial flip, which crashes, is
++not, so nothing leads from the one to the other. Charging hops but keeping a crash's turn,
++`pw-flip-hop` stopped jumping at all by 2764, its entropy falling from 22 to 6.7. With the
++bridge both versions of the crash charge flipped from the handover; charging the crash,
++`pw-flip-brc`, landed nearer level than keeping it, `pw-flip-br`, and ships (the table
++below).
++
++### Runs
++
++One H100 each, `warp:cuda`, 4096 environments, `~/crabcraft-train/dance/train_dance.sbatch`
++(`train_power.sbatch` pointed at the checkout `~/crabcraft-train/jumper-dance`, 2 CPUs,
++24G), resumed with `--checkpoint`. `pw-jspin720-ho` and `pw-flip-ho` ran side by side on
++one GPU in one job (`pair_dance.sbatch`, 4 CPUs, 48G), each at about 4.6 s an iteration
++against 1.8 alone, and its peak GPU memory is the two together.
++
++| run | job | commit | iterations | wall | peak GPU memory | final mean reward |
++|---|---|---|---|---|---|---|
++| `pw-jspin720-ho` | 250130 | 27c4a30 (handover start) | 3997 to 5996, resumed from `pw-jspin720`'s `model_3997` | 9129 s | 21549 MiB (both) | 41.74 |
++| `pw-flip-ho` | 250130 | 27c4a30 | 2498 to 4497, resumed from `pw-flip-T`'s `model_2498` | 9449 s | 21549 MiB (both) | 89.59 |
++| `pw-flip-hoc` | 250855 | 6473d45 (crashes charged) | 2498 to about 3026, resumed from `pw-flip-T`'s `model_2498`; cancelled | 948 s | 11897 MiB | 70.95 (TensorBoard, at 3026) |
++| `pw-flip-hot` | 250872 | 449b2f8 (crashes and hops charged) | 2498 to about 3150, the same; cancelled | 1080 s | 11897 MiB | 21.73 (at 3150) |
++| `pw-flip-hop` | 250885 | b0ecca3 (hops charged, crashes kept; `exp/power-flip-hop-clawback`) | 2498 to about 2953, the same; cancelled | 747 s | 11897 MiB | 3.68 (at 2953) |
++| **`pw-flip-brc`** | 250900 | 501dad7 (the bridge, hops and crashes charged) | 2498 to 3997, the same | 2580 s | 11897 MiB | 68.24 |
++| `pw-flip-br` | 250901 | cbc533f (the bridge, hops charged, crashes kept; `exp/power-flip-bridge-crash-kept`, on the cluster's checkout only) | 2498 to 3997, the same | 2750 s | 11897 MiB | 74.99 |
++
++Every run that finished exited 0: both of job 250130's, and 250900 and 250901. 250855,
++250872 and 250885 were cancelled by hand once what each one did (above) was measured on a
++checkpoint of it; their wall time is SLURM's, their reward TensorBoard's last.
++
++### Results
++
++`tools/eval_power.py` as above, deterministic, native:cpu, `pw-jspin720` and `pw-flip-T`
++against what trained on from them. Two starts: **mjlab's reset** (`--hold 0`), the one
++they trained from, and **the handover** (`--hold 0.05 1.0 --pose-offset 0.1`): each
++environment spawned with its joints up to 0.1 rad off `HOME`, held there for its own draw
++of 0.05 to 1.0 s -- past the training's 0.6 -- and handed over with its histories emptied.
++DR off is 16 environments, DR on 32. An upright landing, a failure and the turn in the air
++are what they are above; apex rise and flight are over the environments that jumped, the
++tilt at touchdown is the median (largest), and the peaks are over every environment and
++step, the plateau being 1.746 N*m.
++
++**The double jump spin.**
++
++| policy | start | DR | upright landings | failures | turn in the air, mean (min to max) | apex rise | flight | tilt at touchdown | peak torque | peak joint speed |
++|---|---|---|---|---|---|---|---|---|---|---|
++| `pw-jspin720` `model_3997` | mjlab's reset | off | 16 of 16 | 0 | 730 (730 to 730) | 0.268 m | 0.42 s | 29.8 | 1.746 | 53 rad/s |
++| `pw-jspin720` `model_3997` | mjlab's reset | on | 32 of 32 | 0 | 708 (635 to 756) | 0.272 (0.247 to 0.294) m | 0.43 (0.41 to 0.45) s | 26.4 (36.5) | 1.746 | 59 rad/s |
++| `pw-jspin720` `model_3997` | handover | off | 0 of 16, no jump | 0 | 0 | -- | -- | -- | 1.746 | 15 rad/s |
++| `pw-jspin720` `model_3997` | handover | on | 0 of 32, no jump | 0 | 0 (0 to 1) | -- | -- | -- | 1.746 | 15 rad/s |
++| **`pw-jspin720-ho` `model_5996`** | **handover** | off | **16 of 16** | 0 | **728 (679 to 778)** | 0.345 (0.337 to 0.356) m | 0.47 (0.46 to 0.48) s | 21.0 (27.4) | 1.746 | 52 rad/s |
++| **`pw-jspin720-ho` `model_5996`** | **handover** | on | **32 of 32** | 0 | **735 (664 to 802)** | 0.342 (0.309 to 0.372) m | 0.47 (0.45 to 0.50) s | 19.2 (34.5) | 1.746 | 55 rad/s |
++| `pw-jspin720-ho` `model_5996` | mjlab's reset | off | 16 of 16 | 0 | 705 (705 to 705) | 0.341 m | 0.47 s | 19.3 | 1.746 | 51 rad/s |
++| `pw-jspin720-ho` `model_5996` | mjlab's reset | on | 32 of 32 | 0 | 677 (546 to 774) | 0.327 (0.291 to 0.352) m | 0.46 (0.44 to 0.50) s | 22.2 (40.3) | 1.746 | 54 rad/s |
++
++From the handover it turns as far as `pw-jspin720` did from the reset, 735 degrees in the
++air on average against 708, at least 664 in every trial, and jumps higher: 0.34 m of rise
++against 0.27, 0.47 s in the air against 0.43. It takes off 0.21 to 0.23 s after the go.
++Held at the documented 0.5 s from `HOME` exactly (4 environments, DR off) it turns 767 at
++0.342 m. It still jumps from the reset as well, which no controller gives it. Run on past
++its landing (`--keep-running`, 6 s, the handover, DR off and on, 16 each) it never left
++the ground a second time: back at `HOME` with its own actions in the history, it stays
++there.
++
++**The back flip.** The turn in the air is the nose-up pitch the flight made; the net turn
++is the whole episode's, 360 being upright after one flip.
++
++| policy | start | DR | upright landings | failures | turn in the air, mean (min to max) | net turn | apex rise | flight | tilt at touchdown | peak torque | peak joint speed |
++|---|---|---|---|---|---|---|---|---|---|---|---|
++| `pw-flip-T` `model_2498` | mjlab's reset | off | 16 of 16 | 0 | 417 | 359 | 0.215 m | 0.28 s | 47.6 | 1.746 | 49 rad/s |
++| `pw-flip-T` `model_2498` | mjlab's reset | on | 32 of 32 | 0 | 413 (359 to 424) | 359 (356 to 362) | 0.220 (0.188 to 0.249) m | 0.29 (0.27 to 0.34) s | 47.8 (56.5) | 1.746 | 53 rad/s |
++| `pw-flip-T` `model_2498` | handover | off | 0 of 16, no jump | 0 | 0 | 0 | -- | -- | -- | 1.746 | 13 rad/s |
++| `pw-flip-T` `model_2498` | handover | on | 0 of 32, no jump | 0 | 0 | 0 | -- | -- | -- | 1.746 | 13 rad/s |
++| `pw-flip-ho` `model_4497` | handover | off | 0 of 16, no jump | 0 | 62 (0 to 98) | -2 | -- | -- | -- | 1.746 | 37 rad/s |
++| `pw-flip-ho` `model_4497` | handover | on | 6 of 32, hops of 1.0 to 2.7 cm | 1 | 43 (-56 to 94) | -29 | 0.015 m | 0.09 s | 40.5 (51.5) | 1.746 | 39 rad/s |
++| `pw-flip-br` `model_3997` | handover | off | 14 of 16 | 0 | 403 (397 to 409) | 359 (357 to 362) | 0.199 (0.192 to 0.211) m | 0.28 (0.26 to 0.30) s | 47.6 (54.6) | 1.746 | 48 rad/s |
++| `pw-flip-br` `model_3997` | handover | on | 30 of 32 | 0 | 396 (381 to 410) | 357 (342 to 378) | 0.195 (0.118 to 0.223) m | 0.28 (0.23 to 0.30) s | 44.7 (53.9) | 1.746 | 50 rad/s |
++| **`pw-flip-brc` `model_3997`** | **handover** | off | **16 of 16** | 0 | **398 (395 to 402)** | **359 (358 to 361)** | 0.216 (0.213 to 0.230) m | 0.32 (0.32 to 0.33) s | 27.4 (30.3) | 1.746 | 47 rad/s |
++| **`pw-flip-brc` `model_3997`** | **handover** | on | **31 of 32** | 1 | **385 (115 to 401)** | **349 (103 to 360)** | 0.205 (0.148 to 0.230) m | 0.31 (0.29 to 0.32) s | 31.1 (36.6) | 1.746 | 53 rad/s |
++| `pw-flip-brc` `model_3997` | mjlab's reset | off | 16 of 16 | 0 | 393 | 359 | 0.212 m | 0.31 s | 30.7 | 1.746 | 47 rad/s |
++| `pw-flip-brc` `model_3997` | mjlab's reset | on | 32 of 32 | 0 | 392 (384 to 400) | 357 (353 to 360) | 0.212 (0.165 to 0.251) m | 0.31 (0.27 to 0.35) s | 31.8 (38.1) | 1.746 | 49 rad/s |
++
++From the handover `pw-flip-brc` makes the whole flip `pw-flip-T` made from the reset, 359
++degrees net in every trial but one, at the same rise (0.21 against 0.22 m) and a little
++longer in the air (0.31 to 0.33 s against 0.27 to 0.34), and lands nearer level: 27 to 31
++degrees nose-up at touchdown, at most 36.6, against `pw-flip-T`'s median 47.8 and 56.5 at
++most, and under 12.5 degrees 0.3 s after it in every landed trial. It takes off 0.12 to
++0.17 s after the go. Held at the documented 0.5 s from `HOME` exactly it turns 402 in the
++air, 358 net, and touches down at 30.0. The one failure (DR on) is a weak takeoff, 0.063
++m of rise and 115 degrees of turn, that tipped onto its rear feet. Left running 6 s past
++its landing (the handover, DR off and on, 16 each) it lands 16 of 16 both times; the only
++second time off the floor is a bounce 0.09 to 0.12 s after the touchdown, in 5 of the 32.
++
++### Through the bundle's controller
++
++Both exports built into a scratch copy of the `crabcraft` manifest, as modes
++`power_jumpspin` (Home + RB, Shift + 6) and `power_backflip` (Shift + 7) from locomotion,
++with `scripts/deploy.py --manifests <copy> --allow-incomplete` (the controller at
++84b610c01abb); `deploy.py --check-reference` on it: 24 frames, 18 inferences, observation
++and targets worst 0.000e+00, "this host matches the reference". Then crabcraft's `jumper_sim.Host`:
++the robot stands (or walks) 1.5 s, the switch is pressed, the ramp hands over, and the
++switch is pressed again 2.5 s after the handover. A flight is all six feet off the floor
++with the base 1 cm over its height at the handover; the turn is the integrated body rate
++over that flight.
++
++| mode | entered from | trials | took off | landed upright, no fallback | rise | flight | turn in the air | tilt, largest | tilt 0.3 s after touchdown, largest |
++|---|---|---|---|---|---|---|---|---|---|
++| `power_jumpspin` | standing | 8 | 8 | 8 | 0.254 (0.235 to 0.275) m | 0.41 s | 599 (577 to 633) | 40.2 | 7.7 |
++| `power_jumpspin` | walking, 0.28 m/s | 4 | 4 | 4 | 0.254 (0.248 to 0.259) m | 0.41 s | 630 (592 to 660) | 35.3 | 4.4 |
++| `power_jumpspin` | walking, 0.62 m/s | 4 | 4 | 4 | 0.267 (0.248 to 0.284) m | 0.42 s | 622 (557 to 674) | 39.8 | 3.9 |
++| `power_jumpspin` | turning, 1.6 rad/s | 4 | 4 | 4 | 0.243 (0.212 to 0.262) m | 0.39 s | 549 (512 to 620) | 44.1 | 4.7 |
++| `power_backflip`, the cascade as shipped | standing | 8 | 8 | 0: `safe` 0.22 s after the handover, in the air | 0.189 (0.188 to 0.192) m | 0.28 s | 320 (314 to 324) | 177.3 | 66.8 |
++| `power_backflip`, the cascade as shipped | walking, 0.28 m/s | 4 | 4 | 0: `safe` 0.215 s after the handover | 0.193 (0.187 to 0.195) m | 0.35 s | 311 (265 to 377) | 178.8 | 39.7 |
++| `power_backflip`, `skip_tilt_check` on its state | standing | 8 | 8 | 8 | 0.195 (0.194 to 0.197) m | 0.30 s | 388 (385 to 390) | 176.9 | 1.9 |
++| `power_backflip`, `skip_tilt_check` on its state | walking, 0.28 m/s | 4 | 4 | 4 | 0.194 (0.188 to 0.198) m | 0.30 s | 392 (390 to 393) | 177.0 | 2.7 |
++
++**The 720 takes off under the controller every time**, 0.21 to 0.23 s after the
++handover, and is back walking after its switch is pressed again. It turns less than in
++its own environment, 599 degrees in the air against 728 from standing, and rises less,
++0.25 m against 0.34. Why is not measured here; the spin, through the same host, also ran
++slower than in its own environment (2.06 rev/s against 2.33). In 9 of the 20 trials
++the landing bounced the base off the floor once more, over 1 cm, 0.02 to 0.28 s after the
++touchdown. Held for 6 s instead of 2.5 (standing, 4 trials) it does nothing more after
++that bounce.
++
++**The back flip takes off under the controller every time, 0.16 s after the handover,
++and lands it once the tilt fallback is lifted for its mode**: 12 of 12, 385 to 393 degrees
++of pitch in the air, under 2.7 degrees of tilt 0.3 s after the touchdown, and back walking
++after its switch is pressed again. With the cascade as it ships, `tilted` (50 degrees)
++sends the robot to `safe`, damping only, 0.22 s after the handover, at the top of the
++flip, and it comes down limp: 62 to 67 degrees of tilt 0.3 s after the first touchdown
++from standing, and on its back in one of the four entered from walking. For this
++measurement `skip_tilt_check = true` was written by hand into the built bundle's
++`controller.toml`, under `power_backflip`'s `[[fsm.state]]`; a mode composed from a
++manifest could not set it then (below).
++
++### In the bundle
++
++What the measurements above found missing, and what was done about it:
++
++- **The back flip's tilt fallback, lifted for its mode only.** A manifest mode may now say
++  `"skip_tilt_check": true` (a JSON boolean; anything else is refused, left out it is false), and
++  `scripts/deploy.py` writes `skip_tilt_check = true` into that mode's `[[fsm.state]]` and records
++  it in `bundle.json`'s `built_from` (`compose_fsm`, `manifest_modes`; `deploy/BUNDLE.md`;
++  `tests/test_deploy_hook.py`). Every other mode, and every bundle that does not ask, composes as
++  before. `feedback_stale` still applies with it lifted, and the tick that enters the state is
++  still checked, so a robot already tilted cannot be switched into the flip. What it costs: while
++  the flip runs nothing catches a tilt, so a weak take-off that tips over, or a robot knocked
++  over, keeps running the flip's policy until the mode is left. None of this has run on a
++  physical Jumper.
++- **Both modes in `deploy/crabcraft.manifests.json`**, from locomotion: `power_jumpspin`
++  (`jumper.power_jumpspin720`) on Home + RB and Shift + 6, `power_backflip`
++  (`jumper.power_backflip`, `skip_tilt_check`) on Home + d-pad up and Shift + 7, both let go by
++  `leave_motion` (Menu, Ctrl) like the other moves, with a rule each in
++  `deploy/crabcraft.controller.toml`. Built with `scripts/deploy.py --manifests
++  deploy/crabcraft.manifests.json --allow-incomplete` (the controller at 84b610c01abb; the
++  crate's 183 tests pass, 25 modes, 28 rules); `deploy.py --check-reference` on it: 24 frames,
++  18 inferences, observation worst 0.000e+00, targets worst 2.235e-08, "this host matches the
++  reference". Through that bundle and crabcraft's `jumper_sim.Host`, from standing, 2 trials
++  each, the switch pressed again 1.4 s (720) and 1.2 s (flip) after the handover: the 720 took
++  off 0.22 and 0.225 s after the handover, turned 577 and 608 degrees in the air at 0.24 and
++  0.26 m of rise and was under 8 degrees of tilt 0.3 s after the touchdown; the flip took off at
++  0.16 s, turned 385 and 388 degrees nose-up at 0.20 m, never went to `safe`, and was under 1
++  degree 0.3 s after the touchdown. Both were walking again afterwards.
++- **A way out after the jump.** Neither jump has a recording or a clock, so its mode still ends
++  only on its switch pressed again, or Menu (Ctrl) on its own; any time after the landing will
++  do. The bundle adds no clock of its own. Crabcraft's Robot Mode presses the switch for the
++  person 1.4 s after the 720's handover and 1.2 s after the flip's, and records the game's clips
++  of both moves through this bundle letting go at the same moments.
 +
 +## Found along the way
 +
@@ -1436,7 +1763,17 @@ index 0000000..7eb2f26
 +
 +These are the budgets the runs above add up to; the runs themselves came in stages, each
 +resumed from the last (`--checkpoint`), and the earlier stages trained on the commits in
-+the tables, not this one. Anywhere else, `scripts/train.py --task jumper.power_spin
++the tables, not this one. The handover start's runs resumed the shipped checkpoints from
++before it, with `train_dance.sbatch` (the same script, another checkout):
++
++```bash
++R=~/crabcraft-train/runs
++sbatch -J pw-jspin720-ho ~/crabcraft-train/dance/train_dance.sbatch jumper.power_jumpspin720 2000 4096 pw-jspin720-ho \
++    --checkpoint $R/pw-jspin720/logs/jumper/jumper.power_jumpspin/2026-10-15_14-29-33/model_3997.pt
++sbatch -J pw-flip-brc ~/crabcraft-train/dance/train_dance.sbatch jumper.power_backflip 1500 4096 pw-flip-brc \
++    --checkpoint $R/pw-flip-T/logs/jumper/jumper.power_backflip/2026-10-15_13-54-57/model_2498.pt
++```
++ Anywhere else, `scripts/train.py --task jumper.power_spin
 +--backend warp --device cuda:0 --num_envs 4096 --headless --max-iterations 3000`. The two
 +jumps start from `ref_free_jump`'s `model_5999` on their own (`runner.py`); a run given
 +`--checkpoint` keeps that instead.
@@ -1448,6 +1785,10 @@ index 0000000..7eb2f26
 +PYTHONPATH=. python tools/eval_power.py --task spin --checkpoint <model_N.pt> --dr off --envs 4 --out out/power/eval
 +PYTHONPATH=. python tools/eval_power.py --task jumpspin --checkpoint <model_N.pt> --dr on --envs 32 --out out/power/eval
 +PYTHONPATH=. python tools/eval_power.py --task spin --checkpoint <model_N.pt> --nonfoot-friction 0.4 --out out/power/eval
++# the handover, and mjlab's reset, as "The handover start" measured them
++PYTHONPATH=. python tools/eval_power.py --task jumpspin720 --checkpoint <model_N.pt> --dr on --envs 32 \
++    --hold 0.05 1.0 --pose-offset 0.1 --out out/power/eval
++PYTHONPATH=. python tools/eval_power.py --task backflip --checkpoint <model_N.pt> --dr off --envs 16 --hold 0 --out out/power/eval
 +PYTHONPATH=. python scripts/play.py --task jumper.power_backflip --checkpoint <model_N.pt> \
 +    --backend native --device cpu --num_envs 1 --headless --steps 500 --stop-on-done \
 +    --video flip.mp4 --video-fps 60 --no-video-follow --video-azimuth 90 --video-elevation -5
@@ -1765,6 +2106,67 @@ index 0000000..0ea16f9
 +crabcraft's `tools/motion/record_clips.py --bundle <the crabcraft bundle>` records each
 +skill through this bundle's controller as it does the gestures, and the windows above,
 +moved by each rollout's own policy start and lag, become the game's `from` and `to`.
+diff --git a/scripts/deploy.py b/scripts/deploy.py
+index 080e537..724edd4 100755
+--- a/scripts/deploy.py
++++ b/scripts/deploy.py
+@@ -553,6 +553,13 @@ def manifest_modes(spec: dict, path: Path) -> tuple[dict[str, Path], dict[str, d
+     `_switch`). Until 2026-09-29 a mode had one `button`, one `key` and one
+     gesture and modifier for both, and the bundle a `keyboard` table making keys
+     pad buttons; both are refused by name.
++
++    And `skip_tilt_check`, `true` or `false` (left out, `false`): `true` suspends
++    the cascade's `tilted` fallback while this mode is the state
++    (`deploy/BUNDLE.md`), for a move that tilts past `tilt_limit` on purpose -- a
++    back flip passes upside down. A mode is the manifest's half, and its state is
++    composed from it, so this is the one place a mode can say it; the FSM file
++    may not declare a model state to say it there.
+     """
+     modes: dict[str, Path] = {}
+     detail: dict[str, dict] = {}
+@@ -604,6 +611,17 @@ def manifest_modes(spec: dict, path: Path) -> tuple[dict[str, Path], dict[str, d
+                 f"takes."
+             )
+ 
++        # Only a JSON boolean: "true" as a string, or 1, would read as one to a
++        # quick eye and lift a safety fallback nobody meant to lift.
++        skip_tilt = entry.get("skip_tilt_check", False)
++        if not isinstance(skip_tilt, bool):
++            raise SystemExit(
++                f"[deploy] {path}: mode {mode!r}'s `skip_tilt_check` is {skip_tilt!r}; it is "
++                f"true or false.\n"
++                f"           true suspends the cascade's `tilted` fallback while the mode "
++                f"is active (deploy/BUNDLE.md)."
++            )
++
+         modes[mode] = where
+         detail[mode] = {"task": task, "from": ckpt or "(the export records no checkpoint)",
+                         "export": str(where.relative_to(REPO))
+@@ -613,6 +631,9 @@ def manifest_modes(spec: dict, path: Path) -> tuple[dict[str, Path], dict[str, d
+                         # only from the cascade -- fine for one mode, and an
+                         # unreachable state for any of the others.
+                         **({"hook": hook} if hook is not None else {}),
++                        # Recorded only when lifted, so a bundle that lifts
++                        # nothing records what it always did.
++                        **({"skip_tilt_check": True} if skip_tilt else {}),
+                         **switches}
+     if not modes:
+         raise SystemExit(f"[deploy] {path}: this bundle has no modes")
+@@ -710,11 +731,14 @@ def compose_fsm(spec: dict, detail: dict[str, dict], models: dict[str, str],
+     # Each mode's task goes in beside its model, and its `hook` if it has one:
+     # the controller finds a task's deploy library by that id and hands it the
+     # table (`deploy/fsm/src/hook.rs`). A mode without `hook` runs without one.
++    # `skip_tilt_check` is written only for a mode that lifts the fallback; the
++    # crate's default, false, is every other mode's.
+     states = "".join(
+         f'\n[[fsm.state]]\nname = "{mode}"\nmodel = "{models[mode]}"\n'
+         f'task = "{detail[mode]["task"]}"\n'
+         + (f'hook = {_toml_value(detail[mode]["hook"], f"{mode}.hook")}\n'
+            if "hook" in detail[mode] else "")
++        + ("skip_tilt_check = true\n" if detail[mode].get("skip_tilt_check") else "")
+         for mode in sorted(detail)
+     )
+     # Each device's switch into a mode is a binding of its own, named after the
 diff --git a/tasks/__init__.py b/tasks/__init__.py
 index 5b376ab..5577a71 100644
 --- a/tasks/__init__.py
@@ -4746,10 +5148,10 @@ index 0000000..4c58284
 +)
 diff --git a/tasks/jumper/power_backflip/env_cfg.py b/tasks/jumper/power_backflip/env_cfg.py
 new file mode 100644
-index 0000000..9cbd37b
+index 0000000..d4f4939
 --- /dev/null
 +++ b/tasks/jumper/power_backflip/env_cfg.py
-@@ -0,0 +1,133 @@
+@@ -0,0 +1,184 @@
 +"""jumper.power_backflip -- a probe of the back flip: how far round does it get?
 +
 +A back flip on this robot would have to turn 360 degrees nose-up in the air and
@@ -4768,7 +5170,9 @@ index 0000000..9cbd37b
 +
 +- `flight_turn_rate`, the probe's main signal: the nose-up pitch rate while in
 +  the own flight, up to a full turn, weighted heavily (`FLIP_RATE_WEIGHT`), so
-+  that turning further in the air pays even when the attempt then crashes. Half
++  that turning further in the air pays. Until the handover start it was kept
++  even when the attempt crashed or the flight was a hop that never became the
++  jump; `turn_clawback` now takes it back then (`mdp/rewards.py` has why). Half
 +  a turn in the air pays 47.
 +- `landed_turn`: the flight's rotation, latched at a landing the robot survives
 +  and paid every step after it, most for a full turn exactly -- the reward for
@@ -4789,8 +5193,28 @@ index 0000000..9cbd37b
 +  is on the ground.
 +
 +Time-out and back-at-HOME (a time-out) are unchanged. On the robot the
-+controller drops to `safe` at 50 degrees in every mode, so a flip would also
-+need that guard lifted for its mode; the probe does not get that far.
++controller drops to `safe` at 50 degrees in every mode that does not lift it,
++so a flip needs that guard lifted for its mode (`skip_tilt_check` on its state,
++which `deploy/crabcraft.manifests.json` sets for `power_backflip`): through the
++bundle's controller with the guard in place, the cascade went to `safe` 0.22 s
++after the handover, in the air (`docs/CRABCRAFT_POWER.md`, "Through the bundle's
++controller").
++
++## The handover start
++
++Every HOME spawn starts the way the bundle's controller hands a mode over
++(`power_jumpspin.env_cfg.handover_start`, `power_jumpspin/mdp/handover.py`): up to
++0.1 rad off HOME on every gait joint, held at HOME with the action at zero for
++0.02 to 0.6 s, and handed to the policy with its observation history emptied.
++`pw-flip-T` trained without it and took off only from mjlab's reset, whose first
++observation shows the servo's limit on 18 of the 20 joints' torque; from a
++robot standing at HOME it did not jump at all. Trained on from the handover
++alone it lost the flip and farmed the in-air rate instead, so two more things
++came with it: `turn_clawback` (`mdp/rewards.py`) gives back the rate a hop or a
++crash was paid, and a bridge (`mdp/curriculum.py`, `BRIDGE_SHARE`) starts some of
++the held spawns at mjlab's reset for the first 900 iterations. `pw-flip-brc`,
++resumed from `pw-flip-T`'s `model_2498` on this configuration, is what ships
++(`docs/CRABCRAFT_POWER.md`, "The handover start").
 +
 +## Symmetry
 +
@@ -4804,12 +5228,14 @@ index 0000000..9cbd37b
 +
 +from mjlab.envs import ManagerBasedRlEnvCfg
 +from mjlab.managers import TerminationTermCfg
++from mjlab.managers.curriculum_manager import CurriculumTermCfg
 +from mjlab.managers.reward_manager import RewardTermCfg
 +from mjlab.sensor import ContactMatch, ContactSensorCfg
 +
 +from ..common.constants import CHASSIS_LINKS
 +from ..power_jumpspin import mdp as turn_mdp
-+from ..power_jumpspin.env_cfg import turning_jump_cfg
++from ..power_jumpspin.env_cfg import handover_start, turning_jump_cfg
++from ..ref_free_jump.rl_cfg import NUM_STEPS_PER_ENV
 +from . import mdp as flip_mdp
 +
 +#: Nose-up pitch rate in the air, per rad/s, until the flight has turned a full
@@ -4836,6 +5262,17 @@ index 0000000..9cbd37b
 +#: standing on the rear feet with the body vertical or past it is not.
 +GROUNDED_TILT_LIMIT = math.radians(80.0)
 +
++#: The bridge from mjlab's reset to the handover (`mdp/curriculum.py`): the share
++#: of held HOME spawns started at the reset instead, held until
++#: `BRIDGE_HOLD_ITERATION` and down to 0 at `BRIDGE_END_ITERATION`. Iterations on
++#: the run's own count, which a resumed run continues: the shipped run resumes
++#: `pw-flip-T`'s `model_2498` (its step counter at 2500 iterations' worth), so
++#: about 200 iterations at the full share, 700 coming down and 600 from the
++#: handover alone in a 1500-iteration run. Chosen, not tuned.
++BRIDGE_SHARE = 0.5
++BRIDGE_HOLD_ITERATION = 2700
++BRIDGE_END_ITERATION = 3400
++
 +#: The chassis collision geoms: the five links bolted together (`CHASSIS_LINKS`).
 +_CHASSIS_GEOMS = tuple(f"{link}_meshcol" for link in CHASSIS_LINKS)
 +
@@ -4845,7 +5282,8 @@ index 0000000..9cbd37b
 +
 +    Args:
 +        asset: path to the model XML, from `--model`. None uses the default jumper.xml.
-+        play: replay mode -- noise and pushes off, every episode from HOME.
++        play: replay mode -- noise and pushes off, every episode from HOME, handed
++            over after `power_jumpspin.env_cfg.PLAY_HOLD_S` of standing.
 +    """
 +    cfg = turning_jump_cfg(asset, play, axis="pitch")
 +
@@ -4869,6 +5307,12 @@ index 0000000..9cbd37b
 +        func=turn_mdp.rewards.flight_turn_rate, weight=FLIP_RATE_WEIGHT,
 +        params={"command_name": "jump", "cap": LANDED_TURN_CAP},
 +    )
++    # Turn paid in a flight that was not the jump, or before a crash, is taken
++    # back (`mdp/rewards.py`).
++    cfg.rewards["turn_clawback"] = RewardTermCfg(
++        func=flip_mdp.rewards.turn_clawback, weight=-FLIP_RATE_WEIGHT,
++        params={"command_name": "jump", "cap": LANDED_TURN_CAP},
++    )
 +
 +    del cfg.terminations["fell_over"]
 +    cfg.terminations["chassis_crash"] = TerminationTermCfg(
@@ -4879,25 +5323,194 @@ index 0000000..9cbd37b
 +        func=flip_mdp.terminations.tipped_on_feet,
 +        params={"limit_angle": GROUNDED_TILT_LIMIT, "sensor_name": "feet_ground_contact"},
 +    )
++    cfg = handover_start(cfg, play)
++    if not play:
++        cfg.commands["jump"].reset_share = BRIDGE_SHARE
++        cfg.curriculum["reset_share"] = CurriculumTermCfg(
++            func=flip_mdp.curriculum.anneal_reset_share,
++            params={"command_name": "jump", "start_share": BRIDGE_SHARE, "end_share": 0.0,
++                    "start_step": NUM_STEPS_PER_ENV * BRIDGE_HOLD_ITERATION,
++                    "end_step": NUM_STEPS_PER_ENV * BRIDGE_END_ITERATION},
++        )
 +    return cfg
 +
 +
 +__all__ = ["env_cfg"]
 diff --git a/tasks/jumper/power_backflip/mdp/__init__.py b/tasks/jumper/power_backflip/mdp/__init__.py
 new file mode 100644
-index 0000000..e1429ed
+index 0000000..8fe0896
 --- /dev/null
 +++ b/tasks/jumper/power_backflip/mdp/__init__.py
-@@ -0,0 +1,9 @@
-+"""MDP terms for jumper.power_backflip (specific to this task): its terminations.
+@@ -0,0 +1,11 @@
++"""MDP terms for jumper.power_backflip (specific to this task): its terminations,
++the clawback of in-air turn that did not make a flip (`rewards.py`), and the
++bridge from mjlab's reset to the handover (`curriculum.py`).
 +
 +The rotation bookkeeping and the rotation rewards are `jumper.power_jumpspin`'s,
 +imported from `tasks/jumper/power_jumpspin/mdp/`.
 +"""
 +
-+from . import terminations
++from . import curriculum, rewards, terminations
 +
-+__all__ = ["terminations"]
++__all__ = ["curriculum", "rewards", "terminations"]
+diff --git a/tasks/jumper/power_backflip/mdp/curriculum.py b/tasks/jumper/power_backflip/mdp/curriculum.py
+new file mode 100644
+index 0000000..b9beade
+--- /dev/null
++++ b/tasks/jumper/power_backflip/mdp/curriculum.py
+@@ -0,0 +1,47 @@
++"""The bridge from mjlab's reset to the handover, for the back flip.
++
++`pw-flip-T` flips only from mjlab's reset, whose first observation shows the
++servo's torque limit on 18 of the 20 joints. Trained from the handover alone it
++loses the flip before it finds a takeoff: `pw-flip-hot` (resumed from
++`pw-flip-T`'s `model_2498`, crashes and hops charged for, 4096 envs, H100,
++warp:cuda) jumped from the handover by iteration 2800 but turned 64 degrees
++there (native:cpu, DR on, 32 of 32 landed) and 53 on average in training at
++3117 -- a landed hop is paid and a partial flip, which crashes, is not, so
++nothing leads from the one to the other; `pw-flip-hop` (crashes kept, hops
++charged) stopped jumping at all by 2764, its entropy falling from 22 to 6.7.
++
++So for a while some of the held HOME spawns start at the reset instead
++(`RotationJumpCommandCfg.reset_share`), where the flip still lands, and the
++share comes down to 0: what the network does after the takeoff keeps being
++paid while it learns to take off from a robot standing at HOME.
++"""
++
++from __future__ import annotations
++
++import torch
++
++
++def anneal_reset_share(
++    env,
++    env_ids: torch.Tensor | None,
++    command_name: str,
++    start_share: float,
++    end_share: float,
++    start_step: int,
++    end_step: int,
++) -> float:
++    """`start_share` until `start_step`, `end_share` from `end_step`, linear between,
++    written into the command's `reset_share`. Steps are the environment's
++    `common_step_counter`, which a resumed run restores. Returns the share, which
++    the curriculum manager logs as `Curriculum/<term>`."""
++    del env_ids
++    if not 0 <= start_step < end_step:
++        raise ValueError(f"need 0 <= start_step < end_step, got {start_step} and {end_step}")
++    s = env.common_step_counter
++    frac = min(max((s - start_step) / (end_step - start_step), 0.0), 1.0)
++    share = start_share + (end_share - start_share) * frac
++    env.command_manager.get_term(command_name).cfg.reset_share = share
++    return share
++
++
++__all__ = ["anneal_reset_share"]
+diff --git a/tasks/jumper/power_backflip/mdp/rewards.py b/tasks/jumper/power_backflip/mdp/rewards.py
+new file mode 100644
+index 0000000..f824a71
+--- /dev/null
++++ b/tasks/jumper/power_backflip/mdp/rewards.py
+@@ -0,0 +1,99 @@
++"""The back flip's own reward term: turn that did not make a flip is given back.
++
++`flight_turn_rate` pays the nose-up rate during the own flight whatever happens
++next, which is what let the probe find a flip at all (`env_cfg.py`). From the
++controller's handover it was farmed two ways, both measured from the handover
++(native:cpu, the training's randomisation, 32 environments):
++
++- **turn, then crash.** `pw-flip-ho` (resumed from `pw-flip-T`'s `model_2498` on
++  the handover start, 2000 iterations, 4096 envs, H100, warp:cuda) ended paying
++  `flight_turn_rate` 40.8 a second against `pw-flip-T`'s 24.1 and `landed_turn`
++  0.93 against 3.54, with 2.17 `tipped_on_feet` and 0.79 `chassis_crash`
++  terminations per logging window against none. Its mean policy did not leave
++  the ground from the handover.
++- **turn in hops that are not the jump.** A flight counts as the episode's jump
++  only once it lifts the robot's lowest point `min_rise` (1 cm), but the rate is
++  paid in every own flight before that. With a crash charged for,
++  `pw-flip-hoc`'s `model_2950` (450 iterations on) took off 5 to 64 times an
++  episode in hops under 1 cm, rocking nose-up while its feet were off the floor,
++  and was paid 25 to 167 for it -- more than a landed flip's 94 -- without ever
++  jumping.
++
++`turn_clawback` charges back what `flight_turn_rate` paid for a flight on the
++step that flight is seen to end without having become the jump, and everything
++it paid that episode on the step a failure terminates it. So the in-air rate
++stays paid only for the one flight that is the jump, and only while the robot
++has not crashed.
++"""
++
++from __future__ import annotations
++
++from typing import TYPE_CHECKING
++
++import torch
++
++from ...power_jumpspin.mdp import rewards as turn_rewards
++
++if TYPE_CHECKING:
++    from mjlab.envs import ManagerBasedRlEnv
++    from mjlab.managers.reward_manager import RewardTermCfg
++
++
++class turn_clawback:
++    """What `flight_turn_rate` has paid and must give back, in rad, divided by the
++    step so that the manager's `weight * dt` makes it exactly what was paid.
++
++    Give it `flight_turn_rate`'s weight, negated, and the same `cap` and
++    `max_rate`. Two charges:
++
++    - a flight that has ended (the command's `in_flight` was set at the last
++      reward and is not now) and did not become the jump (`landed` is still
++      false): what that flight was paid;
++    - with `charge_crash`, a failure termination this step
++      (`termination_manager.terminated`, which excludes the time-outs `time_out`
++      and `back_home`; terminations are computed before rewards in a step):
++      everything still kept this episode.
++    """
++
++    def __init__(self, cfg: RewardTermCfg, env: ManagerBasedRlEnv) -> None:
++        n = env.num_envs
++        self.flight_paid = torch.zeros(n, device=env.device)
++        self.kept = torch.zeros(n, device=env.device)
++        self.was_flying = torch.zeros(n, dtype=torch.bool, device=env.device)
++
++    def reset(self, env_ids: torch.Tensor | slice | None = None) -> None:
++        ids = slice(None) if env_ids is None else env_ids
++        self.flight_paid[ids] = 0.0
++        self.kept[ids] = 0.0
++        self.was_flying[ids] = False
++
++    def __call__(
++        self,
++        env: ManagerBasedRlEnv,
++        command_name: str = "jump",
++        max_rate: float = 60.0,
++        cap: float | None = None,
++        charge_crash: bool = True,
++    ) -> torch.Tensor:
++        cmd = env.command_manager.get_term(command_name)
++        flying = cmd.in_flight
++        hop = self.was_flying & ~flying & ~cmd.landed
++        charge = torch.where(hop, self.flight_paid, torch.zeros_like(self.flight_paid))
++        self.kept -= charge
++        started = flying & ~self.was_flying
++        self.flight_paid.masked_fill_(started | ~flying, 0.0)
++
++        pay = turn_rewards.flight_turn_rate(env, command_name, max_rate, cap) * env.step_dt
++        self.flight_paid += pay
++        self.kept += pay
++        self.was_flying.copy_(flying)
++
++        if not charge_crash:
++            return charge / env.step_dt
++        crashed = env.termination_manager.terminated
++        charge = charge + torch.where(crashed, self.kept, torch.zeros_like(self.kept))
++        self.kept.masked_fill_(crashed, 0.0)
++        return charge / env.step_dt
++
++
++__all__ = ["turn_clawback"]
 diff --git a/tasks/jumper/power_backflip/mdp/terminations.py b/tasks/jumper/power_backflip/mdp/terminations.py
 new file mode 100644
 index 0000000..220d9f0
@@ -5015,10 +5628,10 @@ index 0000000..3a69c3e
 +)
 diff --git a/tasks/jumper/power_jumpspin/env_cfg.py b/tasks/jumper/power_jumpspin/env_cfg.py
 new file mode 100644
-index 0000000..00fd44f
+index 0000000..8f2b872
 --- /dev/null
 +++ b/tasks/jumper/power_jumpspin/env_cfg.py
-@@ -0,0 +1,148 @@
+@@ -0,0 +1,229 @@
 +"""jumper.power_jumpspin -- a jump that turns about the vertical axis in the air.
 +
 +The breaker's jump spin: up, turn half a turn or a whole one in the air, and
@@ -5078,9 +5691,12 @@ index 0000000..00fd44f
 +from typing import Literal
 +
 +from mjlab.envs import ManagerBasedRlEnvCfg
++from mjlab.envs import mdp as envs_mdp
 +from mjlab.envs.mdp.actions import JointPositionActionCfg
++from mjlab.managers.event_manager import EventTermCfg
 +from mjlab.managers.observation_manager import ObservationTermCfg
 +from mjlab.managers.reward_manager import RewardTermCfg
++from mjlab.managers.scene_entity_config import SceneEntityCfg
 +
 +from ..common.constants import GAIT_JOINTS
 +from ..ref_free_jump import env_cfg as ref_free_env
@@ -5100,6 +5716,24 @@ index 0000000..00fd44f
 +#: `LANDED_TURN_CAP`. Summed over a flight it is the flight's turn in radians:
 +#: half a turn pays 3.1.
 +FLIGHT_TURN_RATE_WEIGHT = 1.0
++
++# ── The handover start (`mdp/handover.py`), for the two shipped jumps ──────────
++#: Seconds a HOME spawn stands at HOME under its own PD before the policy acts,
++#: drawn per episode. From 0.02 s, a robot still settling from a pose up to
++#: `HANDOVER_POSE_RANGE` off HOME -- the controller hands over the moment every
++#: joint is inside its tolerance, measured 0.099 rad off and 0.20 rad/s on the
++#: worst joint -- to 0.6 s, a robot long settled: past about 0.3 s nothing the
++#: policy can see changes any more. Chosen to cover that span, not tuned.
++HANDOVER_HOLD_RANGE = (0.02, 0.6)
++
++#: Radians each gait joint may be off HOME at a HOME spawn, uniformly: the
++#: controller's `pose_reach_tol` (`deploy/crabcraft.controller.toml`), the
++#: furthest it hands over from.
++HANDOVER_POSE_RANGE = 0.10
++
++#: Replay's hold, every episode from HOME exactly: the 0.5 s of standing that
++#: `docs/CRABCRAFT_POWER.md` first measured the handover with.
++PLAY_HOLD_S = 0.5
 +
 +
 +def turning_jump_cfg(
@@ -5146,6 +5780,66 @@ index 0000000..00fd44f
 +    return cfg
 +
 +
++def handover_start(
++    cfg: ManagerBasedRlEnvCfg,
++    play: bool,
++    hold_range: tuple[float, float] | None = None,
++    pose_range: float | None = None,
++) -> ManagerBasedRlEnvCfg:
++    """Start every HOME spawn the way the bundle's controller hands a mode over:
++    up to `pose_range` off HOME, held there for a draw from `hold_range` with the
++    action at zero, and the observation history emptied at the go
++    (`mdp/handover.py`). The episode grows by the longest hold.
++
++    Defaults: `HANDOVER_HOLD_RANGE` and `HANDOVER_POSE_RANGE` in training;
++    `PLAY_HOLD_S` from HOME exactly in replay. Applied again to a config that has
++    it, it replaces the ranges, which is how `tools/eval_power.py` sets its own.
++    """
++    if hold_range is None:
++        hold_range = (PLAY_HOLD_S, PLAY_HOLD_S) if play else HANDOVER_HOLD_RANGE
++    if pose_range is None:
++        pose_range = 0.0 if play else HANDOVER_POSE_RANGE
++    lo, hi = hold_range
++    if not 0.0 <= lo <= hi:
++        raise ValueError(f"hold_range {hold_range} is not 0 <= lo <= hi")
++
++    cfg.commands["jump"].command_delay_range = (float(lo), float(hi))
++
++    # The action as it was configured, field for field, holding until the go.
++    old = cfg.actions["joint_pos"]
++    keep = {f.name for f in dataclasses.fields(turn_mdp.handover.HandoverJointPositionActionCfg)
++            if f.init}
++    cfg.actions["joint_pos"] = turn_mdp.handover.HandoverJointPositionActionCfg(
++        **{f.name: getattr(old, f.name) for f in dataclasses.fields(old)
++           if f.init and f.name in keep and f.name != "command_name"},
++        command_name="jump",
++    )
++
++    # The pose after HOME is written and before the reference-state spawns
++    # overwrite their share: reset events run in the dict's order.
++    events = {k: v for k, v in cfg.events.items()
++              if k not in ("handover_pose", "handover_history")}
++    out = {}
++    for name, term in events.items():
++        out[name] = term
++        if name == "reset_to_default" and pose_range > 0.0:
++            out["handover_pose"] = EventTermCfg(
++                func=envs_mdp.reset_joints_by_offset, mode="reset",
++                params={"position_range": (-pose_range, pose_range),
++                        "velocity_range": (0.0, 0.0),
++                        "asset_cfg": SceneEntityCfg("robot", joint_names=list(GAIT_JOINTS))},
++            )
++    if "reset_to_default" not in events:
++        raise ValueError("the handover pose goes after `reset_to_default`, which this config lacks")
++    out["handover_history"] = EventTermCfg(
++        func=turn_mdp.handover.handover_history, mode="step",
++        params={"command_name": "jump"},
++    )
++    cfg.events = out
++    cfg.episode_length_s = ref_free_env.EPISODE_S + float(hi)
++    return cfg
++
++
 +def env_cfg(asset: Path | None = None, play: bool = False) -> ManagerBasedRlEnvCfg:
 +    """The jump spin.
 +
@@ -5166,29 +5860,31 @@ index 0000000..00fd44f
 +    return cfg
 +
 +
-+__all__ = ["env_cfg", "turning_jump_cfg"]
++__all__ = ["env_cfg", "handover_start", "turning_jump_cfg"]
 diff --git a/tasks/jumper/power_jumpspin/mdp/__init__.py b/tasks/jumper/power_jumpspin/mdp/__init__.py
 new file mode 100644
-index 0000000..9209b28
+index 0000000..bfbee94
 --- /dev/null
 +++ b/tasks/jumper/power_jumpspin/mdp/__init__.py
-@@ -0,0 +1,10 @@
+@@ -0,0 +1,12 @@
 +"""MDP terms for the turning jumps: jumper.power_jumpspin, and jumper.power_backflip,
 +which imports them from here.
 +
 +The jump itself -- the go, the flight bookkeeping, the height terms, the landing
-+-- is `jumper.ref_free_jump`'s; what these add is the rotation about one axis.
++-- is `jumper.ref_free_jump`'s; what these add is the rotation about one axis, and
++(`handover.py`) the start the bundle's controller gives a mode, which the two
++shipped jumps train from.
 +"""
 +
-+from . import commands, observations, rewards
++from . import commands, handover, observations, rewards
 +
-+__all__ = ["commands", "observations", "rewards"]
++__all__ = ["commands", "handover", "observations", "rewards"]
 diff --git a/tasks/jumper/power_jumpspin/mdp/commands.py b/tasks/jumper/power_jumpspin/mdp/commands.py
 new file mode 100644
-index 0000000..896a79e
+index 0000000..c570837
 --- /dev/null
 +++ b/tasks/jumper/power_jumpspin/mdp/commands.py
-@@ -0,0 +1,113 @@
+@@ -0,0 +1,125 @@
 +"""The reference-free jump's command, counting how far the body turns.
 +
 +`jumper.ref_free_jump`'s `RefFreeJumpCommand` already decides whose flight a
@@ -5234,6 +5930,12 @@ index 0000000..896a79e
 +    axis: Literal["yaw", "pitch"]
 +    """Which rotation is counted; see the module docstring for the signs."""
 +
++    reset_share: float = 0.0
++    """Share of the held HOME spawns (`mdp/handover.py`) whose go is put back at
++    the reset itself: mjlab's reset, the start the jumps first trained from. 0
++    everywhere but in `jumper.power_backflip`'s bridge, a curriculum that brings
++    it down to 0 (`power_backflip/mdp/curriculum.py`)."""
++
 +    def __post_init__(self):
 +        if self.axis not in ("yaw", "pitch"):
 +            raise ValueError(f"axis must be 'yaw' or 'pitch', got {self.axis!r}")
@@ -5267,6 +5969,12 @@ index 0000000..896a79e
 +
 +    def _resample_command(self, env_ids: torch.Tensor) -> None:
 +        super()._resample_command(env_ids)
++        if self.cfg.reset_share > 0.0:
++            held = self.go_step[env_ids] > 0.0
++            pick = torch.rand(len(env_ids), device=self.device) < self.cfg.reset_share
++            self.go_step[env_ids] = torch.where(
++                held & pick, torch.zeros_like(self.go_step[env_ids]), self.go_step[env_ids]
++            )
 +        for t in (self.turn, self.flight_turn, self.landed_turn, self.peak_turn):
 +            t[env_ids] = 0.0
 +
@@ -5302,6 +6010,132 @@ index 0000000..896a79e
 +
 +
 +__all__ = ["RotationJumpCommand", "RotationJumpCommandCfg"]
+diff --git a/tasks/jumper/power_jumpspin/mdp/handover.py b/tasks/jumper/power_jumpspin/mdp/handover.py
+new file mode 100644
+index 0000000..191c997
+--- /dev/null
++++ b/tasks/jumper/power_jumpspin/mdp/handover.py
+@@ -0,0 +1,120 @@
++"""Episodes that begin the way the bundle's controller hands a mode over.
++
++A turning jump's actor sees no clock and no command, so whatever starts the jump
++has to be in what it observes. Until these terms existed, every episode began at
++mjlab's reset, whose first observation shows `joint_torque` at the servo's limit
++on 18 of the 20 joints, in all five frames of the history: the PD toward a
++target of zero before the first action, saturated by HOME's offsets. The jumps
++learnt to take off on that, and from a robot standing at HOME with its real
++torques -- which is what a controller switching into the mode hands over --
++they did not (`docs/CRABCRAFT_POWER.md`, "Under the controller").
++
++What the controller does on a switch (`deploy/crabcraft.controller.toml`, and
++measured through the bundle's own controller in crabcraft's `jumper_sim.Host`):
++its ramp slides the setpoint to the mode's HOME at its own PD and hands over
++once every joint is within `pose_reach_tol` (0.10 rad) of it -- 0.57 s after the
++switch from standing, the worst joint 0.099 rad off, the fastest 0.20 rad/s, the
++torques 0.39 N*m at most. The policy's first observation is that moment's frame
++in every slot of the history, its last action zero.
++
++These terms put the same moment at the start of a HOME spawn:
++
++- the spawn is HOME with every gait joint up to `HANDOVER_POSE_RANGE` off it
++  (`env_cfg.py`), a reset event ahead of the reference-state spawns, which
++  overwrite it for their share;
++- `HandoverJointPositionAction` holds the target at HOME -- the raw action zero,
++  in the manager's copy too, so the actor's `actions` and `action_rate_l2` read
++  zero -- until the jump command's go, which `env_cfg.py` delays by a random
++  hold: the robot settles under its own PD, with its own torques;
++- `handover_history`, a step event, empties every observation history at the go,
++  so the frame the policy first acts on fills all five slots, as the
++  controller's reset of the history does.
++
++The go was the episode's first step before (`ref_free_jump`'s `GO_DELAY_RANGE`
++is zero); the command's own bookkeeping already counts a takeoff only after the
++go, so nothing it pays changes meaning. A reference-state spawn has its go in
++the past and is not held.
++"""
++
++from __future__ import annotations
++
++from dataclasses import dataclass
++from typing import TYPE_CHECKING
++
++import torch
++from mjlab.envs.mdp.actions import JointPositionAction, JointPositionActionCfg
++
++if TYPE_CHECKING:
++    from mjlab.envs import ManagerBasedRlEnv
++
++
++def holding(env: ManagerBasedRlEnv, command_name: str) -> torch.Tensor:
++    """Environments whose go has not come yet, for the action about to be applied.
++
++    `episode_length_buf` is the step the action is applied at; the go is the
++    command's `go_step`, so an action is held while its step comes before it.
++    """
++    cmd = env.command_manager.get_term(command_name)
++    return env.episode_length_buf.float() < cmd.go_step
++
++
++@dataclass(kw_only=True)
++class HandoverJointPositionActionCfg(JointPositionActionCfg):
++    command_name: str = "jump"
++    """The jump command, whose go ends the hold."""
++
++    def build(self, env: ManagerBasedRlEnv) -> HandoverJointPositionAction:
++        return HandoverJointPositionAction(self, env)
++
++
++class HandoverJointPositionAction(JointPositionAction):
++    """An absolute joint target around HOME that holds HOME until the go.
++
++    The held action is zero in the action manager's buffer as well as here: the
++    actor's `actions` observation and `action_rate_l2` read that buffer, and on
++    the robot the policy's first observation shows a last action of zero. The
++    policy's own output for a held step is still what PPO stored; the step's
++    outcome does not depend on it.
++    """
++
++    cfg: HandoverJointPositionActionCfg
++
++    def process_actions(self, actions: torch.Tensor) -> None:
++        held = holding(self._env, self.cfg.command_name)
++        if bool(held.any()):
++            manager = self._env.action_manager
++            if manager.total_action_dim != self.action_dim:
++                raise RuntimeError(
++                    "the handover holds the whole action: this term must be the only one"
++                )
++            actions = torch.where(held[:, None], torch.zeros_like(actions), actions)
++            manager.action[held] = 0.0
++        super().process_actions(actions)
++
++
++def handover_history(env: ManagerBasedRlEnv, env_ids: torch.Tensor | None,
++                     command_name: str = "jump") -> None:
++    """Step event: at the go, empty every observation history of the environments
++    whose go it is, so that the observation computed at the end of this step --
++    the one the policy first acts on -- fills every frame with itself.
++
++    Runs after the step's `episode_length_buf` increment and before the
++    observation is computed, so the go is now when the step just counted reached
++    it and the one before had not.
++    """
++    del env_ids
++    cmd = env.command_manager.get_term(command_name)
++    k = env.episode_length_buf.float()
++    go = cmd.go_step
++    now = (go > 0.0) & (k >= go) & (k - 1.0 < go)
++    ids = now.nonzero(as_tuple=False).flatten()
++    if len(ids) > 0:
++        env.observation_manager.reset(ids)
++
++
++__all__ = [
++    "HandoverJointPositionAction",
++    "HandoverJointPositionActionCfg",
++    "handover_history",
++    "holding",
++]
 diff --git a/tasks/jumper/power_jumpspin/mdp/observations.py b/tasks/jumper/power_jumpspin/mdp/observations.py
 new file mode 100644
 index 0000000..2b7c5ed
@@ -5573,10 +6407,10 @@ index 0000000..eb1a304
 +)
 diff --git a/tasks/jumper/power_jumpspin720/env_cfg.py b/tasks/jumper/power_jumpspin720/env_cfg.py
 new file mode 100644
-index 0000000..2d5dce8
+index 0000000..f7891c6
 --- /dev/null
 +++ b/tasks/jumper/power_jumpspin720/env_cfg.py
-@@ -0,0 +1,47 @@
+@@ -0,0 +1,59 @@
 +"""jumper.power_jumpspin720 -- jumper.power_jumpspin with the turn capped at two turns.
 +
 +Everything is `jumper.power_jumpspin`'s (its `env_cfg.py` has the design) but the
@@ -5593,8 +6427,19 @@ index 0000000..2d5dce8
 +jump spin "World of Crabcraft" ships, and an export is only reproducible against
 +the task it trained on, so the cap is a task here rather than a branch.
 +
-+`pw-jspin720` trained under the id `jumper.power_jumpspin` (its logs say so); the
-+configuration this task builds is the one it trained on, field for field.
++`pw-jspin720` trained under the id `jumper.power_jumpspin` (its logs say so), on
++this configuration without the handover below.
++
++## The handover start
++
++Every HOME spawn starts the way the bundle's controller hands a mode over
++(`power_jumpspin.env_cfg.handover_start`, `power_jumpspin/mdp/handover.py`): up to
++0.1 rad off HOME on every gait joint, held at HOME with the action at zero for
++0.02 to 0.6 s, and handed to the policy with its observation history emptied.
++`pw-jspin720` took off only from mjlab's reset, whose first observation shows the
++servo's limit on 18 of the 20 joints' torque; from a robot standing at HOME it
++did not jump. `pw-jspin720-ho`, resumed from its `model_3997` on this
++configuration, is what ships (`docs/CRABCRAFT_POWER.md`, "The handover start").
 +"""
 +
 +from __future__ import annotations
@@ -5615,12 +6460,13 @@ index 0000000..2d5dce8
 +
 +    Args:
 +        asset: path to the model XML, from `--model`. None uses the default jumper.xml.
-+        play: replay mode -- noise and pushes off, every episode from HOME.
++        play: replay mode -- noise and pushes off, every episode from HOME, handed
++            over after `power_jumpspin.env_cfg.PLAY_HOLD_S` of standing.
 +    """
 +    cfg = jumpspin_env.env_cfg(asset=asset, play=play)
 +    cfg.rewards["landed_turn"].params["cap"] = LANDED_TURN_CAP
 +    cfg.rewards["flight_turn_rate"].params["cap"] = LANDED_TURN_CAP
-+    return cfg
++    return jumpspin_env.handover_start(cfg, play)
 +
 +
 +__all__ = ["env_cfg"]
@@ -9627,6 +10473,245 @@ index 0000000..e91d918
 +    from mjlab.tasks.tracking.rl import MotionTrackingOnPolicyRunner
 +
 +    return MotionTrackingOnPolicyRunner
+diff --git a/tests/test_deploy_hook.py b/tests/test_deploy_hook.py
+index fe1a81a..704da9e 100644
+--- a/tests/test_deploy_hook.py
++++ b/tests/test_deploy_hook.py
+@@ -182,3 +182,50 @@ def test_each_device_s_switch_reaches_the_cascade_as_its_own_binding(tmp_path) -
+     (tmp_path / "cascade.toml").write_text(CASCADE + '\n[fsm.keyboard]\nkey_g = "LB"\n', "utf-8")
+     with pytest.raises(SystemExit, match=r"\[fsm\.keyboard\]"):
+         deploy.compose_fsm(spec, detail, models, manifest)
++
++
++def test_a_modes_skip_tilt_check_reaches_its_state_and_only_its_own(tmp_path) -> None:
++    """`skip_tilt_check` on a manifest mode arrives in that mode's `[[fsm.state]]` and
++    in what the bundle records it was built from; every other mode's state goes
++    without it, so the crate's default -- the `tilted` fallback armed -- stays theirs.
++
++    A flip mode needs the fallback lifted (it passes upside down), and nothing else
++    does: the failure on one side is a flip dropped to `safe` in the air, on the
++    other a mode that tips past the limit with nothing to catch it. So the composed
++    file is read back as TOML and every state is checked, the walking state and a
++    mode that says `false` out loud being the control group. Anything but a JSON
++    boolean is refused rather than read as one.
++    """
++    import copy
++
++    import tomllib
++
++    deploy = _deploy_module()
++    export = tmp_path / "export"
++    export.mkdir()
++    (export / "layout.json").write_text("{}", "utf-8")
++    (tmp_path / "cascade.toml").write_text(CASCADE, "utf-8")
++    manifest = tmp_path / "manifests.json"
++    spec = {"fsm": "cascade.toml", "modes": {
++        "walk": {"task": "jumper.tripod", "policy": str(export)},
++        "slow": {"task": "jumper.tripod", "policy": str(export), "pad": {"button": "A"},
++                 "skip_tilt_check": False},
++        "flip": {"task": "jumper.power_backflip", "policy": str(export),
++                 "keys": {"key": ["key_7"], "with": "shift"}, "skip_tilt_check": True},
++    }}
++
++    modes, detail = deploy.manifest_modes(spec, manifest)
++    assert detail["flip"]["skip_tilt_check"] is True, "bundle.json's built_from would not record it"
++    assert "skip_tilt_check" not in detail["walk"] and "skip_tilt_check" not in detail["slow"]
++    text = deploy.compose_fsm(spec, detail, {m: f"{m}.onnx" for m in modes}, manifest)
++    states = {s["name"]: s for s in tomllib.loads(text)["fsm"]["state"]}
++    assert states["flip"]["skip_tilt_check"] is True
++    assert states["flip"]["task"] == "jumper.power_backflip"
++    assert [n for n, s in states.items() if s.get("skip_tilt_check")] == ["flip"]
++    assert "skip_tilt_check" not in states["safe"]
++
++    for wrong in ("true", 1, None):
++        broken = copy.deepcopy(spec)
++        broken["modes"]["flip"]["skip_tilt_check"] = wrong
++        with pytest.raises(SystemExit, match="'flip''s `skip_tilt_check` is"):
++            deploy.manifest_modes(broken, manifest)
+diff --git a/tests/test_power_handover.py b/tests/test_power_handover.py
+new file mode 100644
+index 0000000..f17b1c2
+--- /dev/null
++++ b/tests/test_power_handover.py
+@@ -0,0 +1,178 @@
++"""The two shipped jumps start the way the bundle's controller hands a mode over.
++
++`jumper.power_jumpspin720` and `jumper.power_backflip` took off only from mjlab's
++reset, whose first observation shows the servo's torque limit on 18 of the 20
++joints, and from a robot standing at HOME they did not jump
++(`docs/CRABCRAFT_POWER.md`). `power_jumpspin/mdp/handover.py` starts every HOME
++spawn the controller's way instead. What is pinned here is what fails silently:
++
++- the hold has to reach the action manager's own copy of the action, or the
++  actor's `actions` observation shows the policy's discarded output while the
++  robot stands at HOME, which the controller never shows it;
++- the history has to be emptied at the go, or the first frame the policy acts on
++  sits behind four frames the controller would not have;
++- the reference-state spawns must come after the handover pose, or they spawn
++  mid-flight with their joints knocked off the recording.
++"""
++
++from __future__ import annotations
++
++import pytest
++
++SHIPPED = ("jumper.power_jumpspin720", "jumper.power_backflip")
++
++
++@pytest.mark.parametrize("task", SHIPPED)
++def test_the_shipped_jumps_train_from_the_handover(task: str) -> None:
++    import tasks
++    from tasks.jumper.power_jumpspin import env_cfg as jumpspin_env
++    from tasks.jumper.power_jumpspin.mdp.handover import HandoverJointPositionActionCfg
++    from tasks.jumper.ref_free_jump import env_cfg as ref_free_env
++
++    cfg = tasks.load_env_cfg(task)
++    assert isinstance(cfg.actions["joint_pos"], HandoverJointPositionActionCfg)
++    assert cfg.actions["joint_pos"].use_default_offset
++    assert cfg.commands["jump"].command_delay_range == jumpspin_env.HANDOVER_HOLD_RANGE
++    lo, hi = jumpspin_env.HANDOVER_HOLD_RANGE
++    assert lo > 0.0, "a zero hold is mjlab's reset, the start this replaces"
++    assert cfg.episode_length_s == pytest.approx(ref_free_env.EPISODE_S + hi)
++
++    resets = [n for n, t in cfg.events.items() if t.mode == "reset"]
++    assert resets.index("reset_to_default") < resets.index("handover_pose") \
++        < resets.index("reset_from_reference")
++    r = jumpspin_env.HANDOVER_POSE_RANGE
++    assert cfg.events["handover_pose"].params["position_range"] == (-r, r)
++    assert cfg.events["handover_history"].mode == "step"
++
++    play = tasks.load_env_cfg(task, play=True)
++    hold = jumpspin_env.PLAY_HOLD_S
++    assert play.commands["jump"].command_delay_range == (hold, hold)
++    assert "handover_pose" not in play.events
++    assert "handover_history" in play.events
++
++
++def test_the_full_turn_keeps_its_own_start() -> None:
++    """`jumper.power_jumpspin` is not shipped and its runs trained without it."""
++    import tasks
++    from tasks.jumper.power_jumpspin.mdp.handover import HandoverJointPositionActionCfg
++
++    cfg = tasks.load_env_cfg("jumper.power_jumpspin")
++    assert not isinstance(cfg.actions["joint_pos"], HandoverJointPositionActionCfg)
++    assert cfg.commands["jump"].command_delay_range == (0.0, 0.0)
++    assert "handover_history" not in cfg.events
++
++
++def test_the_hold_is_zero_everywhere_and_the_go_hands_over_one_frame() -> None:
++    """Step a real environment with large random actions: while held, the target
++    is HOME and the manager's action is zero; at the go every history frame is
++    the go's own, the last action zero; after it, the policy's action applies."""
++    from mjlab.sim import get_simulation_cls, set_simulation_cls
++    from mjrl.backend import native_sim, select
++    from mjrl.backend.resolve import resolve
++
++    # `use_backend` sets two module globals; put them back afterwards, as
++    # `test_dance_motion.py` explains, or this test's `n` becomes
++    # `test_resolve.py`'s thread count.
++    saved_cls = get_simulation_cls()
++    saved_nthread = native_sim._DEFAULT_NTHREAD
++    n = 3
++    res = resolve(backend="native", device="cpu", num_envs=n)
++    select.use_backend(res)
++    try:
++        _hold_and_go(n, res)
++    finally:
++        set_simulation_cls(saved_cls)
++        native_sim._DEFAULT_NTHREAD = saved_nthread
++
++
++def _hold_and_go(n: int, res) -> None:
++    import torch
++    from mjlab.envs import ManagerBasedRlEnv
++
++    import tasks
++    from tasks.jumper.power_jumpspin.env_cfg import handover_start
++
++    cfg = tasks.load_env_cfg("jumper.power_jumpspin720")
++    for name in ("base_com", "encoder_bias", "foot_friction", "push_robot"):
++        cfg.events.pop(name, None)
++    cfg.events["reset_from_reference"].params["rsi_fraction"] = 0.0
++    cfg.commands["jump"].rsi_fraction = 0.0
++    handover_start(cfg, play=False, hold_range=(0.05, 0.12), pose_range=0.1)
++    cfg.scene.num_envs = n
++    cfg.sim.device = res.device
++
++    env = ManagerBasedRlEnv(cfg, device=res.device)
++    try:
++        obs, _ = env.reset()
++        cmd = env.command_manager.get_term("jump")
++        go = cmd.go_step.clone()
++        assert bool((go >= 0.05 / env.step_dt - 1e-6).all())
++        robot = env.scene["robot"]
++        term = env.action_manager.get_term("joint_pos")
++        ids = term.target_ids
++        home = robot.data.default_joint_pos[:, ids]
++        group = env.observation_manager
++        names = group.active_terms["actor"]
++        dims = [int(torch.tensor(d).prod()) for d in group.group_obs_term_dim["actor"]]
++        start = dict(zip(names, torch.tensor([0, *dims]).cumsum(0).tolist()))
++        width = dict(zip(names, dims))
++
++        handed = torch.zeros(n, dtype=torch.bool)
++        gen = torch.Generator().manual_seed(0)
++        for _ in range(int(0.2 / env.step_dt)):
++            k = env.episode_length_buf.clone().float()
++            act = 2.0 * torch.randn(n, env.action_manager.total_action_dim, generator=gen)
++            obs, *_ = env.step(act)
++            held = k < go
++            if held.any():
++                assert torch.all(env.action_manager.action[held] == 0.0)
++                assert torch.allclose(robot.data.joint_pos_target[:, ids][held], home[held])
++            if (~held).any():
++                assert torch.allclose(env.action_manager.action[~held], act[~held])
++            now = (env.episode_length_buf.float() >= go) & ~handed
++            for e in now.nonzero().flatten().tolist():
++                x = obs["actor"][e]
++                for name in ("joint_pos", "joint_vel", "actions", "actuator_force"):
++                    frames = x[start[name]:start[name] + width[name]].view(5, -1)
++                    assert torch.allclose(frames, frames[-1:].expand_as(frames)), (
++                        f"env {e}: {name}'s history at the go is not one frame"
++                    )
++                actions = x[start["actions"]:start["actions"] + width["actions"]]
++                assert torch.all(actions == 0.0)
++            handed |= now
++        assert bool(handed.all())
++    finally:
++        env.close()
++
++
++def test_the_flips_clawback_mirrors_the_rate_it_takes_back() -> None:
++    """`turn_clawback` returns what `flight_turn_rate` paid, so it cancels it only
++    at the same weight, negated, and with the same cap: anything else leaves a
++    crash or a hop part of its pay, which the policy farms (`mdp/rewards.py`)."""
++    import tasks
++
++    cfg = tasks.load_env_cfg("jumper.power_backflip")
++    rate, claw = cfg.rewards["flight_turn_rate"], cfg.rewards["turn_clawback"]
++    assert claw.weight == -rate.weight
++    assert claw.params["cap"] == rate.params["cap"]
++    assert claw.params.get("max_rate", 60.0) == rate.params.get("max_rate", 60.0)
++    assert claw.params.get("charge_crash", True)
++
++
++def test_the_flips_bridge_comes_down_to_the_handover() -> None:
++    """The reset share starts where the curriculum starts it and reaches 0 inside
++    the shipped run's 1500 iterations from `pw-flip-T`'s `model_2498`, and replay
++    has none of it."""
++    import tasks
++    from tasks.jumper.power_backflip import env_cfg as flip_env
++    from tasks.jumper.ref_free_jump.rl_cfg import NUM_STEPS_PER_ENV
++
++    cfg = tasks.load_env_cfg("jumper.power_backflip")
++    term = cfg.curriculum["reset_share"]
++    assert cfg.commands["jump"].reset_share == term.params["start_share"] == flip_env.BRIDGE_SHARE
++    assert term.params["end_share"] == 0.0
++    assert term.params["end_step"] <= NUM_STEPS_PER_ENV * (2498 + 1500)
++    play = tasks.load_env_cfg("jumper.power_backflip", play=True)
++    assert play.commands["jump"].reset_share == 0.0
++    assert "reset_share" not in play.curriculum
++    assert tasks.load_env_cfg("jumper.power_jumpspin720").commands["jump"].reset_share == 0.0
 diff --git a/tests/test_task_parity.py b/tests/test_task_parity.py
 index 89270b8..5659f00 100644
 --- a/tests/test_task_parity.py
@@ -11848,10 +12933,10 @@ index 0000000..383e87f
 +    sys.exit(main())
 diff --git a/tools/eval_power.py b/tools/eval_power.py
 new file mode 100644
-index 0000000..3350436
+index 0000000..db87408
 --- /dev/null
 +++ b/tools/eval_power.py
-@@ -0,0 +1,331 @@
+@@ -0,0 +1,373 @@
 +"""Evaluate a jumper.power_* checkpoint in the task's own environment (native MuJoCo, CPU).
 +
 +Run from the repository root, with the repository on PYTHONPATH so that `tasks`
@@ -11869,6 +12954,16 @@ index 0000000..3350436
 +Every environment starts at HOME (play mode: no reference-state spawns, the
 +spin's random heading kept) and the deterministic policy (the distribution's
 +mean) runs until each environment's first termination or `--seconds`.
++
++**The handover** (`--hold`, the jumps only): each environment stands at HOME for a
++hold drawn from the range given, the action at zero, and is handed to the policy
++at the go with its observation history emptied -- the start the bundle's
++controller gives a mode (`tasks/jumper/power_jumpspin/mdp/handover.py`).
++`--pose-offset` spawns every gait joint up to that many radians off HOME first.
++`--hold 0` is mjlab's reset itself, the start the jumps trained from until the
++handover existed. Without `--hold`, the task's own replay config decides.
++`--keep-running` drops the back-at-HOME termination, to see whether and when the
++policy jumps a second time once it has landed and settled.
 +"dr off" removes the startup randomisation (base CoM offset, encoder bias, foot
 +friction -- the feet keep the model's nominal 1.2), the pushes and the
 +observation noise; "dr on" keeps the training's: those three, the pushes, and
@@ -11965,7 +13060,16 @@ index 0000000..3350436
 +    ap.add_argument("--nonfoot-friction", type=float, default=None, metavar="MU",
 +                    help="contact stress: every non-foot geom at this sliding friction against "
 +                    "the floor (condim 3, priority over the plane), instead of the plane's 1.0")
++    ap.add_argument("--hold", type=float, nargs="+", default=None, metavar="S",
++                    help="jumps: the handover -- seconds standing at HOME before the policy "
++                    "acts, one value or a range LO HI drawn per environment; 0 is mjlab's reset")
++    ap.add_argument("--pose-offset", type=float, default=0.0, metavar="RAD",
++                    help="with --hold: every gait joint spawned up to this far off HOME")
++    ap.add_argument("--keep-running", action="store_true",
++                    help="jumps: no back-at-HOME termination, so a second jump shows")
 +    args = ap.parse_args()
++    if args.hold is not None and not 1 <= len(args.hold) <= 2:
++        ap.error("--hold takes one value or two")
 +
 +    import mjrl.backend.select as sel
 +    from mjrl.backend import resolve
@@ -11993,6 +13097,15 @@ index 0000000..3350436
 +        cfg.observations["actor"] = train_cfg.observations["actor"]
 +    if args.foot_torsion is not None or args.nonfoot_friction is not None:
 +        stress_contacts(cfg, args.foot_torsion, args.nonfoot_friction)
++    if args.hold is not None:
++        if args.task in SPINS:
++            ap.error("--hold is the jumps' handover; the spin has no go")
++        from tasks.jumper.power_jumpspin.env_cfg import handover_start
++
++        lo, hi = (args.hold[0], args.hold[-1])
++        handover_start(cfg, play=True, hold_range=(lo, hi), pose_range=args.pose_offset)
++    if args.keep_running:
++        cfg.terminations.pop("back_home", None)
 +    if args.seconds is not None:
 +        cfg.episode_length_s = args.seconds
 +    cfg.scene.num_envs = args.envs
@@ -12018,6 +13131,8 @@ index 0000000..3350436
 +    cmd = env.command_manager.get_term("jump") if args.task not in SPINS else None
 +
 +    obs, _ = wrapped.reset()
++    # Each environment's go, drawn at the reset: the handover's moment.
++    go_s = cmd.go_step.cpu().numpy() * dt if cmd is not None else np.zeros(E)
 +    pos = np.full((n, E, 3), np.nan)
 +    grav = np.full((n, E, 3), np.nan)
 +    yaw_rate = np.full((n, E), np.nan)
@@ -12030,7 +13145,8 @@ index 0000000..3350436
 +    body_sensor = env.scene.sensors.get("body_ground_contact") if hasattr(env.scene, "sensors") else None
 +    # jump bookkeeping, last value seen while alive
 +    jb = {k: np.zeros(E) for k in ("landed", "apex_rise", "landed_turn", "flight_turn",
-+                                   "peak_turn", "turn", "in_flight")}
++                                   "peak_turn", "turn", "in_flight", "second_jump")}
++    second_t = np.full(E, np.nan)
 +    takeoff_t = np.full(E, np.nan)
 +    touchdown_t = np.full(E, np.nan)
 +    was_flying = np.zeros(E, dtype=bool)
@@ -12047,6 +13163,7 @@ index 0000000..3350436
 +            "peak_turn": cmd.peak_turn.cpu().numpy(),
 +            "turn": cmd.turn.cpu().numpy(),
 +            "in_flight": cmd.in_flight.float().cpu().numpy(),
++            "second_jump": cmd.second_jump.float().cpu().numpy(),
 +        }
 +        flying = st["in_flight"] > 0.5
 +        t = (k + 1) * dt
@@ -12056,6 +13173,8 @@ index 0000000..3350436
 +        takeoff_t[newly_up] = t
 +        down = ~flying & was_flying & live & np.isnan(touchdown_t) & (st["landed"] > 0.5)
 +        touchdown_t[down] = t
++        again = (st["second_jump"] > 0.5) & live & np.isnan(second_t)
++        second_t[again] = t
 +        was_flying = np.where(live, flying, was_flying)
 +        for key, v in st.items():
 +            jb[key] = np.where(live, v, jb[key])
@@ -12159,6 +13278,14 @@ index 0000000..3350436
 +        upright = [bool(landed[e]) and not any(f in why[e].split(",") for f in FAILURES)
 +                   and tilt_after[e] is not None and tilt_after[e] < 30.0 for e in range(E)]
 +        metrics.update({
++            "hold_s": args.hold, "pose_offset_rad": args.pose_offset,
++            "keep_running": args.keep_running,
++            "go_s": [round(float(x), 3) for x in go_s],
++            "takeoff_after_go_s": [None if math.isnan(x) else round(float(x - g), 3)
++                                   for x, g in zip(takeoff_t, go_s)],
++            "second_jump": int(np.sum(~np.isnan(second_t))),
++            "second_jump_after_touchdown_s": [None if math.isnan(x) else round(float(x - d), 3)
++                                              for x, d in zip(second_t, touchdown_t)],
 +            "jumped": int(landed.sum()),
 +            "apex_rise_m": [round(float(x), 3) for x in jb["apex_rise"]],
 +            "flight_s": [None if math.isnan(x) else round(float(x), 3) for x in flight_s],
