@@ -64,9 +64,12 @@ exclusive = true
 # docs/CRABCRAFT_POWER.md): 9.0 degrees.
 #
 # The 720 jump spin, measured through this controller (docs/CRABCRAFT_POWER.md,
-# "The final bundle", 24 trials from standing and walking, its targets let past
-# the stops by its mode's `target_margin`): 31.7 to 40.8 degrees at most, at its
-# landing; 26.3 to 37.4 in 24 trials with them clamped at the stops.
+# "The bundle with the three", 24 trials from standing and walking, its targets
+# clamped at the stops like every other mode's): 35.8 to 42.7 degrees at most,
+# at its landing. Closer than any other move: in its own environment, with the
+# training's randomisation, one landing of 32 reached 49.1 ("Within the
+# stops"). The export before it, its targets let 1.7 rad past the stops, peaked
+# at 31.7 to 40.8 through this controller ("The final bundle").
 #
 # The back flip (`jumper.power_backflip`) does not fit under this number and is
 # not meant to: it passes 177 degrees in the air. Under this rule it went to
@@ -840,7 +843,6 @@ skip_tilt_check = true
 name = "power_jumpspin"
 model = "power_jumpspin.onnx"
 task = "jumper.power_jumpspin720"
-target_margin = 1.7
 
 [[fsm.state]]
 name = "power_spin"

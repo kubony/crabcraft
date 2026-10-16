@@ -4,8 +4,9 @@
 // the jump, each of the six skills and the seven breakdance moves (the four jumper.break_*
 // recordings, the spin, the 720 jump spin and the back flip), then the live breakdance routine
 // (src/robot/sim/routine.ts) several times from different starts, and prints what happened (exit 1
-// when a move fails to enter, finish or hand back, a jump does not take off and land upright, or a
-// routine run does not play every move on its downbeat and end walking upright without a Safe Hold).
+// when a move fails to enter, finish or hand back, the six-step does not turn its full turn, a jump
+// does not take off and land upright, or a routine run does not play every move on its downbeat and
+// end walking upright without a Safe Hold).
 //
 //   node tools/robot-sim-check.ts [--quick] [--routine N] [--routine-only]
 // --routine N: routine runs (default 5); --routine-only: skip everything before the routine.
@@ -324,7 +325,12 @@ for (const [mode, code, clip] of SKILLS) {
 }
 // The breakdance moves (jumper.break_* and jumper.power_spin_feet), on Shift + 1 to 5. The four
 // recordings end by themselves and hand back; the spin has no recording, so it is held for 6 s
-// and let go with its own switch, as a person would.
+// and let go with its own switch, as a person would. The six-step's recording turns the robot a
+// full turn, and its policy sees how far its heading has fallen behind the recording's (the
+// controller's ref_heading_error, from the IMU's yaw since the mode was entered): on this core it
+// turns 357.7 degrees from its policy's start to walking again, so a bundle whose six-step no
+// longer closes its turn (the export before turned 345.9) fails under SIXSTEP_MIN_TURN.
+const SIXSTEP_MIN_TURN = 350;
 const shiftTap = async (code: string) => {
   press('ShiftLeft', true); press(code, true);
   await run(0.1, `  Shift+${code} down`);
@@ -334,14 +340,28 @@ const BREAKS: [string, string, number][] = [
   ['break_toprock', 'Digit1', 6.24], ['break_sixstep', 'Digit2', 5.32],
   ['break_clawstand', 'Digit3', 6.52], ['break_oneclaw', 'Digit4', 6.52], ['power_spin', 'Digit5', 0],
 ];
-const breaks: Record<string, { entered: boolean; back: boolean; minZ: number; maxTiltDeg: number; turnedDeg: number; revPerS?: number }> = {};
+const breaks: Record<string, { entered: boolean; back: boolean; minZ: number; maxTiltDeg: number; turnedDeg: number; revPerS?: number; policyTurnedDeg?: number }> = {};
 for (const [mode, code, clip] of BREAKS) {
   if (!bundle.modes[mode]) continue;
   const before = sim.log.length;
   await shiftTap(code);
   let r;
   let revPerS: number | undefined;
-  if (clip > 0) r = await run(clip + 3.2, mode);
+  // The turn while the mode's own policy runs: from its start (the handover) to walking again.
+  let policyTurned = 0;
+  let policyYaw: number | null = null;
+  const whilePolicy = () => {
+    if (sim.mode === mode && sim.runningPolicy) {
+      const yaw = heading();
+      if (policyYaw !== null) policyTurned += ((yaw - policyYaw + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
+      policyYaw = yaw;
+    } else if (policyYaw !== null && sim.mode === 'locomotion') {
+      const yaw = heading();
+      policyTurned += ((yaw - policyYaw + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
+      policyYaw = null;
+    }
+  };
+  if (clip > 0) r = await run(clip + 3.2, mode, whilePolicy);
   else {
     // the switch-in ramp, then the spin; the rate is read over the last 4 s of the 6
     const ramp = await run(1.0, `${mode} ramp+spin-up`);
@@ -362,8 +382,13 @@ for (const [mode, code, clip] of BREAKS) {
   breaks[mode] = {
     entered, back, minZ: +r.minZ.toFixed(3), maxTiltDeg: +(r.maxTilt * 57.3).toFixed(1),
     turnedDeg: +(r.turned * 57.3).toFixed(1), ...(revPerS !== undefined ? { revPerS: +revPerS.toFixed(2) } : {}),
+    ...(clip > 0 ? { policyTurnedDeg: +(policyTurned * 57.2958).toFixed(1) } : {}),
   };
   if (!entered || !back || r.maxTilt * 57.3 > 45) skillsFailed++;
+  if (mode === 'break_sixstep' && Math.abs(policyTurned * 57.2958) < SIXSTEP_MIN_TURN) {
+    console.log(`break_sixstep turned ${(policyTurned * 57.2958).toFixed(1)} degrees under its policy, under ${SIXSTEP_MIN_TURN}`);
+    skillsFailed++;
+  }
   await run(1, 'settle');
 }
 
@@ -374,10 +399,12 @@ for (const [mode, code, clip] of BREAKS) {
 // (on its feet again, under 30 degrees of tilt 0.3 s after the touchdown, never in `safe`) and be
 // handed back to the walking policy by the host's own press of its switch (core.ts AUTO_LEAVE_S).
 // The turn in the air is the body rate integrated over that flight: about the vertical for the
-// 720, nose-up about the body's pitch axis for the flip. The 720's floor sits between what it turns
-// with its targets let 1.7 rad past the stops, as the bundle ships it (690 to 746 degrees on this
-// core, 24 trials from standing and walking), and what it turned with them clamped at the stops
-// (at most 653 through the bundle's controller): a bundle that lost its `target_margin` fails here.
+// 720, nose-up about the body's pitch axis for the flip. The 720 ships trained with its targets
+// clamped at the joint stops, as the controller clamps every other mode's (no `target_margin`): on
+// this core it turns 682 to 750 degrees in the air in 24 trials from standing and walking, and 680
+// and 686 in this check. Its floor, 660, sits under that and over what the export before it turned
+// clamped at the stops (at most 653 through the bundle's controller), so a bundle that brings back
+// an export that needs the margin, without the margin, fails here.
 const JUMPS: [string, string, 'yaw' | 'pitch', number][] = [
   ['power_jumpspin', 'Digit6', 'yaw', 660], ['power_backflip', 'Digit7', 'pitch', 330],
 ];

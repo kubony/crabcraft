@@ -1,9 +1,9 @@
 {
   "_source": "scripts/export.py -- re-export whenever the env / robot / agent config changes",
   "_checkpoint": {
-    "path": "logs/jumper/jumper.break_sixstep/2026-10-15_15-36-26/model_3999.pt",
-    "run": "logs/jumper/jumper.break_sixstep/2026-10-15_15-36-26",
-    "iteration": "model_3999"
+    "path": "logs/jumper/jumper.break_sixstep/2026-10-16_21-18-52/model_5998.pt",
+    "run": "logs/jumper/jumper.break_sixstep/2026-10-16_21-18-52",
+    "iteration": "model_5998"
   },
   "_schema": "isaac_layout v1",
   "obs_joint_order": [
@@ -211,7 +211,7 @@
     "control_hz": 50.0
   },
   "observation": {
-    "dim": 209,
+    "dim": 210,
     "history_length": 1,
     "history_order": "oldest_first",
     "normalization": "baked_into_onnx",
@@ -289,6 +289,14 @@
         "dim": 22,
         "offset": 187,
         "source_name": "actuator_force"
+      },
+      {
+        "name": "ref_heading_error",
+        "dim": 1,
+        "offset": 209,
+        "params": {
+          "command_name": "motion"
+        }
       }
     ]
   },

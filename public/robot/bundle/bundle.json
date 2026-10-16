@@ -8,7 +8,7 @@
       "tool": "scripts/deploy.py",
       "cargo": "build --release --target wasm32-unknown-unknown --no-default-features --features web",
       "wasmBindgen": "wasm-bindgen 0.2.128",
-      "commit": "f3afcefce261298001a167f6096ce77769f4036d",
+      "commit": "0cf350ad7ee2b67232cdfec28066ea4a3d98c704",
       "unverifiedByTheConsumer": "A consumer's own controller is held against its own implementation by a parity test. This one is not held against anything: it arrived with the upload. A consumer that runs it should say so where the person can see it."
     },
     "mjlab": {
@@ -19,7 +19,7 @@
           "abi": "abi3-py310"
         }
       },
-      "commit": "f3afcefce261298001a167f6096ce77769f4036d",
+      "commit": "0cf350ad7ee2b67232cdfec28066ea4a3d98c704",
       "note": "The same source as the wasm, built for a host that imports it. Platform-specific: `abi3` frees it from the Python version, not from the machine, so it is keyed by platform: the build machine's, and win-amd64 and macosx-universal2, cross-built. macOS is keyed without a version and the one file carries arm64 and x86_64."
     }
   },
@@ -48,7 +48,7 @@
         "onnx": "models/break_sixstep.onnx"
       },
       "contract": "break_sixstep.json",
-      "observation": 209,
+      "observation": 210,
       "action": 22,
       "trajectory": "sixstep.motion.trajectory.json"
     },
@@ -277,7 +277,7 @@
   "files": {
     "README.md": {
       "bytes": 25899,
-      "sha256": "7268e078b194732f372eb45d2720b64340dbdea3f93d82a6cda1fce49a5f0334"
+      "sha256": "148b7aa8cde0d6a4b4879cd19ab8149b36fabc4aee1abede726ee2eeb4e917b2"
     },
     "bow.motion.trajectory.json": {
       "bytes": 143332,
@@ -296,8 +296,8 @@
       "sha256": "2dda02df480baa7c70c2085bc079518371f7414bdced3cbfd6dd90514f0fbf87"
     },
     "break_sixstep.json": {
-      "bytes": 7099,
-      "sha256": "2e66338431dd417a36c7f81ae51035dff8078f4fbd3f7d72201a7d7c70a6190f"
+      "bytes": 7259,
+      "sha256": "377c970be720db2f8252b962fb6cfec11dc34d8ce9e708338751b4db61766f94"
     },
     "break_toprock.json": {
       "bytes": 7099,
@@ -320,8 +320,8 @@
       "sha256": "be95c575ad917648c05b4c5155a8b836aa1aaeb4926f3a5bec774abf5953a7ce"
     },
     "controller.toml": {
-      "bytes": 23721,
-      "sha256": "cc38894fc5fae2ffdc83b109d2df69b5219c83844cf1c258d25038495439940a"
+      "bytes": 23925,
+      "sha256": "d2915cf81fc1d8045f1e360826958f632f5cfaead393a48832ff59203a0a702e"
     },
     "dance_brazilian.json": {
       "bytes": 7107,
@@ -400,8 +400,8 @@
       "sha256": "d1a12201b1b13ad11da8b263419a0f8261ddeaa2aa9391a0849b71ba34d80ee0"
     },
     "models/break_sixstep.onnx": {
-      "bytes": 1129112,
-      "sha256": "b17c676b38a24f8b9a23e2ef21b6cbf1999228a7515811598fd0736b02d94109"
+      "bytes": 1131168,
+      "sha256": "6cdb60953157e27423e209b7e1a27e80ca1d1c6b21da7d4e9f32aa298558759f"
     },
     "models/break_toprock.onnx": {
       "bytes": 1129112,
@@ -453,11 +453,11 @@
     },
     "models/power_backflip.onnx": {
       "bytes": 1533624,
-      "sha256": "ce368e06f9f1e73e15f72cdc069909a9d94f9661b33de8e56e38bca7029c6cff"
+      "sha256": "c69e36de7b3a5cb74a2f4e73e674d606e3ea5e43574101e316c43decd9178442"
     },
     "models/power_jumpspin.onnx": {
       "bytes": 1533624,
-      "sha256": "23f3f74ee013ab6e417bd808eb860491c1451207198bf5fc51e93eb310de6608"
+      "sha256": "b8fa663726cc90110d657552ec48fc4ba00077fb4ee3947ddb67247f7ccd63ae"
     },
     "models/power_spin.onnx": {
       "bytes": 1533624,
@@ -497,11 +497,11 @@
     },
     "power_backflip.json": {
       "bytes": 7427,
-      "sha256": "49db4ff989f7b63918aee801efc5cc506b7d1106895cec1156bc9109df4db89b"
+      "sha256": "0312462d6ca724012ad345c2e5127814c887d194caa13ee42dc480f177f21823"
     },
     "power_jumpspin.json": {
-      "bytes": 7433,
-      "sha256": "21ec3204a781df746dbd9e089a76d29262e449679e6d46f922f982484106a0ac"
+      "bytes": 7435,
+      "sha256": "e60f80e356684f2f8365734c1bb7028d118ad71059566b84254bbe157428e587"
     },
     "power_spin.json": {
       "bytes": 7419,
@@ -513,19 +513,19 @@
     },
     "reference.json": {
       "bytes": 183501,
-      "sha256": "bee96b34fcb490807a7ab9837fb314b27ae04e043d25a922490d2d6d223c9b69"
+      "sha256": "03e3d0ecf44c41df3b5322491b8f57072ee99850a63f4f0819371b4f50a27641"
     },
     "runtime/mjlab/macosx-11.0-arm64/controller.so": {
-      "bytes": 1669408,
-      "sha256": "b6eb1c74132bf9ec8f01de2dfb65a91d48445956001caa0577c7cd92ed66c929"
+      "bytes": 1669456,
+      "sha256": "bb13c8dc101584f2287dad92ef18cf1419d0b63b8e83e3e05ecb6eef2f0c19f4"
     },
     "runtime/web/controller.js": {
       "bytes": 29783,
       "sha256": "dde2baa0c7ed5fa5de30e6d53128721959853929c29fa131f64de8100380e59e"
     },
     "runtime/web/controller.wasm": {
-      "bytes": 1361768,
-      "sha256": "afa1be40587b197afbe6cf0f292cb1070950b5f2a9dab6a4232557f778b740a5"
+      "bytes": 1363628,
+      "sha256": "0ccb32b50a01200eca956737327928bd96766b5956fce2cb0032fad40fcee182"
     },
     "salute.motion.trajectory.json": {
       "bytes": 98320,
@@ -1079,7 +1079,7 @@
     },
     "break_sixstep": {
       "task": "jumper.break_sixstep",
-      "from": "logs/jumper/jumper.break_sixstep/2026-10-15_15-36-26/model_3999.pt",
+      "from": "logs/jumper/jumper.break_sixstep/2026-10-16_21-18-52/model_5998.pt",
       "export": "tasks/jumper/break_sixstep/out/crabcraft",
       "pad": {
         "button": "X",
@@ -1176,9 +1176,8 @@
     },
     "power_jumpspin": {
       "task": "jumper.power_jumpspin720",
-      "from": "logs/jumper/jumper.power_jumpspin720/2026-10-16_16-53-06/model_7250.pt",
+      "from": "logs/jumper/jumper.power_jumpspin720/2026-10-16_21-48-22/model_11048.pt",
       "export": "tasks/jumper/power_jumpspin720/out/crabcraft",
-      "target_margin": 1.7,
       "pad": {
         "button": "RB",
         "on": "toggle",
@@ -1201,7 +1200,7 @@
     },
     "power_backflip": {
       "task": "jumper.power_backflip",
-      "from": "logs/jumper/jumper.power_backflip/2026-10-16_17-38-20/model_5900.pt",
+      "from": "logs/jumper/jumper.power_backflip/2026-10-16_21-42-49/model_7900.pt",
       "export": "tasks/jumper/power_backflip/out/crabcraft",
       "skip_tilt_check": true,
       "pad": {

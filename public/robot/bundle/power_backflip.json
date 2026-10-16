@@ -1,9 +1,9 @@
 {
   "_source": "scripts/export.py -- re-export whenever the env / robot / agent config changes",
   "_checkpoint": {
-    "path": "logs/jumper/jumper.power_backflip/2026-10-16_17-38-20/model_5900.pt",
-    "run": "logs/jumper/jumper.power_backflip/2026-10-16_17-38-20",
-    "iteration": "model_5900"
+    "path": "logs/jumper/jumper.power_backflip/2026-10-16_21-42-49/model_7900.pt",
+    "run": "logs/jumper/jumper.power_backflip/2026-10-16_21-42-49",
+    "iteration": "model_7900"
   },
   "_schema": "isaac_layout v1",
   "obs_joint_order": [
