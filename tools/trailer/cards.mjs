@@ -73,6 +73,9 @@ async function captions() {
   for (const c of list) {
     const pos = (layout === 'port' ? c.portPos : c.landPos) ?? 'bottom';
     const q = new URLSearchParams({ mode: 'caption', layout, en: c.en, zh: c.zh, pos });
+    // A lower third's second line (what the move is), in both languages.
+    if (c.enLine) q.set('enLine', c.enLine);
+    if (c.zhLine) q.set('zhLine', c.zhLine);
     await page.goto(`${base}/tools/trailer/cards.html?${q}`);
     await page.waitForFunction(() => window.__cardsReady === true && document.body.dataset.ready === '1', null, { timeout: 30000 });
     const file = resolve(outDir, `cap-${c.id}-${layout}.png`);

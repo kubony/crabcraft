@@ -13,7 +13,8 @@ the cut: sections in bars, impacts on the landings, a riser into each drop.
 
 Styles: hook (slow, muffled, rising), drop (impact, then a drum break with scratches), grooveA,
 grooveB (busier, horns, scratch fills), half (half-time for slow motion), finale (everything),
-outro (one bar of groove, a final stab that rings out over `tail` seconds).
+outro (one bar of groove, a final stab that rings out over `tail` seconds), rest (nothing but the
+crackle: another track plays there, the live routine's own music in the showcase reel).
 
 Usage: uv run --with numpy --with scipy python tools/trailer/breakdance/beat.py <arrangement.json> <out.wav>
 Writes 48 kHz stereo 32-bit float WAV (not loudness-normalised: the edit does that).
@@ -426,6 +427,8 @@ def render(arr):
                 S.put('music', bass(note(ROOT[chord]), BAR * 0.95, 0.9), b0)
                 pad = epiano([note(x) for x in CHORDS[chord]], BAR * 0.95, 0.8, 0.7)
                 S.put('music', filt(pad, 'low', 1800), b0, send=0.5)
+            elif style == 'rest':
+                pass
             elif style == 'outro':
                 if k == 0:
                     drums(S, b0, 'grooveA', 0, True)
@@ -440,7 +443,7 @@ def render(arr):
                     S.put('music', bass(note('E2'), BAR * 1.1, 0.9), b0)
                     S.put('music', filt(epiano([note(x) for x in CHORDS['Em9']], BAR * 1.8, 0.5, 0.4), 'low', 1500), b0 + BEAT * 2, send=0.6)
             # A riser into the next section's first bar when it is a drop or the finale.
-            if last and nxt in ('drop', 'finale', 'grooveB') and style != 'hook':
+            if last and nxt in ('drop', 'finale', 'grooveB') and style not in ('hook', 'rest'):
                 S.put('music', riser(BEAT * 2, 0.5), b0 + BAR - BEAT * 2)
             bar += 1
     for h in hits:

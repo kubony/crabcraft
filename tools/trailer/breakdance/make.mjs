@@ -1,22 +1,27 @@
 #!/usr/bin/env node
-// The breakdance video, end to end, in one command: serve the app, capture every shot in both
-// layouts, render the title cards and captions, cut the landscape and the vertical video, draw
-// their contact sheets and check the results (ffprobe specs, loudness, silence, black frames, the
-// capture's blank-frame repairs). Re-run it after any clip is re-recorded: every cut follows the
-// game's clip windows (routine.mjs).
+// The breakdance videos, end to end, in one command: serve the app, capture every shot, render the
+// title cards and captions, cut, draw the contact sheets and check the results (ffprobe specs,
+// loudness, silence, black frames, the capture's blank-frame repairs). Re-run it after any clip is
+// re-recorded or the bundle changes: every cut follows the probes the shots record (the game's
+// clip windows, routine.mjs; the live routine's bars; each jump's landing).
 //
 //   node tools/trailer/breakdance/make.mjs --work <scratch dir> --out-dir <dir>
+//     [--reel]                        the showcase reel of every dance and move (reel.mjs) instead
+//                                     of the contest cut (edit.mjs, landscape and vertical)
 //     [--url http://localhost:5241]   use a running dev server instead of starting one
 //     [--port 5241]                   port for the dev server this script starts
-//     [--shots routine-a,ending]      capture only these shots (the rest are reused from --work)
+//     [--shots live,ending]           capture only these shots (the rest are reused from --work)
+//     [--reuse]                       capture only the shots --work does not have yet
 //     [--skip-capture] [--skip-cards] [--dsf 2]
 //
-// Writes <out-dir>/crabcraft-breakdance-1080p.mp4, crabcraft-breakdance-vertical-1080x1920.mp4,
-// their .en.srt and .zh.srt, crabcraft-breakdance-contact-sheet.png and
-// crabcraft-breakdance-vertical-contact-sheet.png, and <work>/report.json. Needs ffmpeg, uv and
-// installed Chrome (Playwright's channel 'chrome').
+// The contest cut writes <out-dir>/crabcraft-breakdance-1080p.mp4,
+// crabcraft-breakdance-vertical-1080x1920.mp4, their .en.srt and .zh.srt and contact sheets; the
+// reel crabcraft-moves-showcase-1080p.mp4, its .srt files and contact sheet; both a report in
+// <work> (report.json, reel-report.json). Run the cut first and the reel with --reuse in the same
+// --work: the reel takes the live routine, the slow 720 and the game's shots from it. Needs ffmpeg,
+// uv and installed Chrome (Playwright's channel 'chrome').
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -33,18 +38,30 @@ const outDir = resolve(opt('--out-dir', '.'));
 const port = Number(opt('--port', '5241'));
 let url = opt('--url', '');
 const dsf = opt('--dsf', '2');
-const shots = opt('--shots', '');
-const dirs = { shots: resolve(work, 'shots'), cards: resolve(work, 'cards'), edit: resolve(work, 'edit') };
+const reel = flag('--reel');
+const dirs = { shots: resolve(work, 'shots'), cards: resolve(work, reel ? 'reel-cards' : 'cards'), edit: resolve(work, reel ? 'reel-edit' : 'edit') };
 for (const d of [work, outDir, ...Object.values(dirs)]) mkdirSync(d, { recursive: true });
 
-const OUT = {
-  land: resolve(outDir, 'crabcraft-breakdance-1080p.mp4'),
-  port: resolve(outDir, 'crabcraft-breakdance-vertical-1080x1920.mp4'),
-};
-const SHEET = {
-  land: resolve(outDir, 'crabcraft-breakdance-contact-sheet.png'),
-  port: resolve(outDir, 'crabcraft-breakdance-vertical-contact-sheet.png'),
-};
+const OUT = reel
+  ? { reel: resolve(outDir, 'crabcraft-moves-showcase-1080p.mp4') }
+  : { land: resolve(outDir, 'crabcraft-breakdance-1080p.mp4'), port: resolve(outDir, 'crabcraft-breakdance-vertical-1080x1920.mp4') };
+const SHEET = reel
+  ? { reel: resolve(outDir, 'crabcraft-moves-showcase-contact-sheet.png') }
+  : { land: resolve(outDir, 'crabcraft-breakdance-contact-sheet.png'), port: resolve(outDir, 'crabcraft-breakdance-vertical-contact-sheet.png') };
+const CUTS = Object.keys(OUT);
+/** The shots each video cuts from (capture.mjs), and in which layouts. */
+const SHOTS = reel
+  ? { layout: 'land', names: ['dance-crab', 'dance-brazilian', 'dance-maze', 'dance-dream-wings', 'moves', 'jump-live-slow', 'flip-live-slow', 'live', 'routine-a', 'ending'] }
+  : { layout: 'both', names: ['jump-live-slow', 'live', 'routine-a', 'routine-b', 'jump-slow', 'flip-slow2', 'ending'] };
+/** Each video's length, seconds. */
+const LENGTH = reel ? [60, 120] : [30, 45];
+const shotsWanted = (() => {
+  const asked = opt('--shots', '');
+  if (asked) return asked.split(',');
+  if (!flag('--reuse')) return SHOTS.names;
+  const layouts = SHOTS.layout === 'both' ? ['', '-port'] : [''];
+  return SHOTS.names.filter((n) => layouts.some((sfx) => !existsSync(resolve(dirs.shots, `${n}${sfx}.json`))));
+})();
 /** The end card's note: the moves are simulation results. */
 const NOTE = {
   en: 'Trained in simulation. Not yet run on a physical Jumper.',
@@ -98,30 +115,33 @@ process.on('SIGINT', () => process.exit(130));
 try {
   // -------------------------------------------------------------------------------- shots and cards
 
-  if (!flag('--skip-capture')) {
-    run('node', [resolve(here, 'capture.mjs'), '--url', url, '--out', dirs.shots, '--layout', 'both', '--dsf', dsf, ...(shots ? ['--shots', shots] : [])]);
+  if (!flag('--skip-capture') && shotsWanted.length) {
+    run('node', [resolve(here, 'capture.mjs'), '--url', url, '--out', dirs.shots, '--layout', SHOTS.layout, '--dsf', dsf, '--shots', shotsWanted.join(',')]);
   }
   if (!flag('--skip-cards')) {
-    for (const layout of ['land', 'port']) {
+    for (const layout of reel ? ['land'] : ['land', 'port']) {
       run('node', [resolve(here, '..', 'cards.mjs'), '--url', url, '--out', dirs.cards, '--layout', layout,
-        '--captions', resolve(here, 'captions.json'), '--what', 'logo,end,captions',
-        '--logo-tag', 'The breakdance', '--logo-tag-zh', '霹雳舞', '--end-note', NOTE.en, '--end-note-zh', NOTE.zh]);
+        '--captions', resolve(here, reel ? 'reel-captions.json' : 'captions.json'), '--what', 'logo,end,captions',
+        '--logo-tag', reel ? 'Every dance, every move' : 'The breakdance', '--logo-tag-zh', reel ? '每一支舞，每一个动作' : '霹雳舞',
+        '--end-note', NOTE.en, '--end-note-zh', NOTE.zh]);
     }
   }
   stop();
 
   // -------------------------------------------------------------------------------- the cuts
 
-  for (const cut of ['land', 'port']) {
-    run('node', [resolve(here, 'edit.mjs'), '--shots', dirs.shots, '--cards', dirs.cards, '--work', dirs.edit, '--cut', cut, '--out', OUT[cut]]);
+  for (const cut of CUTS) {
+    if (reel) run('node', [resolve(here, 'reel.mjs'), '--shots', dirs.shots, '--cards', dirs.cards, '--work', dirs.edit, '--out', OUT[cut]]);
+    else run('node', [resolve(here, 'edit.mjs'), '--shots', dirs.shots, '--cards', dirs.cards, '--work', dirs.edit, '--cut', cut, '--out', OUT[cut]]);
+    // The reel is long: a frame every 4 s keeps its sheet readable.
     run('uv', ['run', '-q', '--with', 'pillow', 'python', resolve(here, '..', 'contact_sheet.py'), OUT[cut], SHEET[cut],
-      '--every', '2', '--cols', cut === 'port' ? '11' : '6', '--width', cut === 'port' ? '220' : '400']);
+      '--every', reel ? '4' : '2', '--cols', cut === 'port' ? '11' : '6', '--width', cut === 'port' ? '220' : '400']);
   }
 
   // -------------------------------------------------------------------------------- checks
 
   const report = {};
-  for (const cut of ['land', 'port']) {
+  for (const cut of CUTS) {
     const f = OUT[cut];
     const probe = JSON.parse(capture('ffprobe', ['-v', 'error', '-show_entries', 'format=duration,size,bit_rate:stream=codec_type,codec_name,profile,width,height,r_frame_rate,pix_fmt,sample_rate,channels', '-of', 'json', f]));
     const v = probe.streams.find((s) => s.codec_type === 'video');
@@ -153,15 +173,15 @@ try {
     if (m.blanks?.length) report.captureBlanks[f.replace(/\.json$/, '')] = m.blanks;
     if (m.errors?.length) (report.pageErrors ??= {})[f.replace(/\.json$/, '')] = m.errors;
   }
-  writeFileSync(resolve(work, 'report.json'), JSON.stringify(report, null, 1));
+  writeFileSync(resolve(work, reel ? 'reel-report.json' : 'report.json'), JSON.stringify(report, null, 1));
   console.log(`\n${JSON.stringify(report, null, 1)}`);
-  const bad = ['land', 'port'].flatMap((c) => {
+  const bad = CUTS.flatMap((c) => {
     const r = report[c];
     const why = [];
     if (r.silences.length) why.push(`${c}: silence at ${r.silences.join(', ')}`);
     if (r.blackRuns.length || r.blackFrames.length) why.push(`${c}: black frames`);
     if (Math.abs(r.loudness.integratedLUFS + 14) > 0.6) why.push(`${c}: ${r.loudness.integratedLUFS} LUFS`);
-    if (r.duration < 30 || r.duration > 45) why.push(`${c}: ${r.duration} s`);
+    if (r.duration < LENGTH[0] || r.duration > LENGTH[1]) why.push(`${c}: ${r.duration} s`);
     return why;
   });
   console.log(bad.length ? `CHECKS FAILED\n  ${bad.join('\n  ')}` : 'CHECKS PASSED');

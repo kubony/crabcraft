@@ -1,13 +1,11 @@
 [
   { "id": "hook", "en": "Jumper learned to breakdance. In simulation.", "zh": "Jumper 螃蟹机器人学会了霹雳舞，在仿真中。", "portPos": "low" },
-  { "id": "robot", "en": "Robot Mode: all seven moves run live in MuJoCo, in your browser.", "zh": "Robot Mode：全部七个动作都在浏览器里的 MuJoCo 中实时运行。", "portPos": "low" },
+  { "id": "live", "en": "Robot Mode: the whole routine runs live, on the beat, in your browser.", "zh": "Robot Mode：整套霹雳舞在浏览器里按节拍实时运行。", "portPos": "low" },
   { "id": "ours", "en": "Seven new Jumper policies. Trained by us, open source.", "zh": "七个全新的 Jumper 策略，由我们训练并开源。", "portPos": "low" },
   { "id": "press", "en": "In the game, press B: six moves, six trained policies.", "zh": "在游戏里按 B：六个动作，六个训练好的策略。", "portPos": "low" },
-  { "id": "replay", "en": "The 720 and the back flip, slowed down. Both also run live in Robot Mode.", "zh": "放慢的 720 度跳转和后空翻，两者也能在 Robot Mode 里实时运行。", "portPos": "low" },
+  { "id": "replay", "en": "The 720 and the back flip, slowed down. Both also run live in Robot Mode.", "zh": "放慢的 720 跳转和后空翻，两者也能在 Robot Mode 里实时运行。", "portPos": "low" },
   { "id": "finale", "en": "Beat the Rust Tyrant, and the whole town watches you break.", "zh": "击败锈蚀暴君，全镇围观你跳霹雳舞。", "portPos": "low" },
   { "id": "tag-toprock", "en": "Toprock", "zh": "站舞", "landPos": "tag", "portPos": "tag" },
   { "id": "tag-sixstep", "en": "Six-step", "zh": "六步", "landPos": "tag", "portPos": "tag" },
-  { "id": "tag-spin", "en": "Spin", "zh": "原地旋转", "landPos": "tag", "portPos": "tag" },
-  { "id": "tag-jumps", "en": "720 + back flip", "zh": "720 度跳转 + 后空翻", "landPos": "tag", "portPos": "tag" },
-  { "id": "tag-freeze", "en": "One-claw freeze", "zh": "单钳定格", "landPos": "tag", "portPos": "tag" }
+  { "id": "tag-jumps", "en": "720 + back flip", "zh": "720 跳转 + 后空翻", "landPos": "tag", "portPos": "tag" }
 ]

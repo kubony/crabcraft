@@ -209,20 +209,45 @@
         requestAnimationFrame(() => (document.body.dataset.ready = '1'));
       };
     }
+    if (pos === 'lower') {
+      // A lower third, bottom left on a soft shade: a gold rule, the move's name in gold capitals
+      // with its Chinese beside it, then what it is (enLine, zhLine).
+      const x = (port ? 56 : 84) * u;
+      const shade = el('div', '', card);
+      shade.style.cssText = `position:absolute;left:0;bottom:0;width:${port ? W : W * 0.62}px;height:${(port ? 520 : 330) * u}px;` +
+        'background:radial-gradient(120% 100% at 0% 100%, rgba(5,6,10,0.7), rgba(5,6,10,0.35) 50%, transparent 78%);';
+      const box = el('div', '', card);
+      box.style.cssText = `position:absolute;left:${x}px;right:${x}px;bottom:${(port ? 330 : 64) * u}px;`;
+      const rule = el('div', '', box);
+      rule.style.cssText = `width:${84 * u}px;height:${4 * u}px;margin-bottom:${14 * u}px;background:linear-gradient(90deg,#ffd97a,#c8932f);border-radius:2px;`;
+      const name = el('div', '', box);
+      name.style.cssText = `display:flex;align-items:baseline;flex-wrap:wrap;column-gap:${18 * u}px;`;
+      const ne = el('span', 'en gold', name, q.get('en') ?? '');
+      ne.style.cssText += `font-size:${Math.round((port ? 60 : 56) * u)}px;line-height:1.1;letter-spacing:0.07em;`;
+      const nz = el('span', 'zh', name, q.get('zh') ?? '');
+      nz.style.cssText += `font-size:${Math.round((port ? 36 : 32) * u)}px;`;
+      const le = el('div', 'en', box, q.get('enLine') ?? '');
+      le.style.cssText += `margin-top:${10 * u}px;font-family:Alegreya,serif;font-weight:700;letter-spacing:0.02em;font-size:${Math.round((port ? 34 : 30) * u)}px;line-height:1.25;`;
+      const lz = el('div', 'zh', box, q.get('zhLine') ?? '');
+      lz.style.cssText += `margin-top:${6 * u}px;font-size:${Math.round((port ? 28 : 25) * u)}px;line-height:1.3;`;
+      afterFonts = () => requestAnimationFrame(() => (document.body.dataset.ready = '1'));
+    }
     const base = pos === 'top' ? H * 0.06 : port ? H * (pos === 'low' ? 0.75 : 0.665) : H * (pos === 'band' ? 0.845 : 0.835);
     if (pos === 'band') {
       const band = el('div', '', card);
       band.style.cssText = `position:absolute;left:0;right:0;top:${H * 0.7}px;bottom:0;` +
         'background:linear-gradient(180deg, rgba(5,6,10,0) 0%, rgba(5,6,10,0.78) 38%, rgba(5,6,10,0.9) 100%);';
     }
-    const shadeEl = pos === 'tag' ? document.createElement('div') : el('div', 'cap-shade', card);
+    // The tag and the lower third lay out their own text above.
+    const own = pos === 'tag' || pos === 'lower';
+    const shadeEl = own ? document.createElement('div') : el('div', 'cap-shade', card);
     const w = port ? W * 1.1 : W * 0.62;
     shadeEl.style.cssText += `top:${base - enSize * 1.1}px;width:${w}px;height:${enSize * 4.2}px;margin-left:0;`;
-    const e = el('div', 'cap en', pos === 'tag' ? document.createElement('div') : card, en);
+    const e = el('div', 'cap en', own ? document.createElement('div') : card, en);
     e.style.cssText += `top:${base}px;font-size:${enSize}px;line-height:1.2;padding:0 ${port ? 60 : 120}px;`;
-    const z = el('div', 'cap zh', pos === 'tag' ? document.createElement('div') : card, zh);
+    const z = el('div', 'cap zh', own ? document.createElement('div') : card, zh);
     // Measure the English block once the fonts are in, so a wrapped line pushes the Chinese down.
-    if (pos !== 'tag') afterFonts = () => {
+    if (!own) afterFonts = () => {
       const r = e.getBoundingClientRect();
       z.style.cssText += `top:${r.bottom + 12 * u}px;font-size:${zhSize}px;line-height:1.3;padding:0 ${port ? 60 : 120}px;`;
       requestAnimationFrame(() => (document.body.dataset.ready = '1'));

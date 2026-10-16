@@ -1,0 +1,18 @@
+[
+  { "id": "low-dance_crab", "en": "Crab Dance", "zh": "螃蟹舞", "enLine": "Jumper's own dance policy, live in MuJoCo in your browser", "zhLine": "Jumper 自带的舞蹈策略，在浏览器里的 MuJoCo 中实时运行", "landPos": "lower" },
+  { "id": "low-dance_brazilian", "en": "Brazilian", "zh": "巴西舞", "enLine": "Jumper's own dance policy, live in MuJoCo in your browser", "zhLine": "Jumper 自带的舞蹈策略，在浏览器里的 MuJoCo 中实时运行", "landPos": "lower" },
+  { "id": "low-dance_maze", "en": "Maze", "zh": "迷宫舞", "enLine": "Jumper's own dance policy, live in MuJoCo in your browser", "zhLine": "Jumper 自带的舞蹈策略，在浏览器里的 MuJoCo 中实时运行", "landPos": "lower" },
+  { "id": "low-dance_dream_wings", "en": "Dream Wings", "zh": "梦之翼", "enLine": "Jumper's own dance policy, live in MuJoCo in your browser", "zhLine": "Jumper 自带的舞蹈策略，在浏览器里的 MuJoCo 中实时运行", "landPos": "lower" },
+  { "id": "low-break_toprock", "en": "Toprock", "zh": "站舞", "enLine": "A policy we trained, live in MuJoCo in your browser", "zhLine": "我们训练的策略，在浏览器里的 MuJoCo 中实时运行", "landPos": "lower" },
+  { "id": "low-break_sixstep", "en": "Six-step", "zh": "六步", "enLine": "A policy we trained, live in MuJoCo in your browser", "zhLine": "我们训练的策略，在浏览器里的 MuJoCo 中实时运行", "landPos": "lower" },
+  { "id": "low-break_clawstand", "en": "Claw Stand", "zh": "钳撑", "enLine": "A policy we trained, live in MuJoCo in your browser", "zhLine": "我们训练的策略，在浏览器里的 MuJoCo 中实时运行", "landPos": "lower" },
+  { "id": "low-break_oneclaw", "en": "One Claw", "zh": "单钳定格", "enLine": "A policy we trained, live in MuJoCo in your browser", "zhLine": "我们训练的策略，在浏览器里的 MuJoCo 中实时运行", "landPos": "lower" },
+  { "id": "low-power_spin", "en": "Spin", "zh": "原地旋转", "enLine": "A policy we trained, live in MuJoCo in your browser", "zhLine": "我们训练的策略，在浏览器里的 MuJoCo 中实时运行", "landPos": "lower" },
+  { "id": "low-power_jumpspin", "en": "720", "zh": "720 跳转", "enLine": "A policy we trained, live in MuJoCo in your browser", "zhLine": "我们训练的策略，在浏览器里的 MuJoCo 中实时运行", "landPos": "lower" },
+  { "id": "low-jump-slow", "en": "720, slowed down", "zh": "720 跳转，慢放", "enLine": "The same live simulation, stepped at a quarter of real time", "zhLine": "同一个实时仿真，以四分之一的速度步进", "landPos": "lower" },
+  { "id": "low-power_backflip", "en": "Back Flip", "zh": "后空翻", "enLine": "A policy we trained, live in MuJoCo in your browser", "zhLine": "我们训练的策略，在浏览器里的 MuJoCo 中实时运行", "landPos": "lower" },
+  { "id": "low-flip-slow", "en": "Back Flip, slowed down", "zh": "后空翻，慢放", "enLine": "The same live simulation, stepped at a fifth of real time", "zhLine": "同一个实时仿真，以五分之一的速度步进", "landPos": "lower" },
+  { "id": "low-routine", "en": "The whole routine, live", "zh": "整套动作，实时运行", "enLine": "Press P: the page starts six policies on the beat, with the routine's own music", "zhLine": "按 P：页面按节拍依次启动六个策略，配上这套动作自己的音乐", "landPos": "lower" },
+  { "id": "low-game", "en": "In the game, press B", "zh": "游戏里按 B", "enLine": "Your crab breaks with recorded rollouts of the same policies", "zhLine": "你的螃蟹跳的是同一组策略的仿真录制", "landPos": "lower" },
+  { "id": "low-ending", "en": "The ending", "zh": "结局", "enLine": "Beat the Rust Tyrant, and the whole town watches you break", "zhLine": "击败锈蚀暴君，全镇围观你跳霹雳舞", "landPos": "lower" }
+]
