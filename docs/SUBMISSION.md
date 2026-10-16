@@ -83,7 +83,7 @@ Apache-2.0 and runs as a static web page.
   switches (each press shown in the log), timed in simulated time so every policy starts on the
   downbeat of its bar, and waits for each move to hand back to walking. 10 of 10 headless runs
   complete without a Safe Hold and end walking upright, the power moves starting within 15 ms of
-  their downbeats and the tracked moves within 60 ms; in Chrome the music stays within 25 ms of the
+  their downbeats and the tracked moves within 60 ms; in Chrome the music stays within 30 ms of the
   simulation. Simulation only, like the rest of the breakdance.
 - Headless check (`node tools/robot-sim-check.ts`): 21.65 m in 30 s of walking without a fall, max tilt
   1.88 deg, jump apex 0.228 m; each of the six skills and the five breaking modes entered on its key,
@@ -135,7 +135,7 @@ World of Crabcraft 把 Jumper 螃蟹机器人变成了一个完整的奇幻世�
 - 霹雳舞来自另外 7 个新 Jumper 任务（同样在 `jumper/` 中）：4 个跟踪参考动作的任务 `jumper.break_toprock`、`break_sixstep`、`break_clawstand`、`break_oneclaw`（56 次运行没有摔倒，带随机化时动作区间内的关节 RMS 误差 0.65 到 2.76 度，原地不动为 10.1 到 32.8 度），以及 3 个靠奖励学出来的大招 `jumper.power_spin_feet`（只用脚旋转，每秒 2.32 圈）、`power_jumpspin720`（空中平均转 735 度，带随机化 32 次全部站稳落地）和 `power_backflip`（空中转 385 度，32 次中 31 次站稳），两个跳跃都从控制器切换模式时交给策略的姿态起跳。全部是仿真结果，没有在实体 Jumper 上运行过。six-step 按原样使用，只转了 360 度中的 345.9 度：机器人看不到自己的朝向，转身是开环的。套路（按 B，以及结局的压轴）连续播放其中 6 个，并把每个动作的位移和转向交给螃蟹，下一个动作从上一个停下的地方开始。后空翻会整个翻过来（倾角 177 度），所以它的模式只在自己运行期间解除控制器 50 度的倾角保护；在实体机器人上，后空翻运行时摔倒不会被保护接住。
 - bundle 一致性（`tools/motion/check_bundle.py`）：控制器回放观测差 0，目标差 0（示例 bundle）和 2.2e-8（crabcraft bundle）；ONNX 输出与录制动作最大差 9.5e-07（示例 bundle）和 0（crabcraft bundle）。
 - 真实身体：螃蟹模型由 Jumper 的 URDF 和网格生成；与 MuJoCo 的正向运动学对比 41 个刚体 x 13 个姿态，最大位置误差 0.000534 mm。6 个种族 x 4 种头饰、3 种职业武器、NPC 配件、3 种敌人和 11 种表情的 LED 面部。
-- 整套霹雳舞实时运行、踩在节拍上：在 Robot Mode 里按 P，机器人把 toprock、six-step、原地旋转、720、后空翻和单钳定格连成一整套，每个动作都是它的策略在 bundle 控制器下实时运行，配 107.14 bpm 的原创节拍。页面只按 bundle 自己的模式按键（每次都写进日志），按仿真时间安排，让每个策略都在它那一小节的强拍上开始，并等每个动作交回行走后再按下一个。无头运行 10 次全部完整跳完，没有 Safe Hold，最后站稳行走；大招在强拍前后 15 毫秒内开始，跟踪动作在 60 毫秒内；在 Chrome 中音乐与仿真的误差在 25 毫秒以内。和其余霹雳舞一样，只是仿真结果。
+- 整套霹雳舞实时运行、踩在节拍上：在 Robot Mode 里按 P，机器人把 toprock、six-step、原地旋转、720、后空翻和单钳定格连成一整套，每个动作都是它的策略在 bundle 控制器下实时运行，配 107.14 bpm 的原创节拍。页面只按 bundle 自己的模式按键（每次都写进日志），按仿真时间安排，让每个策略都在它那一小节的强拍上开始，并等每个动作交回行走后再按下一个。无头运行 10 次全部完整跳完，没有 Safe Hold，最后站稳行走；大招在强拍前后 15 毫秒内开始，跟踪动作在 60 毫秒内；在 Chrome 中音乐与仿真的误差在 30 毫秒以内。和其余霹雳舞一样，只是仿真结果。
 - Robot Mode：官方 MuJoCo 3.11.0 WASM、onnxruntime-web 1.30.0、bundle 自带的 controller.wasm 和 24 个 ONNX 策略（25 种模式）在浏览器中实时运行，行走时实测控制频率 199 Hz；按 5 到 0 可以实时运行 6 个技能，Shift + 1 到 4 运行 4 个霹雳舞跟踪动作，Shift + 5 原地旋转，Shift + 6 是 720，Shift + 7 是后空翻。两个跳跃自己不会结束，落地后由页面再按一次按键。加载时回放 `reference.json`（24 帧，观测差 0，目标差 2.2e-8），比较策略输出与录制动作（8.3e-7），并用 SHA-256 校验 71 个 bundle 文件。
 - 无头检查（`node tools/robot-sim-check.ts`）：行走 30 秒前进 21.65 m 不摔倒，最大倾角 1.88 度，跳跃最高 0.228 m；6 个技能和 5 个霹雳舞模式都能按键进入、播放完毕（旋转保持 4 秒，每秒 2.02 圈，然后松开）并交回行走；720（空中转 612 和 657 度）和后空翻（385 和 386 度）从站立和行走中进入，都能起跳、落地 0.3 秒后倾角在 3 度以内，并由页面交回行走；整套实时霹雳舞从 5 种起点运行，每次都完整跳完，每个动作都踩在强拍上。
 - 同一个策略，任意外观：玩家装备好的螃蟹按实时仿真逐帧摆姿，各连杆与物理刚体的偏差在 0.0013 mm 以内。
