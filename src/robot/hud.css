@@ -336,3 +336,25 @@
 @media (max-height: 700px) {
   .rm-notice q { display: none; }
 }
+
+/* ---------- The live routine (sim/routine.ts) ---------- */
+/* Its line on the mode card shows only while it runs. The log below the card moves down for it,
+   and the appearance card folds its picker away to leave the log room (T and the switch still work). */
+.rm-routine { display: none; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--rm-line); }
+.rm.rm-routine-on .rm-routine { display: block; }
+.rm.rm-routine-on .rm-log { top: 500px; }
+.rm.rm-routine-on .rm-look .rm-pick { display: none; }
+.rm-routine .rt { display: flex; justify-content: space-between; align-items: baseline; }
+.rm-routine .rt .k { font: 600 10.5px/1 var(--rm-sans); letter-spacing: 0.22em; text-transform: uppercase; color: var(--rm-red-hi); }
+.rm-routine .rt .num { font: 600 12px/1 var(--rm-mono); color: var(--rm-text); }
+.rm-routine .row { display: flex; align-items: center; gap: 12px; margin-top: 9px; }
+.rm-routine .beats { display: flex; gap: 5px; }
+.rm-routine .beats i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255, 255, 255, 0.14); transition: background 0.06s, box-shadow 0.06s; }
+.rm-routine .beats i:first-child { width: 11px; height: 11px; margin-top: -1px; }
+.rm-routine .beats i.on { background: var(--rm-led); box-shadow: 0 0 10px var(--rm-led); }
+.rm-routine .beats i.on:first-child { background: var(--rm-red-hi); box-shadow: 0 0 12px var(--rm-red-hi); }
+.rm-routine .next { font: 500 12.5px/1.2 var(--rm-sans); color: var(--rm-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rm-routine .rm-progress { margin-top: 10px; }
+.rm-btn.routine { border-color: rgba(255, 74, 87, 0.45); }
+.rm-btn.routine .kb { color: var(--rm-red-hi); }
+.rm-btn.routine.on .kb { color: rgba(255, 255, 255, 0.85); }

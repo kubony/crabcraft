@@ -5,7 +5,8 @@ import type { ClassId, CrabSpec, RaceId } from '../crab/types';
 import { CLASSES, CLASS_ORDER } from '../data/classes';
 import { RACES, RACE_ORDER } from '../data/races';
 import { h } from '../ui/dom';
-import type { Binding, FrameMsg, ReadyInfo } from './protocol';
+import type { Binding, FrameMsg, ReadyInfo, RoutineEvent } from './protocol';
+import { BEAT_S, ROUTINE, ROUTINE_BARS } from './sim/routine';
 
 export const MODE_LABEL: Record<string, string> = {
   locomotion: 'Walk',
@@ -69,8 +70,13 @@ export interface HudActions {
   appearance?(kind: 'bare' | 'crab'): void;
   pickCrab?(pick: CrabPick): void;
   toggleXray?(): boolean;
+  /** The live breakdance routine: start it, or stop it and hand back to walking. */
+  routine?(): void;
   back?: () => void;
 }
+
+/** The page's key for the live routine (a page key, like T: the bundle binds no P). */
+export const ROUTINE_KEY = 'KeyP';
 
 interface DockButton {
   mode: string;
@@ -114,6 +120,14 @@ export class Hud {
     xray: HTMLButtonElement;
   } | null = null;
   private lookState: AppearanceState | null = null;
+  private routineBtn: HTMLButtonElement | null = null;
+  private routineEl: HTMLElement | null = null;
+  private routineBar: HTMLElement | null = null;
+  private routineNext: HTMLElement | null = null;
+  private routineBeats: HTMLElement[] = [];
+  private routineFill: HTMLElement | null = null;
+  /** Policies streamed in so far (the routine's button waits for all of its moves'). */
+  private loaded = new Set<string>();
 
   constructor(parent: HTMLElement, private readonly actions: HudActions) {
     this.loadBar = h('div');
@@ -200,6 +214,7 @@ export class Hud {
         this.modeState,
         this.progressEl,
         h('div', { class: 'rm-cmd' }, cmdCell('speed', 'm/s'), cmdCell('height', 'height mm'), cmdCell('tilt', 'tilt deg')),
+        this.buildRoutineStrip(),
       ),
     );
 
@@ -303,7 +318,9 @@ export class Hud {
     // the 720 jump spin and the back flip. The two jumps have no end of their own; the sim core
     // presses their switch again after the landing (core.ts AUTO_LEAVE_S), and the log says so.
     const breaks = ['break_toprock', 'break_sixstep', 'break_clawstand', 'break_oneclaw', 'power_spin', 'power_jumpspin', 'power_backflip'].filter(has);
-    if (breaks.length) dock.append(group('Breaking', ...breaks.map((m) => btn(m, MODE_LABEL[m]))));
+    // The whole routine, live (sim/routine.ts): the page presses the moves' switches on the beat.
+    const routine = this.actions.routine && ROUTINE.every((m) => has(m.mode)) ? this.buildRoutineButton(info) : null;
+    if (breaks.length) dock.append(group('Breaking', ...(routine ? [routine] : []), ...breaks.map((m) => btn(m, MODE_LABEL[m]))));
     const claws = ['claw_left', 'claw_right'].filter(has);
     if (claws.length) dock.append(group('Claw', ...claws.map((m) => btn(m, m === 'claw_left' ? 'Left' : 'Right'))));
     r.append(dock);
@@ -322,6 +339,7 @@ export class Hud {
         kbd('Ctrl', 'end a motion'),
         ...(has('power_spin') ? [kbd('Shift+5', 'spin, again to stop')] : []),
         ...(has('power_jumpspin') || has('power_backflip') ? [kbd('Shift+6 7', 'jumps, end by themselves')] : []),
+        ...(this.routineBtn ? [kbd('P', 'routine')] : []),
         kbd('Esc', 'let go'),
         ...(this.actions.appearance ? [kbd('T', 'robot or crab')] : []),
         kbd('Drag', 'orbit'),
@@ -401,6 +419,7 @@ export class Hud {
         d.el.disabled = !!from && !from.includes(mode) && d.mode !== mode;
       }
       this.stopBtn.classList.toggle('on', mode === 'locomotion');
+      if (this.routineBtn) this.routineBtn.disabled = mode === 'safe';
       if (this.pending && this.pending.mode === mode) this.pending = null;
     }
     for (const d of this.dock) d.el.classList.toggle('pending', !!this.pending && this.pending.mode === d.mode && performance.now() < this.pending.until);
@@ -433,6 +452,7 @@ export class Hud {
       j.tq.style.left = `${Math.min(pq, pq + (f.tau[i] >= 0 ? 0 : -t * 30)).toFixed(1)}%`;
       j.tq.style.width = `${(t * 30).toFixed(1)}%`;
     }
+    this.updateRoutine(f);
     // The page's own press of a jump's switch, said as such: the bundle has no end for these moves.
     for (const a of f.autoLeft) {
       const keys = a.keys.map((k) => k.replace(/^(Shift|Control|Alt)(Left|Right)$/, '$1').replace(/^(Digit|Numpad|Key)/, '')).join('+');
@@ -451,6 +471,9 @@ export class Hud {
   /** A policy finished streaming in (or failed its digest). */
   policyReady(mode: string, ok: boolean, checked: number, mismatched: string[]): void {
     for (const d of this.dock) if (d.mode === mode) d.el.classList.toggle('loading', false);
+    if (ok) this.loaded.add(mode);
+    if (this.routineBtn && ROUTINE.every((m) => this.loaded.has(m.mode))) this.routineBtn.classList.remove('loading');
+    if (this.routineBtn && !ok && ROUTINE.some((m) => m.mode === mode)) this.routineBtn.classList.add('failed');
     for (const d of this.dock) if (d.mode === mode && !ok) d.el.classList.add('failed');
     if (this.digestLine) {
       this.digestLine.textContent = `${checked} bundle files match their SHA-256`;
@@ -462,6 +485,105 @@ export class Hud {
   /** A fault reported by the simulation after start. */
   fault(message: string): void {
     this.log.append(h('div', null, h('b', null, 'fault '), h('span', null, message)));
+  }
+
+  /** Whether every move of the routine has its policy loaded. */
+  get routineReady(): boolean {
+    return ROUTINE.every((m) => this.loaded.has(m.mode));
+  }
+
+  /** A line in the log, as the page writes them. */
+  note(text: string, at?: number): void {
+    this.logLine(at, text, '');
+  }
+
+  private logLine(at: number | undefined, bold: string, rest: string): void {
+    this.log.append(h('div', null, h('span', null, at === undefined ? '' : `${at.toFixed(1)}s `), h('b', null, bold), h('span', null, rest ? `  ${rest}` : '')));
+    while (this.log.childElementCount > 5) this.log.firstElementChild!.remove();
+  }
+
+  private buildRoutineButton(info: ReadyInfo): HTMLButtonElement {
+    const el = h('button', { class: 'rm-btn routine', tabindex: '-1', title: 'The whole breakdance live: the page presses each move\'s switch on the beat' },
+      'Routine', h('span', { class: 'kb' }, 'P')) as HTMLButtonElement;
+    el.addEventListener('mousedown', (e) => e.preventDefault());
+    el.onclick = () => this.actions.routine?.();
+    for (const m of ROUTINE) if (info.policiesReady.includes(m.mode)) this.loaded.add(m.mode);
+    if (!this.routineReady) el.classList.add('loading');
+    this.routineBtn = el;
+    return el;
+  }
+
+  /** The routine's line on the mode card: the bar, the beat, the next move. Hidden between runs. */
+  private buildRoutineStrip(): HTMLElement {
+    this.routineBar = h('span', { class: 'num' }, '');
+    this.routineNext = h('div', { class: 'next' });
+    this.routineBeats = [0, 1, 2, 3].map(() => h('i'));
+    this.routineFill = h('div');
+    this.routineEl = h(
+      'div',
+      { class: 'rm-routine', 'data-state': 'idle' },
+      h('div', { class: 'rt' }, h('span', { class: 'k' }, 'Breakdance routine'), this.routineBar),
+      h('div', { class: 'row' }, h('div', { class: 'beats' }, ...this.routineBeats), this.routineNext),
+      h('div', { class: 'rm-progress on' }, this.routineFill),
+    );
+    return this.routineEl;
+  }
+
+  private updateRoutine(f: FrameMsg): void {
+    const r = f.routine;
+    const el = this.routineEl;
+    if (!el) return;
+    const running = !!r && r.state === 'running' && !Number.isNaN(r.t0);
+    this.routineBtn?.classList.toggle('on', running);
+    this.root.classList.toggle('rm-routine-on', running);
+    if (r) {
+      el.dataset.state = r.state;
+      el.dataset.move = String(r.move);
+      el.dataset.slips = String(r.slips);
+      el.dataset.why = r.why;
+    }
+    if (running && r) {
+      const beat = Math.max(0, (f.simTime - r.t0) / BEAT_S);
+      const bar = Math.floor(beat / 4);
+      const inBar = Math.floor(beat) % 4;
+      this.set(this.routineBar!, `bar ${Math.min(bar, ROUTINE_BARS - 1) + 1} of ${ROUTINE_BARS}`);
+      this.routineBeats.forEach((b, i) => b.classList.toggle('on', i === inBar));
+      const m = ROUTINE[r.move];
+      const next = m ? (r.phase === 'wait' ? `next: ${MODE_LABEL[m.mode] ?? m.mode} on bar ${m.bar + r.slips + 1}` : `${MODE_LABEL[m.mode] ?? m.mode}, bar ${m.bar + r.slips + 1}`) : 'freeze';
+      this.set(this.routineNext!, next);
+      this.routineFill!.style.width = `${Math.min(100, (100 * beat) / (ROUTINE_BARS * 4)).toFixed(1)}%`;
+    }
+    for (const e of f.routineEvents) this.routineLog(e);
+  }
+
+  /** The routine's presses and moments, in the log: every key it presses is said as the page's. */
+  private routineLog(e: RoutineEvent): void {
+    const label = (m: string) => MODE_LABEL[m] ?? m;
+    const keys = (k: string[] | undefined) =>
+      (k ?? []).map((c) => c.replace(/^(Shift|Alt)(Left|Right)$/, '$1').replace(/^Control(Left|Right)$/, 'Ctrl').replace(/^(Digit|Numpad|Key)/, '')).join('+');
+    const bar = (beat: number) => Math.floor(Math.round(beat * 100) / 400) + 1;
+    switch (e.kind) {
+      case 'press':
+        this.logLine(e.at, `page pressed ${keys(e.keys)}`,
+          e.why === 'start' ? `${label(e.mode)} for bar ${bar(e.beat) + 1}`
+            : e.why === 'end' ? `${label(e.mode)} ends on the beat`
+              : `${label(e.mode)} back to walking`);
+        break;
+      case 'live': {
+        const ms = Math.round((e.offBeat ?? 0) * 1000);
+        this.logLine(e.at, `${label(e.mode)} live`, `bar ${Math.round(e.beat / 4) + 1} downbeat ${ms >= 0 ? '+' : ''}${ms} ms`);
+        break;
+      }
+      case 'slip':
+        this.logLine(e.at, `${label(e.mode)} waits a bar`, e.text ?? '');
+        break;
+      case 'end':
+        if (e.state === 'done') this.logLine(e.at, 'routine complete', `${ROUTINE.length} moves live`);
+        else this.logLine(e.at, `routine ${e.state}`, e.text ?? '');
+        break;
+      default:
+        break;
+    }
   }
 
   /** The appearance card: a two-way switch, the point it makes, and a picker without a saved crab. */

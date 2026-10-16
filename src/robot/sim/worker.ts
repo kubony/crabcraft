@@ -6,6 +6,7 @@
 import loadMujoco from '@mujoco/mujoco';
 import * as ort from 'onnxruntime-web/wasm';
 import { RobotSim, TICK_S } from './core';
+import { LiveRoutine } from './routine';
 import type { BundleContract, BundleJson, RobotPackage, WebFsmLike } from './types';
 import type { FromWorker, ReadyInfo, ToWorker, FrameMsg } from '../protocol';
 
@@ -35,6 +36,12 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
       break;
     case 'letGo':
       sim?.letGo();
+      break;
+    case 'routine':
+      if (!sim) break;
+      if (m.on) {
+        if (sim.routine?.state !== 'running') sim.startRoutine(new LiveRoutine());
+      } else sim.stopRoutine(m.why ?? 'stopped');
       break;
     case 'pad':
       sim?.setPad(m.pad);
@@ -469,6 +476,8 @@ function postFrame(s: RobotSim): void {
     },
     transitions: s.log.splice(0).map((t) => ({ from: t.from, to: t.to, why: t.why })),
     autoLeft: s.autoLeft.splice(0).map((a) => ({ mode: a.mode, after: a.after, keys: a.keys })),
+    routine: s.routine ? s.routine.status() : null,
+    routineEvents: s.routine ? s.routine.events.splice(0) : [],
     motionLeft: dur && motionStart && motionStart.mode === s.mode ? Math.max(0, dur - (s.simTime - motionStart.at)) : null,
   };
   post(msg, [poses.buffer, q.buffer, target.buffer, tau.buffer]);

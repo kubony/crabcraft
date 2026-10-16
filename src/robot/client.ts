@@ -10,10 +10,19 @@ export interface Progress {
   label: string;
 }
 
+/** What frames report once: kept from every frame until the page takes them. */
+export interface FrameEvents {
+  transitions: FrameMsg['transitions'];
+  autoLeft: FrameMsg['autoLeft'];
+  routineEvents: FrameMsg['routineEvents'];
+}
+
 export class SimClient {
   private worker: Worker;
   info: ReadyInfo | null = null;
+  /** The latest frame. Its one-off reports are also queued for drainEvents(). */
   frame: FrameMsg | null = null;
+  private events: FrameEvents = { transitions: [], autoLeft: [], routineEvents: [] };
   /** Frames received since start, for the HUD's transition log. */
   private frameListeners = new Set<(f: FrameMsg) => void>();
   readonly ready: Promise<ReadyInfo>;
@@ -40,6 +49,11 @@ export class SimClient {
         const m = e.data;
         if (m.type === 'frame') {
           this.frame = m;
+          // The page renders the latest frame only; the transitions, presses and routine moments
+          // of the frames in between must not be lost with them.
+          this.events.transitions.push(...m.transitions);
+          this.events.autoLeft.push(...m.autoLeft);
+          this.events.routineEvents.push(...m.routineEvents);
           for (const fn of this.frameListeners) fn(m);
         } else if (m.type === 'progress') {
           this.onProgress?.(m);
@@ -100,6 +114,13 @@ export class SimClient {
     }
     if (!this.paused) this.simTarget += (dtMs / 1000) * this.speed;
     await ask(this.simTarget);
+  }
+
+  /** Every transition, host press and routine moment reported since the last call. */
+  drainEvents(): FrameEvents {
+    const e = this.events;
+    this.events = { transitions: [], autoLeft: [], routineEvents: [] };
+    return e;
   }
 
   key(code: string, down: boolean, repeat = false): void {

@@ -9,6 +9,14 @@ export class OrbitFollow {
   elevation = 0.24;
   distance = 0.9;
   follow = true;
+  /**
+   * Framing for a performance (the live routine): `hold` keeps the camera's heading where it is
+   * instead of turning with the robot, so a spin or a 720 turns in the shot rather than the shot
+   * turning with it; `zoom` pulls back (1 is the person's distance); `lookY`, when set, is a fixed
+   * height to look at (m) instead of one that rides with the body, so a jump rises in the shot.
+   */
+  readonly perform: { hold: boolean; zoom: number; lookY: number | null } = { hold: false, zoom: 1, lookY: null };
+  private zoomNow = 1;
   private target = new THREE.Vector3(0, 0.07, 0);
   private heading = 0;
   private dragging = false;
@@ -46,10 +54,12 @@ export class OrbitFollow {
   update(dt: number, base: THREE.Vector3, yaw: number, speed = 0): void {
     this.idle += dt;
     const k = 1 - Math.exp(-dt * 5);
-    this.target.lerp(new THREE.Vector3(base.x, base.y * 0.6 + 0.02, base.z), k);
+    this.zoomNow += (this.perform.zoom - this.zoomNow) * (1 - Math.exp(-dt * 2.2));
+    const lookY = this.perform.lookY ?? base.y * 0.6 + 0.02;
+    this.target.lerp(new THREE.Vector3(base.x, lookY, base.z), k);
     // Pull back while walking so the whole robot and where it is going stay in frame.
     this.speedZoom += (Math.min(1, speed / 0.6) - this.speedZoom) * (1 - Math.exp(-dt * 1.5));
-    if (this.follow) {
+    if (this.follow && !this.perform.hold) {
       let d = yaw - this.heading;
       d = Math.atan2(Math.sin(d), Math.cos(d));
       this.heading += d * (1 - Math.exp(-dt * 1.6));
@@ -73,7 +83,7 @@ export class OrbitFollow {
   private apply(): void {
     const yaw = (this.follow ? this.heading : 0) + this.az;
     const c = Math.cos(this.el);
-    const dist = this.dist * (1 + this.speedZoom * 0.45);
+    const dist = this.dist * (1 + this.speedZoom * 0.45) * this.zoomNow;
     this.camera.position.set(
       this.target.x + dist * c * Math.sin(yaw),
       this.target.y + dist * Math.sin(this.el),

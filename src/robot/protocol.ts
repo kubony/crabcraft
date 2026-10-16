@@ -1,4 +1,7 @@
 // Messages between Robot Mode's page and its simulation worker.
+import type { RoutineEvent, RoutineStatus } from './sim/routine';
+
+export type { RoutineEvent, RoutineStatus } from './sim/routine';
 
 export interface PadFrame {
   axes: Record<string, number>;
@@ -9,6 +12,8 @@ export type ToWorker =
   | { type: 'init'; baseUrl: string; mujocoWasmUrl: string; ortWasmUrl: string }
   | { type: 'key'; code: string; down: boolean; repeat: boolean }
   | { type: 'letGo' }
+  /** The live breakdance routine (sim/routine.ts): start it, or stop it and hand back to walking. */
+  | { type: 'routine'; on: boolean; why?: string }
   | { type: 'pad'; pad: PadFrame | null }
   | { type: 'reset' }
   | { type: 'speed'; value: number }
@@ -92,6 +97,9 @@ export interface FrameMsg {
   autoLeft: { mode: string; after: number; keys: string[] }[];
   /** Remaining seconds of a recorded motion, if one is playing. */
   motionLeft: number | null;
+  /** The live routine's state (null before the first run), and what it did since the last frame. */
+  routine: RoutineStatus | null;
+  routineEvents: RoutineEvent[];
 }
 
 export type FromWorker =

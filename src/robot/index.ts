@@ -5,6 +5,7 @@
 // hands the person's keys, buttons and gamepad to the controller, which decides what they mean.
 import * as THREE from 'three';
 import { ToneMappingMode } from 'postprocessing';
+import type { AudioManager } from '../core/audio';
 import { Engine, type ViewOptions } from '../core/engine';
 import { capture } from '../capture/clock';
 import { initAssets } from '../core/assets';
@@ -13,8 +14,10 @@ import { CLASS_ORDER } from '../data/classes';
 import { RACES, RACE_ORDER } from '../data/races';
 import { randomName } from '../screens/create/names';
 import { SimClient } from './client';
-import { Hud, type CrabPick } from './hud';
-import type { FrameMsg, FrameStats, ReadyInfo } from './protocol';
+import { Hud, ROUTINE_KEY, type CrabPick } from './hud';
+import type { FrameMsg, FrameStats, ReadyInfo, RoutineStatus } from './protocol';
+import { RoutineMusic } from './routineMusic';
+import { ROUTINE } from './sim/routine';
 import type { RobotPackage } from './sim/types';
 import { AppearanceLayer, type Appearance } from './view/appearance';
 import { Arena } from './view/arena';
@@ -24,7 +27,7 @@ import { OrbitFollow } from './view/orbit';
 import { StlRobotView, type FaceExpr, type RobotViewLayer } from './view/robotView';
 
 export type { RobotViewLayer, RobotRenderFrame } from './view/robotView';
-export type { ReadyInfo, FrameStats } from './protocol';
+export type { ReadyInfo, FrameStats, RoutineStatus } from './protocol';
 export type { Appearance } from './view/appearance';
 export type { AlignmentSample } from './view/crabRigView';
 
@@ -52,6 +55,8 @@ export interface RobotModeOptions {
   spec?: CrabSpec | null;
   /** First appearance (default: the player's crab when `spec` is set, else the bare robot). */
   appearance?: Appearance;
+  /** Plays the live routine's music through the app's audio (its music volume and mute apply). */
+  audio?: AudioManager;
 }
 
 /** The robot's state for one frame, in game axes (Y-up, the crab faces +Z, left +X). */
@@ -76,6 +81,15 @@ export interface RobotModeHandle {
   release(): void;
   /** The page's own Stop: the operator lets go of every held control. */
   letGo(): void;
+  /**
+   * The live breakdance routine (sim/routine.ts): the page presses the moves' own switches on the
+   * beat. False when a move's policy has not streamed in yet. Starting hands back to walking first.
+   */
+  startRoutine(): boolean;
+  /** Stops the routine and hands the robot back to walking (a jump in the air lands first). */
+  stopRoutine(why?: string): void;
+  /** The routine's state in the latest frame; null before the first run. */
+  readonly routine: RoutineStatus | null;
   /** Stand the robot back up at the start, with a fresh controller. */
   reset(): void;
   setPaused(paused: boolean): void;
@@ -151,6 +165,7 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
     return orbit.follow;
   };
   const hud = opts.hud === false ? null : new Hud(container, {
+    routine: () => toggleRoutine(),
     request: (m) => handle.requestMode(m),
     release: () => handle.release(),
     reset: () => handle.reset(),
@@ -172,6 +187,30 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
   if (import.meta.env.DEV) (window as unknown as { __robotEngine: Engine }).__robotEngine = engine;
 
   const client = new SimClient(base);
+  // The routine's music, in step with the simulation (not in capture mode: the trailer tools mux it).
+  const music = opts.audio && !capture ? new RoutineMusic(opts.audio) : null;
+  // Dev server only (tools/breakdance-check.mjs reads how far the music is from the simulation).
+  if (import.meta.env.DEV && music) (window as unknown as { __robotMusic: RoutineMusic }).__robotMusic = music;
+  if (opts.audio) {
+    // The volume the player set in the game's menu, as the game applies it.
+    try {
+      const v = Number(localStorage.getItem('cc.musicVol') ?? NaN);
+      if (Number.isFinite(v)) opts.audio.setMusicVolume(v);
+    } catch {
+      /* private mode */
+    }
+  }
+  /** The routine as asked for from this page, until the worker's frames say so themselves. */
+  let routineAsk: { on: boolean; at: number } | null = null;
+  const routineRunning = (): boolean => {
+    const r = client.frame?.routine;
+    if (routineAsk && performance.now() - routineAsk.at < 400) return routineAsk.on;
+    return !!r && r.state === 'running';
+  };
+  const toggleRoutine = (): void => {
+    if (routineRunning()) handle.stopRoutine('stopped on P');
+    else if (!handle.startRoutine()) hud?.note('the routine waits for its policies to stream in');
+  };
   client.onProgress = (p) => {
     // After the worker is up, the remaining policies stream in the background.
     if (!client.info) hud?.progress(p.loaded, p.total, p.label);
@@ -254,6 +293,7 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
     return { ...cur, classId: p.classId ?? cur.classId };
   };
   let stopped = false;
+  let paused = false;
   const view: ViewOptions = {
     bloom: { intensity: 0.85, threshold: 0.92, radius: 0.7 },
     dof: { focusDistance: 0.8, focusRange: 0.22, bokehScale: 5.5 },
@@ -362,6 +402,18 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
       robot.setExpression?.(expr);
     }
     robot.update(renderFrame(f), dt);
+    // The routine: its music follows the simulation, and the camera holds still while a move turns
+    // the robot (the spin, the 720, the six-step), pulled back for the power moves.
+    const r = f.routine;
+    const performing = !!r && r.state === 'running';
+    music?.update(f, slow || paused || (f.stats.ratio > 0 && f.stats.ratio < 0.9));
+    const pm = performing ? ROUTINE[r.move]?.mode ?? '' : '';
+    const jumping = pm === 'power_jumpspin' || pm === 'power_backflip';
+    orbit.perform.hold = performing && r.phase !== 'wait';
+    // The jumps go about 0.25 m up: further back, looking at a fixed height, the whole flight in frame.
+    orbit.perform.zoom = !performing ? 1 : jumping ? 1.5 : pm.startsWith('power_') ? 1.25 : 1.12;
+    orbit.perform.lookY = jumping ? 0.15 : null;
+    if (performing) orbit.poke();
     arena.update(allBodies, f.poses.subarray(0), basePos, camera);
     // Toys follow the robot bodies in the pose array.
     orbit.update(dt, basePos, yaw, speed);
@@ -370,7 +422,9 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
     focusAt.set(basePos.x, basePos.y * 0.6 + 0.02, basePos.z);
     engine.setFocus(camera.position.distanceTo(focusAt), 0.22);
     up.set(0, 1, 0).applyQuaternion(baseQuat);
-    hud?.update(f, { speed, height: basePos.y, tilt: THREE.MathUtils.radToDeg(Math.acos(Math.min(1, up.y))) }, dt);
+    // The log reports every frame's transitions and presses once, not the latest frame's twice.
+    const events = client.drainEvents();
+    hud?.update({ ...f, ...events }, { speed, height: basePos.y, tilt: THREE.MathUtils.radToDeg(Math.acos(Math.min(1, up.y))) }, dt);
     for (const fn of stateListeners) fn(state);
   });
   disposers.push(offFrame);
@@ -393,6 +447,15 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
       if (e.code === 'KeyT' && !e.ctrlKey && !e.metaKey && !bundleKeys.has('KeyT')) {
         return void handle.setAppearance(wanted === 'crab' ? 'bare' : 'crab');
       }
+    }
+    // P: the live routine, on and off (a page key; the bundle binds no P).
+    if (e.code === ROUTINE_KEY && !e.ctrlKey && !e.metaKey && !bundleKeys.has(ROUTINE_KEY)) {
+      if (down && !e.repeat) toggleRoutine();
+      return;
+    }
+    // Any robot control the person touches ends the routine: the robot is theirs again.
+    if (down && !e.repeat && routineRunning() && (bound.has(e.code) || (e.ctrlKey && /^(Digit|Numpad)\d$/.test(e.code)))) {
+      handle.stopRoutine(`stopped by ${e.code}`);
     }
     const code = KEY_ALIAS[e.code] ?? e.code;
     orbit.poke();
@@ -437,13 +500,15 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
     PAD_BUTTONS.forEach((n, i) => {
       if (n && gp.buttons[i]) buttons[n] = gp.buttons[i].pressed;
     });
-    client.pad({
-      axes: {
-        Lx: dead(gp.axes[0] ?? 0), Ly: dead(gp.axes[1] ?? 0), Rx: dead(gp.axes[2] ?? 0), Ry: dead(gp.axes[3] ?? 0),
-        LT: gp.buttons[6]?.value ?? 0, RT: gp.buttons[7]?.value ?? 0,
-      },
-      buttons,
-    });
+    const axes = {
+      Lx: dead(gp.axes[0] ?? 0), Ly: dead(gp.axes[1] ?? 0), Rx: dead(gp.axes[2] ?? 0), Ry: dead(gp.axes[3] ?? 0),
+      LT: gp.buttons[6]?.value ?? 0, RT: gp.buttons[7]?.value ?? 0,
+    };
+    // The pad in use ends the routine, as a key does.
+    if (routineRunning() && (Object.values(buttons).some(Boolean) || Object.values(axes).some((v) => Math.abs(v) > 0.1))) {
+      handle.stopRoutine('stopped by the gamepad');
+    }
+    client.pad({ axes, buttons });
   }
 
   // A press of the bundle's binding for `mode`, as the keyboard would make it.
@@ -467,6 +532,7 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
     scene,
     camera,
     requestMode(mode) {
+      if (routineRunning()) handle.stopRoutine(`stopped for ${mode}`);
       const current = client.frame?.mode ?? info.initialMode;
       if (mode === 'locomotion') {
         handle.release();
@@ -477,6 +543,8 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
       return tapBinding(b.key!, b.with);
     },
     release() {
+      // The routine hands back to walking by itself when stopped.
+      if (routineRunning()) return handle.stopRoutine('stopped for walking');
       const current = client.frame?.mode ?? '';
       // A claw is a toggle: its own key switches it off. Recorded motions leave on leave_motion.
       const own = info.bindings.find((x) => x.name === current && x.key && x.on === 'toggle' && current.startsWith('claw'));
@@ -490,11 +558,30 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
     letGo() {
       client.send({ type: 'letGo' });
     },
+    startRoutine() {
+      const ready = (m: string) => info.policiesReady.includes(m) || client.policies.get(m)?.ok === true;
+      if (!ROUTINE.every((m) => ready(m.mode))) return false;
+      // The key or click that starts it is the gesture that lets the page's audio play.
+      void opts.audio?.ctx.resume();
+      routineAsk = { on: true, at: performance.now() };
+      client.send({ type: 'routine', on: true });
+      return true;
+    },
+    stopRoutine(why = 'stopped') {
+      if (!routineRunning()) return;
+      routineAsk = { on: false, at: performance.now() };
+      client.send({ type: 'routine', on: false, why });
+      music?.stop();
+    },
+    get routine() {
+      return client.frame?.routine ?? null;
+    },
     reset() {
       client.send({ type: 'reset' });
       snapped = false;
     },
     setPaused(p) {
+      paused = p;
       client.send({ type: 'pause', paused: p });
     },
     setSpeed(s) {
@@ -562,6 +649,7 @@ export async function startRobotMode(container: HTMLElement, opts: RobotModeOpti
     },
     stop() {
       stopped = true;
+      music?.dispose();
       for (const d of disposers.splice(0)) d();
       client.stop();
       orbit.dispose();

@@ -16,7 +16,7 @@ export default class RobotScreen implements Screen {
     // Not awaited: the screen fades in on the loading overlay while the bundle downloads.
     // The player's crab from character creation wears the live policy; without one the bare robot
     // starts and the HUD offers a race and class picker.
-    startRobotMode(this.host, { engine: app.engine, spec: app.spec, onBack: () => void app.go('title') })
+    startRobotMode(this.host, { engine: app.engine, spec: app.spec, audio: app.audio, onBack: () => void app.go('title') })
       .then((handle) => {
         if (this.left) handle.stop();
         else this.handle = handle;

@@ -14,6 +14,7 @@
 // curve and the thermal peak budget (jumper tasks/jumper/common/actuator.py::ServoCurveActuator).
 
 import type { WebFsmLike, BundleContract, RobotPackage } from './types';
+import type { LiveRoutine, RoutineHost } from './routine';
 
 /** Seconds of one controller tick: the fastest mode's period. */
 export const TICK_S = 0.005;
@@ -33,6 +34,11 @@ const TICK_US = 5000;
 export const AUTO_LEAVE_S: Readonly<Record<string, number>> = { power_jumpspin: 1.4, power_backflip: 1.2 };
 /** Ticks the host's own press of a switch is held for (40 ms). */
 const AUTO_PRESS_TICKS = 8;
+
+interface KeyInfo {
+  bindings: { name: string; key: string | null; with: string | null; on: string; leaves: string[] | null }[];
+  codeOf(name: string): string | undefined;
+}
 
 export interface SimInit {
   /** The loaded @mujoco/mujoco module (MainModule). */
@@ -75,7 +81,7 @@ export interface SimStats {
   inferences: number;
 }
 
-export class RobotSim {
+export class RobotSim implements RoutineHost {
   readonly mj: any;
   readonly model: any;
   readonly data: any;
@@ -125,9 +131,21 @@ export class RobotSim {
   /** Per mode the host leaves by itself: when, and the key codes of its switch, modifier first. */
   private readonly autoLeave = new Map<string, { after: number; codes: string[] }>();
   /** Sim seconds at which the current mode's policy started; null while it has not. */
-  private policySince: number | null = null;
+  policySince: number | null = null;
   private autoPressed = false;
-  private autoRelease: { atTick: number; codes: string[] } | null = null;
+  /** The host's own presses (AUTO_LEAVE_S, the routine) waiting to be let go: at which tick, which keys. */
+  private hostReleases: { atTick: number; codes: string[] }[] = [];
+  /** Host presses asked for while another was down: each goes down after the one before is let go,
+   * so two never make a chord (Ctrl over a held Shift + 2 would be another binding). */
+  private hostQueue: string[][] = [];
+  /** The tick the last host press was let go on. */
+  private hostFreeAt = -1;
+  /** The bundle's bindings and key codes, read once from the controller. */
+  private keyInfo: KeyInfo | null = null;
+  /** The live breakdance routine (routine.ts), while it runs and after it ends until the next. */
+  routine: LiveRoutine | null = null;
+  /** Each mode's home pose in wire order, for homeDistance. */
+  private readonly homes = new Map<string, Float32Array>();
   readonly bodies: BodyPose[] = [];
   readonly toyBodies: BodyPose[] = [];
   readonly baseBody: number;
@@ -196,22 +214,103 @@ export class RobotSim {
   /** The keyboard switch of each mode in `table`, as the bundle binds it. A mode the bundle does
    * not carry, or reaches by no key, is left to the person. */
   private findAutoLeave(table: Readonly<Record<string, number>>): void {
-    const bindings = JSON.parse(this.fsm.bindings()) as { name: string; key: string | null; with: string | null }[];
-    const keys = (JSON.parse(this.fsm.inputs()) as { keys: { name: string; code: [string, string] | string | null }[] }).keys;
-    const codeOf = (name: string): string | undefined => {
-      const k = keys.find((x) => x.name === name) ?? keys.find((x) => x.name === `key_left_${name}`);
-      const c = k?.code;
-      return (Array.isArray(c) ? c[0] : c) ?? undefined;
-    };
     const modes = this.fsm.modes();
     for (const [mode, after] of Object.entries(table)) {
       if (!modes.includes(mode)) continue;
-      const b = bindings.find((x) => x.name === mode && x.key && !/^keypad_/.test(x.key));
-      const key = b?.key ? codeOf(b.key) : undefined;
-      const mod = b?.with ? codeOf(b.with) : null;
-      if (!key || mod === undefined) continue;
-      this.autoLeave.set(mode, { after, codes: mod ? [mod, key] : [key] });
+      const codes = this.switchCodes(mode);
+      if (codes) this.autoLeave.set(mode, { after, codes });
     }
+  }
+
+  private keys(): KeyInfo {
+    if (!this.keyInfo) {
+      const bindings = JSON.parse(this.fsm.bindings()) as KeyInfo['bindings'];
+      const keys = (JSON.parse(this.fsm.inputs()) as { keys: { name: string; code: [string, string] | string | null }[] }).keys;
+      const codeOf = (name: string): string | undefined => {
+        const k = keys.find((x) => x.name === name) ?? keys.find((x) => x.name === `key_left_${name}`);
+        const c = k?.code;
+        return (Array.isArray(c) ? c[0] : c) ?? undefined;
+      };
+      this.keyInfo = { bindings, codeOf };
+    }
+    return this.keyInfo;
+  }
+
+  /** Key codes (modifier first) of a keyboard binding, or null when one of its keys has no code. */
+  private codesOf(b: { key: string | null; with: string | null } | undefined): string[] | null {
+    if (!b?.key) return null;
+    const { codeOf } = this.keys();
+    const key = codeOf(b.key);
+    const mod = b.with ? codeOf(b.with) : null;
+    if (!key || mod === undefined) return null;
+    return mod ? [mod, key] : [key];
+  }
+
+  /** The keyboard switch of `mode` as the bundle binds it (the main keys, not the keypad's). */
+  switchCodes(mode: string): string[] | null {
+    return this.codesOf(this.keys().bindings.find((x) => x.name === mode && x.key && !/^keypad_/.test(x.key)));
+  }
+
+  /** The keyboard binding that hands `mode` back to walking: a claw's own toggle, else leave_motion. */
+  leaveCodes(mode: string): string[] | null {
+    const b = this.keys().bindings;
+    const own = b.find((x) => x.name === mode && x.key && x.on === 'toggle' && mode.startsWith('claw'));
+    return this.codesOf(own ?? b.find((x) => x.key && x.leaves?.includes(mode)));
+  }
+
+  /** The host presses `codes` (modifier first) for the person: down now (or once the host's
+   * previous press is let go), let go 40 ms later. */
+  private hostPress(codes: string[]): void {
+    if (this.hostReleases.length || this.hostQueue.length || this.tickIndex <= this.hostFreeAt) this.hostQueue.push(codes);
+    else this.hostDown(codes);
+  }
+
+  private hostDown(codes: string[]): void {
+    for (const code of codes) this.pendingKeys.push({ code, down: true, repeat: false });
+    this.hostReleases.push({ atTick: this.tickIndex + AUTO_PRESS_TICKS, codes });
+  }
+
+  // RoutineHost: the routine presses the bundle's own bindings through the same path.
+  pressSwitch(mode: string): string[] | null {
+    const codes = this.switchCodes(mode);
+    if (codes) this.hostPress(codes);
+    return codes;
+  }
+
+  pressLeave(mode: string): string[] | null {
+    const codes = this.leaveCodes(mode);
+    if (codes) this.hostPress(codes);
+    return codes;
+  }
+
+  endsByItself(mode: string): boolean {
+    return this.autoLeave.has(mode);
+  }
+
+  /** The largest distance of a joint from `mode`'s home pose (its contract's default_joint_pos), rad. */
+  homeDistance(mode: string): number {
+    let home = this.homes.get(mode);
+    if (!home) {
+      const c = this.contracts[mode];
+      if (!c) return 0;
+      home = Float32Array.from(this.wire, (j) => c.default_joint_pos[j] ?? 0);
+      this.homes.set(mode, home);
+    }
+    const qpos = this.data.qpos as Float64Array;
+    let d = 0;
+    for (let i = 0; i < this.nj; i++) d = Math.max(d, Math.abs(qpos[this.qadr[i]] - home[i]));
+    return d;
+  }
+
+  /** Starts the live breakdance routine (routine.ts); it takes effect on the next tick. */
+  startRoutine(r: LiveRoutine): void {
+    this.routine?.cancel('replaced by a new run');
+    this.routine = r;
+  }
+
+  /** Stops the routine at the next tick, handing the robot back to walking. */
+  stopRoutine(why: string): void {
+    this.routine?.stop(why);
   }
 
   /** A fresh controller, as the bundle's README builds one. */
@@ -245,11 +344,15 @@ export class RobotSim {
     }
     this.fsm.free?.();
     this.fsm = this.buildFsm();
+    this.keyInfo = null;
     this.pendingKeys = [];
     this.inferTimes = [];
     this.policySince = null;
     this.autoPressed = false;
-    this.autoRelease = null;
+    this.hostReleases = [];
+    this.hostQueue = [];
+    this.hostFreeAt = -1;
+    this.routine?.cancel('the robot was reset');
     this.setTimestep(this.contracts[this.fsm.mode()]?.control.sim_dt ?? 0.005);
   }
 
@@ -306,6 +409,8 @@ export class RobotSim {
     this.readState();
     fsm.set_state(this.qBuf, this.qdBuf, this.tau, this.quatBuf, this.gyroBuf, now);
     fsm.setSignal('base_lin_vel', this.linVelBuf);
+    // The routine first: what it presses this tick reaches the controller this tick.
+    this.routine?.tick(this);
     if (this.pendingLetGo) {
       fsm.letGo(now);
       this.pendingLetGo = false;
@@ -314,14 +419,15 @@ export class RobotSim {
     const auto = this.autoLeave.get(this.mode);
     if (auto && !this.autoPressed && this.policySince !== null && this.simTime - this.policySince >= auto.after - 1e-9) {
       this.autoPressed = true;
-      for (const code of auto.codes) this.pendingKeys.push({ code, down: true, repeat: false });
-      this.autoRelease = { atTick: this.tickIndex + AUTO_PRESS_TICKS, codes: auto.codes };
+      this.hostPress(auto.codes);
       this.autoLeft.push({ mode: this.mode, at: this.simTime, after: auto.after, keys: auto.codes });
     }
-    if (this.autoRelease && this.tickIndex >= this.autoRelease.atTick) {
-      for (const code of [...this.autoRelease.codes].reverse()) this.pendingKeys.push({ code, down: false, repeat: false });
-      this.autoRelease = null;
+    while (this.hostReleases.length && this.tickIndex >= this.hostReleases[0].atTick) {
+      const r = this.hostReleases.shift()!;
+      for (const code of [...r.codes].reverse()) this.pendingKeys.push({ code, down: false, repeat: false });
+      this.hostFreeAt = this.tickIndex;
     }
+    if (this.hostQueue.length && !this.hostReleases.length && this.tickIndex > this.hostFreeAt) this.hostDown(this.hostQueue.shift()!);
     // A key that goes down and up between two ticks would never be seen down: the controller
     // reads key levels once per tick. Hold its release (and everything after it) for a tick.
     const downNow = new Set<string>();
