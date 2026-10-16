@@ -188,16 +188,21 @@ async function checkRobot() {
         await shot(mode);
         let safe = false;
         let back = false;
+        // The log keeps its last five lines, so the press is watched for while waiting: read only
+        // at the end, a slow page could have scrolled it out under the transitions that follow it.
+        const sawPress = () => page.evaluate(() => [...document.querySelectorAll('.rm-log div')].some((d) => /page pressed/.test(d.textContent ?? '')));
+        let pressed = await sawPress();
         while (Date.now() - t0 < 15000) {
           const name = await modeName();
           if (name === 'Safe Hold') safe = true;
+          pressed ||= await sawPress();
           if (name === 'Walk' && (await live())) {
             back = true;
             break;
           }
           await sleep(40);
         }
-        const pressed = await page.evaluate(() => [...document.querySelectorAll('.rm-log div')].some((d) => /page pressed/.test(d.textContent ?? '')));
+        pressed ||= await sawPress();
         if (safe) fails.push(`${mode}: went to the Safe Hold`);
         if (!back) fails.push(`${mode}: did not hand back to walking`);
         if (!pressed) fails.push(`${mode}: the log does not show the page's press`);
