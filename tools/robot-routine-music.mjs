@@ -14,6 +14,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { BREAK_CLIPS } from '../src/motion/breakClips.ts';
 import { BAR_S, ROUTINE, ROUTINE_BARS } from '../src/robot/sim/routine.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -41,7 +42,8 @@ const STYLE = {
  * recorded clips' `land` minus `policy_start` (src/motion/breakClips.ts), which the live routine
  * reproduces (tools/robot-sim-check.ts prints each jump's touchdown in the routine).
  */
-const LANDING_S = { power_jumpspin: 0.63, power_backflip: 0.465 };
+const landing = (id) => +(BREAK_CLIPS[id].events.land - BREAK_CLIPS[id].events.policy_start).toFixed(3);
+const LANDING_S = { power_jumpspin: landing('break_jumpspin'), power_backflip: landing('break_backflip') };
 /** Seconds of ring-out after the last bar: the freeze held, released and stood up from. */
 const TAIL_S = 4.6;
 
