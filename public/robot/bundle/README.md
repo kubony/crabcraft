@@ -138,7 +138,7 @@ The rest of this file is for a browser.
 
 **The controller here is the one the robot runs.** Not the same logic
 reimplemented from the same contract -- the same compiled object, built from
-`deploy/fsm` at commit `84b610c01abb8bae77624670196c293f43280dcd`. That is the point of shipping it: three
+`deploy/fsm` at commit `f3afcefce261298001a167f6096ce77769f4036d`. That is the point of shipping it: three
 implementations of one observation agreed by people reading each other's code,
 and a sign corrected in one left the other two wrong with every other number
 still correct.
@@ -446,4 +446,4 @@ loader error nobody can read.
 
 ---
 
-Built by `scripts/deploy.py` from KingKongRobotics/jumper `84b610c01abb8bae77624670196c293f43280dcd`.
+Built by `scripts/deploy.py` from KingKongRobotics/jumper `f3afcefce261298001a167f6096ce77769f4036d`.

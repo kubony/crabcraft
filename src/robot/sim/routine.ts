@@ -36,8 +36,8 @@ export interface RoutineMove {
  *   toprock     0.70-0.83 s       6.24 s (its recording)           4
  *   six-step    0.70-0.83 s       5.32 s (its recording)           3
  *   spin        0.58-0.69 s       6 beats held, then 0.93-0.99 s   3
- *   720         0.58-0.69 s       1.40 s + 0.81-0.84 s             2
- *   back flip   0.58-0.69 s       1.20 s + 0.74-0.84 s             2
+ *   720         0.58-0.69 s       1.40 s + 0.74-0.75 s             2
+ *   back flip   0.58-0.69 s       1.20 s + 0.93-0.94 s             2
  *   one-claw    0.70-0.83 s       6.52 s (its recording)           (the end)
  *
  * The one-claw freeze lands on the downbeat after its own (its clip's hit, 4 beats after the policy

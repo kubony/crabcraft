@@ -374,9 +374,12 @@ for (const [mode, code, clip] of BREAKS) {
 // (on its feet again, under 30 degrees of tilt 0.3 s after the touchdown, never in `safe`) and be
 // handed back to the walking policy by the host's own press of its switch (core.ts AUTO_LEAVE_S).
 // The turn in the air is the body rate integrated over that flight: about the vertical for the
-// 720, nose-up about the body's pitch axis for the flip.
+// 720, nose-up about the body's pitch axis for the flip. The 720's floor sits between what it turns
+// with its targets let 1.7 rad past the stops, as the bundle ships it (690 to 746 degrees on this
+// core, 24 trials from standing and walking), and what it turned with them clamped at the stops
+// (at most 653 through the bundle's controller): a bundle that lost its `target_margin` fails here.
 const JUMPS: [string, string, 'yaw' | 'pitch', number][] = [
-  ['power_jumpspin', 'Digit6', 'yaw', 450], ['power_backflip', 'Digit7', 'pitch', 330],
+  ['power_jumpspin', 'Digit6', 'yaw', 660], ['power_backflip', 'Digit7', 'pitch', 330],
 ];
 const jumps: Record<string, Record<string, unknown>> = {};
 for (const [mode, code, axis, minTurn] of JUMPS) for (const start of ['standing', 'walking']) {

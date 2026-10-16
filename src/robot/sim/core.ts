@@ -23,13 +23,15 @@ const TICK_US = 5000;
 /**
  * Modes this host leaves by itself, and when: seconds after the mode's policy starts (the
  * controller's handover), in simulated time. The 720 jump spin and the back flip have no recording
- * and no clock, so nothing in the bundle ends them: each jumps once and then stands at its home
- * pose until its switch is pressed again, which on a robot the operator does after the landing.
- * Here the host presses that switch for the person, with the bundle's own keyboard binding (the
- * modifier and the key, held 40 ms), at the moment the game's clips of the two moves let go
- * (tools/motion/record_clips.py BREAKS). On those recordings, through the bundle's controller, the
- * 720 lands 0.63 s after the handover and has settled by 1.03 s; the back flip lands at 0.47 s and
- * has settled by 0.67 s. The spin is not here: it is a held move, ended when the person wants.
+ * and no clock, so nothing in the bundle ends them: each jumps once and then stands still until its
+ * switch is pressed again, which on a robot the operator does after the landing. Here the host
+ * presses that switch for the person, with the bundle's own keyboard binding (the modifier and the
+ * key, held 40 ms), at the moment the game's clips of the two moves let go
+ * (tools/motion/record_clips.py BREAKS). On this simulation core, 12 trials each from standing and
+ * from walking, the 720 lands 0.69 to 0.74 s after the handover and is at rest from 0.99 to 1.12 s;
+ * the back flip lands at 0.45 to 0.48 s and is at rest from 0.69 to 0.83 s (the hand-back moment of
+ * the Jumper checkout's tools/eval_calm.py: joint speeds under 0.2 rad/s RMS, roll and pitch under
+ * 5 deg/s, for 0.3 s). The spin is not here: it is a held move, ended when the person wants.
  */
 export const AUTO_LEAVE_S: Readonly<Record<string, number>> = { power_jumpspin: 1.4, power_backflip: 1.2 };
 /** Ticks the host's own press of a switch is held for (40 ms). */
