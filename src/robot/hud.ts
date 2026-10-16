@@ -487,11 +487,6 @@ export class Hud {
     this.log.append(h('div', null, h('b', null, 'fault '), h('span', null, message)));
   }
 
-  /** Whether every move of the routine has its policy loaded. */
-  get routineReady(): boolean {
-    return ROUTINE.every((m) => this.loaded.has(m.mode));
-  }
-
   /** A line in the log, as the page writes them. */
   note(text: string, at?: number): void {
     this.logLine(at, text, '');
@@ -508,7 +503,7 @@ export class Hud {
     el.addEventListener('mousedown', (e) => e.preventDefault());
     el.onclick = () => this.actions.routine?.();
     for (const m of ROUTINE) if (info.policiesReady.includes(m.mode)) this.loaded.add(m.mode);
-    if (!this.routineReady) el.classList.add('loading');
+    if (!ROUTINE.every((m) => this.loaded.has(m.mode))) el.classList.add('loading');
     this.routineBtn = el;
     return el;
   }

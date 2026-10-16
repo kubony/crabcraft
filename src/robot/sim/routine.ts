@@ -4,8 +4,8 @@
 //
 // Nothing here moves a joint. The routine only presses the bundle's own mode switches, as its
 // keyboard binds them (Shift + 1 to 7, held 40 ms), at times it plans on the beat grid, and waits
-// for each mode to hand the robot back to walking before it asks for the next: every switch in the
-// bundle is reachable from walking only. The recorded moves end by themselves, the spin is ended by
+// for each mode to hand the robot back to walking before it asks for the next: the bundle takes each
+// of these switches from walking only. The recorded moves end by themselves, the spin is ended by
 // its own switch pressed again, and the 720 and the back flip by the host's press after the landing
 // (core.ts AUTO_LEAVE_S). Every press it makes is reported, so the page can say so.
 //
