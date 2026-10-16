@@ -22,13 +22,17 @@ flip, one-claw freeze, from seven more new Jumper tasks in `jumper/`: four track
 (`jumper.break_*`) and three reward-driven power moves (`jumper.power_spin_feet`,
 `power_jumpspin720`, `power_backflip`). They are simulation results; none has run on a physical
 robot. The back flip's mode lifts the robot controller's 50-degree tilt guard while it runs, which
-a physical robot would need with care: nothing catches a fall during the flip. The 720's and the
-spin's modes let their joint targets go up to 1.7 rad past the joint stops, as they trained, which
-on a robot would hold a joint against its stop at up to 1.746 N m and can send a target of about
-6.45 rad (untested on a physical robot). Both jumps stand still after their landing. The routine
-(`src/motion/breakdance.ts`) plays each move's window in turn and carries the move's travel and turn
-over to the crab, so the six-step's short turn (345.9 of 360 degrees, used as it is) and the 720's
-763 degrees from its start to its landing leave the crab facing where the policy left the robot.
+a physical robot would need with care: nothing catches a fall during the flip. The spin's mode
+lets its joint targets go up to 1.7 rad past the joint stops, as it trained, which on a robot would
+hold a joint against its stop at up to 1.746 N m and can send a target of about 6.45 rad (untested
+on a physical robot); the 720 was trained again with its targets clamped at the stops and sends none
+past them. Both jumps stand still after their landing, the 720 about 10 degrees nose-up, the flip
+level near the standing pose. The six-step closes its turn, 357.7 of 360 degrees, on a heading error
+the controller builds from the IMU's yaw since the move began (whether a physical robot's AHRS yaw
+follows its gyro is unchecked). The routine (`src/motion/breakdance.ts`) plays each move's window in
+turn and carries the move's travel and turn over to the crab, so the six-step's last 2 degrees and
+the 720's 751 degrees from its start to its landing leave the crab facing where the policy left the
+robot.
 
 Tagline: **Six shells. One tide.**
 
