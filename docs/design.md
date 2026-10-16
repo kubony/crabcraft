@@ -22,10 +22,13 @@ flip, one-claw freeze, from seven more new Jumper tasks in `jumper/`: four track
 (`jumper.break_*`) and three reward-driven power moves (`jumper.power_spin_feet`,
 `power_jumpspin720`, `power_backflip`). They are simulation results; none has run on a physical
 robot. The back flip's mode lifts the robot controller's 50-degree tilt guard while it runs, which
-a physical robot would need with care: nothing catches a fall during the flip. The routine
+a physical robot would need with care: nothing catches a fall during the flip. The 720's and the
+spin's modes let their joint targets go up to 1.7 rad past the joint stops, as they trained, which
+on a robot would hold a joint against its stop at up to 1.746 N m and can send a target of about
+6.45 rad (untested on a physical robot). Both jumps stand still after their landing. The routine
 (`src/motion/breakdance.ts`) plays each move's window in turn and carries the move's travel and turn
 over to the crab, so the six-step's short turn (345.9 of 360 degrees, used as it is) and the 720's
-turn after landing leave the crab facing where the policy left the robot.
+763 degrees from its start to its landing leave the crab facing where the policy left the robot.
 
 Tagline: **Six shells. One tide.**
 
@@ -192,7 +195,8 @@ spin on Shift + 5, the 720 on Shift + 6 and the back flip on Shift + 7, claw). A
 mode, its control rate from the contract (200 Hz for locomotion, jump, the spin and the two power
 jumps, 50 Hz for dances, gestures, skills, tracked breaking moves and claw) and the joint telemetry.
 The 720 and the back flip have no end of their own; the page presses their switch again 1.4 s and
-1.2 s after the handover, once they have landed, and logs that it did. A toggle
+1.2 s after the handover, once they have landed and come to rest (by 1.14 s and 0.86 s at the latest
+through the bundle's controller), and logs that it did. A toggle
 shows the bare robot vs. the race appearance.
 
 ## Art direction
