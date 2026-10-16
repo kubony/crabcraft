@@ -26,7 +26,7 @@ const HOP = { from: 0.8, to: 1.56, speed: 1.15, fade: 0.06 } as const;
 const BREAK_BARKS: Partial<Record<RoutineStep['id'], string[]>> = {
   break_sixstep: ['Look at those legs go!', 'Footwork!'],
   break_spin: ['Spin it!', 'Round and round!'],
-  break_jumpspin: ['Look at it turn!', 'Seven-twenty!'],
+  break_jumpspin: ['Two full turns!', 'Seven-twenty!'],
   break_backflip: ['A back flip!', 'It flipped!'],
   break_oneclaw: ['Freeze!', 'On one claw!'],
 };
