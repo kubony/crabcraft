@@ -21,7 +21,8 @@ The hero can also break (B, and the ending's finale): toprock, six-step, spin, 7
 flip, one-claw freeze, from seven more new Jumper tasks in `jumper/`: four tracked moves
 (`jumper.break_*`) and three reward-driven power moves (`jumper.power_spin_feet`,
 `power_jumpspin720`, `power_backflip`). They are simulation results; none has run on a physical
-robot, and a real back flip needs the robot controller's 50-degree tilt guard disabled. The routine
+robot. The back flip's mode lifts the robot controller's 50-degree tilt guard while it runs, which
+a physical robot would need with care: nothing catches a fall during the flip. The routine
 (`src/motion/breakdance.ts`) plays each move's window in turn and carries the move's travel and turn
 over to the crab, so the six-step's short turn (345.9 of 360 degrees, used as it is) and the 720's
 turn after landing leave the crab facing where the policy left the robot.
@@ -186,11 +187,12 @@ A separate scene (opened from the title screen or with R): a sunny tabletop aren
 TVC (warm light, shallow depth of field). The chosen crab runs live: MuJoCo WASM physics plus the
 bundle's ONNX policies and controller wasm, the same files the physical robot loads. Keyboard /
 on-screen buttons switch modes exactly like the robot's controller (walk with WASD, jump, dances,
-gestures, the six skills on 5 6 7 8 9 0, the four tracked breaking moves on Shift + 1 2 3 4 and the
-spin on Shift + 5, claw). A HUD shows the live mode, its control rate from the contract (200 Hz for
-locomotion, jump and the spin, 50 Hz for dances, gestures, skills, breaking moves and claw) and the
-joint telemetry. The 720 and the back flip are not here: their policies start the jump only from
-their training environment's reset, which a mode switch does not produce. A toggle
+gestures, the six skills on 5 6 7 8 9 0, the four tracked breaking moves on Shift + 1 2 3 4, the
+spin on Shift + 5, the 720 on Shift + 6 and the back flip on Shift + 7, claw). A HUD shows the live
+mode, its control rate from the contract (200 Hz for locomotion, jump, the spin and the two power
+jumps, 50 Hz for dances, gestures, skills, tracked breaking moves and claw) and the joint telemetry.
+The 720 and the back flip have no end of their own; the page presses their switch again 1.4 s and
+1.2 s after the handover, once they have landed, and logs that it did. A toggle
 shows the bare robot vs. the race appearance.
 
 ## Art direction
