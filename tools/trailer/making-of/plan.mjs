@@ -42,7 +42,11 @@ export const SOURCES = {
   rest: `${CALM}/home_side_old_vs_new_2s_slow4x.mp4`,
   // A still: the two settled poses side by side.
   restStill: `${CALM}/home_settled_pose_old_vs_new.png`,
-  // The 720 aiming past the joint stops and retrained within them, through the controller, 4x slow.
+  // The 720 before it was retrained, through the bundle's controller as it clipped every mode's
+  // targets at the stops, switched into while walking (4x slow motion, 50 fps; its mode line at
+  // the top; the handover 7.44 s in); and the 720 retrained within the stops, through the
+  // controller, from a side-by-side review (4x slow, the handover 0.4 s in).
+  clipped: `${DANCE}/jumpspin720_controller_from_walk_slow4x.mp4`,
   stops: 'feat-crabcraft-safe720/out/review/720_old_vs_new/review_720_4x.mp4',
   // The six-step from above, without and with its heading error (real time for its first 6.6 s).
   heading: 'feat-crabcraft-sixstep360/out/review/sixstep_F_vs_new_top.mp4',
@@ -155,8 +159,14 @@ export const SCENES = [
   {
     id: 'bug5',
     chapter: 'ch5',
-    // The 4x slow-motion take slowed to three quarters of that again (about 5.3x), to fill four bars.
-    plates: [{ id: 'bug5', bars: 4, panels: halves('stops', [0, 56, 640, 424], [640, 56, 640, 424], { from: 0.04, speed: 0.75 }), labels: ['lbl-b5-old', 'lbl-b5-new'] }],
+    // Both 4x slow-motion takes slowed to three quarters of that again (about 5.3x), to fill four
+    // bars, aligned on the handover (0.48 s into the plate). The controller take is cut to the
+    // review half's shape, its mode line cut away.
+    plates: [{
+      id: 'bug5', bars: 4,
+      panels: [{ src: 'clipped', crop: [91, 24, 780, 516], from: 7.08, speed: 0.75 }, { src: 'stops', crop: [640, 56, 640, 424], from: 0.04, speed: 0.75 }],
+      labels: ['lbl-b5-old', 'lbl-b5-new'],
+    }],
     captions: [['b5why', 0, 2], ['b5fix', 2, 4]],
     music: ['half', 'half', 'grooveA', 'grooveB'],
   },

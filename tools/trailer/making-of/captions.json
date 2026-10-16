@@ -44,7 +44,7 @@
   { "id": "lbl-b4-new", "tone": "green", "en": "AFTER", "zh": "修复后", "enLine": "lands, then rests near HOME, quarter speed", "zhLine": "落地后停在 HOME 附近，四分之一速度", "landPos": "label", "portPos": "label" },
   { "id": "lbl-b4-old-still", "tone": "red", "en": "BEFORE", "zh": "修复前", "enLine": "settled: splayed, 7.7° tilt", "zhLine": "停稳后：趴开，倾斜 7.7 度", "landPos": "label", "portPos": "label" },
   { "id": "lbl-b4-new-still", "tone": "green", "en": "AFTER", "zh": "修复后", "enLine": "settled: near HOME, 1.0° tilt", "zhLine": "停稳后：在 HOME 附近，倾斜 1.0 度", "landPos": "label", "portPos": "label" },
-  { "id": "lbl-b5-old", "tone": "red", "en": "BEFORE", "zh": "修复前", "enLine": "targets let 1.7 rad past the stops, slowed down", "zhLine": "目标可越过限位 1.7 rad，慢放", "landPos": "label", "portPos": "label" },
+  { "id": "lbl-b5-old", "tone": "red", "en": "BEFORE", "zh": "修复前", "enLine": "targets clipped at the stops, from walking, slowed down", "zhLine": "目标被限位截断，行走中进入，慢放", "landPos": "label", "portPos": "label" },
   { "id": "lbl-b5-new", "tone": "green", "en": "AFTER", "zh": "修复后", "enLine": "retrained with its targets within the stops, slowed down", "zhLine": "在限位内重新训练，慢放", "landPos": "label", "portPos": "label" },
   { "id": "lbl-b6-old", "tone": "red", "en": "BEFORE", "zh": "修复前", "enLine": "cannot see its heading: 345.9°", "zhLine": "看不到朝向：345.9 度", "landPos": "label", "portPos": "label" },
   { "id": "lbl-b6-new", "tone": "green", "en": "AFTER", "zh": "修复后", "enLine": "sees its heading error: 357.7°", "zhLine": "看得到朝向误差：357.7 度", "landPos": "label", "portPos": "label" },
