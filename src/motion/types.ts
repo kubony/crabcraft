@@ -42,11 +42,10 @@ export type MotionId =
   // game and recorded through the crabcraft bundle. Play them through src/motion/skills.ts, which
   // cuts each to its move (from/to) at its pace.
   | 'attack_swipe' | 'attack_slam' | 'cast' | 'hit_react' | 'death' | 'sit'
-  // The breakdance: the four tracked moves (jumper.break_*) and the spin (jumper.power_spin_feet),
-  // recorded through the crabcraft bundle, and the 720 jump spin and back flip
-  // (jumper.power_jumpspin720, jumper.power_backflip), recorded as rollouts in their own training
-  // environment. Play them through src/motion/breakdance.ts, which cuts each to its window and
-  // carries its travel and turn over to the crab.
+  // The breakdance: the four tracked moves (jumper.break_*), the spin (jumper.power_spin_feet), the
+  // 720 jump spin (jumper.power_jumpspin720) and the back flip (jumper.power_backflip), all recorded
+  // through the crabcraft bundle. Play them through src/motion/breakdance.ts, which cuts each to its
+  // window and carries its travel and turn over to the crab.
   | 'break_toprock' | 'break_sixstep' | 'break_clawstand' | 'break_oneclaw'
   | 'break_spin' | 'break_jumpspin' | 'break_backflip';
 

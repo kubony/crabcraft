@@ -3,20 +3,19 @@
     JUMPER_ROOT=<jumper checkout> PYTHONPATH=<jumper checkout>:<jumper checkout>/rl \
         <jumper venv>/bin/python tools/motion/record_rollouts.py [--out scratch/motion-raw]
 
-Every other policy-backed clip is recorded through the crabcraft bundle's own controller
-(record_clips.py). These two cannot be: `jumper.power_jumpspin720` and `jumper.power_backflip` take
-off only from their training environment's reset, whose first observation shows the torque of 18
-of the 20 joints at the servo's limit (mjlab reports the actuator's PD force toward a zero target
-before the first action). A controller switching into either mode hands it a robot standing at
-HOME with its real torques, and from there neither jumps: held at HOME for 0.5 s in its own environment and then
-handed over, the 720 rises 9 mm and the flip none (docs/CRABCRAFT_POWER.md in the jumper checkout,
-"Under the controller"). So each clip here is one episode of the task's own environment, as the
-policy was trained and evaluated: mjlab on native MuJoCo, play mode (from HOME, no observation
-noise, no pushes) with the startup randomisation removed, 2.5 s at 200 Hz, the exported actor
-(`tasks/jumper/<task>/out/crabcraft/actor.onnx`, within 1.1e-05 of the torch policy) choosing every
-action. It is written in record_clips.py's raw format, the robot's state mapped onto
-jumper_sim's model by joint name, so export_clips.py treats it like any other recording; its
-metadata says it is a direct rollout and not the bundle.
+No game clip comes from here any more. The game's break_jumpspin and break_backflip were once
+recorded this way, because the policies then shipped took off only from their training
+environment's reset; the ones shipped now (`pw-jspin720-ho`, `pw-flip-brc`) take off from the
+controller's handover, so record_clips.py records both through the crabcraft bundle like every
+other move. This stays as a way to compare a jump in its own environment with the same jump
+through the bundle.
+
+Each rollout is one episode of the task's own environment: mjlab on native MuJoCo, play mode
+(from HOME, no observation noise, no pushes) with the startup randomisation removed, at 200 Hz,
+the exported actor (`tasks/jumper/<task>/out/crabcraft/actor.onnx`) choosing every action. It is
+written in record_clips.py's raw format, the robot's state mapped onto jumper_sim's model by joint
+name, so export_clips.py reads it like any other recording; its metadata says it is a direct
+rollout and not the bundle.
 
 Needs the jumper checkout's training environment (mjlab, rsl_rl) importable, hence PYTHONPATH and
 no `-I`.

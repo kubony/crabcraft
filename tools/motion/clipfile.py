@@ -175,10 +175,9 @@ def write_index(out_dir: Path) -> dict:
         "schema": "crabcraft-motions/1",
         "note": "Every clip is a closed-loop rollout of a Jumper policy (KingKongRobotics/jumper, "
                 "Apache-2.0) in MuJoCo: the example bundle's walking, jump, claw, gesture and dance "
-                "policies, the six skills (jumper.skill_*, trained for this game) and five of the "
-                "seven breakdance moves (jumper.break_* and the spin) through the crabcraft bundle, "
-                "and the 720 jump spin and the back flip as rollouts in their own training "
-                "environment, which the bundle's controller cannot start. tools/motion/ rebuilds "
+                "policies, and the six skills (jumper.skill_*) and the seven breakdance moves "
+                "(jumper.break_*, the spin, the 720 jump spin and the back flip), trained for this "
+                "game, through the crabcraft bundle's controller. tools/motion/ rebuilds "
                 "everything.",
         "clips": clips,
     }

@@ -1,6 +1,6 @@
 {
  "schema": "crabcraft-motions/1",
- "note": "Every clip is a closed-loop rollout of a Jumper policy (KingKongRobotics/jumper, Apache-2.0) in MuJoCo: the example bundle's walking, jump, claw, gesture and dance policies, the six skills (jumper.skill_*, trained for this game) and five of the seven breakdance moves (jumper.break_* and the spin) through the crabcraft bundle, and the 720 jump spin and the back flip as rollouts in their own training environment, which the bundle's controller cannot start. tools/motion/ rebuilds everything.",
+ "note": "Every clip is a closed-loop rollout of a Jumper policy (KingKongRobotics/jumper, Apache-2.0) in MuJoCo: the example bundle's walking, jump, claw, gesture and dance policies, and the six skills (jumper.skill_*) and the seven breakdance moves (jumper.break_*, the spin, the 720 jump spin and the back flip), trained for this game, through the crabcraft bundle's controller. tools/motion/ rebuilds everything.",
  "clips": [
   {
    "id": "attack_slam",
@@ -29,11 +29,11 @@
    "source": "power_backflip",
    "kind": "break",
    "fps": 50.0,
-   "frameCount": 125,
-   "duration": 2.5,
+   "frameCount": 198,
+   "duration": 3.96,
    "loop": false,
-   "speed": 0.00123,
-   "bytes": 10146
+   "speed": 0.04663,
+   "bytes": 14014
   },
   {
    "id": "break_clawstand",
@@ -51,11 +51,11 @@
    "source": "power_jumpspin",
    "kind": "break",
    "fps": 50.0,
-   "frameCount": 125,
-   "duration": 2.5,
+   "frameCount": 208,
+   "duration": 4.16,
    "loop": false,
-   "speed": 0.09174,
-   "bytes": 9999
+   "speed": 0.04037,
+   "bytes": 14454
   },
   {
    "id": "break_oneclaw",

@@ -11,11 +11,12 @@ way and carry, besides, their reference's moments moved to where the policy play
 game's window of the move in clip seconds, and for death and sit the moment the game holds. The
 windows and moments are also written to src/motion/skillClips.ts, which gameplay reads.
 
-The seven breakdance clips (record_clips.py BREAKS and record_rollouts.py ROLLOUTS) are kept whole
-too. The four tracked moves carry their reference's moments moved by the policy's lag, as the
-skills do; the spin its own start and let-go; the two jumps (direct rollouts in their training
-environment, not the bundle) their take-off, apex and landing read off the rollout. Each carries
-the window the routine plays, and src/motion/breakClips.ts lists them for gameplay.
+The seven breakdance clips (record_clips.py BREAKS, every one through the crabcraft bundle's
+controller) are kept whole too. The four tracked moves carry their reference's moments moved by the
+policy's lag, as the skills do; the spin its own start and let-go; the two jumps their take-off,
+apex, landing, settle and let-go read off the rollout. Each carries the window the routine plays,
+and src/motion/breakClips.ts lists them for gameplay. (record_rollouts.py's direct rollouts of a
+jump in its training environment are still read, should one be exported again; no game clip is one.)
 """
 from __future__ import annotations
 
@@ -57,8 +58,8 @@ SKILL_TABLE = Path(__file__).resolve().parents[2] / "src" / "motion" / "skillCli
 # the robot at HOME) to the end of the move, before the lead-out and the hold
 # (docs/CRABCRAFT_BREAKING.md in the jumper checkout, "The game's windows"); `hit` names the
 # reference moment the game reacts to. The spin runs from its policy's start until the
-# controller's ramp after the let-go has stood it up; the jumps from the episode's start until the
-# landing has settled.
+# controller's ramp after the let-go has stood it up; the jumps from their policy's start (the
+# handover) until the landing has settled.
 BREAKS = {
     "break_toprock": {"move": "toprock", "window": (0.00, 5.32), "fit": (0.00, 5.32), "hit": "beat8"},
     "break_sixstep": {"move": "sixstep", "window": (0.00, 4.40), "fit": (0.00, 4.40), "hit": "turn_to"},
@@ -432,11 +433,18 @@ def break_events(raw: Raw, events: dict, T: np.ndarray) -> dict:
         held = yaw(t_go - 2.0, t_go) / 360.0 / 2.0
         print(f"    spin: policy {window[0]:.3f}s, let go {events['spin_to'][0]:.3f}s, walking again "
               f"{rel(t_back):.3f}s; turned {turned:.0f} deg, {held:.2f} rev/s over the last 2 s held")
-        return {"task": raw.meta.get("task", "jumper.power_spin_feet"), "method": "bundle",
+        return {"task": raw.meta.get("task") or bundle_task(raw), "method": "bundle",
                 "window": window, "turnedDeg": round(turned, 1), "revPerS": round(held, 3)}
-    # A jump: one episode of the task's own environment from HOME (record_rollouts.py).
+    # A jump: through the bundle, from its policy's start (the controller's handover) to the end of
+    # the policy (record_clips.py); or one episode of the task's own environment from HOME
+    # (record_rollouts.py, no longer a game clip), from its first frame.
+    bundle = raw.meta.get("method") != "direct rollout"
     i0, i1 = np.searchsorted(raw.t, [T[0], T[-1]])
+    if bundle:
+        run = np.nonzero(np.array([m == mode for m in raw.modes]) & raw.running)[0]
+        i0, i1 = int(run[0]), int(run[-1]) + 1
     z = raw.pos[i0:i1, 2]
+    z0 = float(z[0])
     air = ~raw.contacts[i0:i1].any(axis=1)
     k = int(np.argmax(z))
     before = np.nonzero(~air[:k])[0]
@@ -447,16 +455,19 @@ def break_events(raw: Raw, events: dict, T: np.ndarray) -> dict:
     events["apex"] = [rel(raw.t[i0 + k])]
     events["land"] = [rel(land)]
     events["hit"] = [rel(land)]
+    if "let_go" in raw.marks:
+        events["let_go"] = [rel(raw.marks["let_go"][0])]
     # Settled: the first moment after the landing from which, for 0.2 s, the body stands within
-    # 12 mm of its starting height, tilts less than 6 degrees and turns slower than 30 deg/s, and
-    # the joints' fastest speed, averaged over 0.1 s, stays under 6 rad/s. The 720 goes on turning
-    # on its feet for a while after it lands. Both policies keep their legs busy at HOME (they run
-    # at 200 Hz with no clock), so "still" is not a threshold they ever cross; this is.
+    # 20 mm of its height at the start, tilts less than 6 degrees and turns slower than 45 deg/s,
+    # and the joints' fastest speed, averaged over 0.1 s, stays under 8 rad/s. The 720 goes on
+    # turning on its feet for a while after it lands, and the flip stands 10 to 14 mm lower after
+    # its landing than at the handover. Both policies keep their legs busy at HOME (they run at
+    # 200 Hz with no clock), so "still" is not a threshold they ever cross; this is.
     qd = moving_average(np.abs(np.gradient(raw.q, raw.t, axis=0)).max(axis=1), int(round(0.1 / DT)))
     wz = moving_average(np.abs(np.gradient(raw.yaw, raw.t)), int(round(0.1 / DT)))
     x_, y_ = raw.quat[:, 1], raw.quat[:, 2]
     tilt = np.degrees(np.arccos(np.clip(1 - 2 * (x_ * x_ + y_ * y_), -1, 1)))
-    quiet = (qd < 6.0) & (wz < np.radians(30)) & (tilt < 6) & (np.abs(raw.pos[:, 2] - raw.pos[0, 2]) < 0.012)
+    quiet = (qd < 8.0) & (wz < np.radians(45)) & (tilt < 6) & (np.abs(raw.pos[:, 2] - z0) < 0.020)
     n = int(round(0.2 / DT))
     settled = float(raw.t[i1 - 1])
     for i in range(int(np.searchsorted(raw.t, land)), len(raw.t) - n):
@@ -464,14 +475,13 @@ def break_events(raw: Raw, events: dict, T: np.ndarray) -> dict:
             settled = float(raw.t[i])
             break
     events["settled"] = [rel(settled)]
-    window = [0.0, rel(min(float(T[-1]), settled + 0.25))]
-    # The heading is read off the body's x axis, which a back flip turns upside down: for the
-    # flip the yaw is not a turn, so the turn about its pitch axis is reported instead.
-    print(f"    jump: take-off {events['takeoff'][0]:.3f}s, apex {events['apex'][0]:.3f}s "
-          f"({z.max() - z[0]:.3f} m), landing {events['land'][0]:.3f}s, settled "
-          f"{events['settled'][0]:.3f}s, window {window}")
-    return {"task": raw.meta["task"], "method": "direct rollout", "window": window,
-            "apexRise": round(float(z.max() - z[0]), 4)}
+    start = rel(raw.t[i0]) if bundle else 0.0
+    window = [start, rel(min(float(T[-1]), settled + 0.25))]
+    print(f"    jump: policy {start:.3f}s, take-off {events['takeoff'][0]:.3f}s, apex {events['apex'][0]:.3f}s "
+          f"({z.max() - z0:.3f} m), landing {events['land'][0]:.3f}s, settled "
+          f"{events['settled'][0]:.3f}s, let go {events.get('let_go')}, window {window}")
+    return {"task": raw.meta.get("task") or bundle_task(raw), "method": "bundle" if bundle else "direct rollout",
+            "window": window, "apexRise": round(float(z.max() - z0), 4)}
 
 
 def write_break_table(out_dir: Path, path: Path) -> None:
@@ -494,7 +504,7 @@ def write_break_table(out_dir: Path, path: Path) -> None:
         "// Generated by tools/motion/export_clips.py from the recorded breakdance clips in public/motions/.\n"
         "// Do not edit: re-run the export. Clip seconds: `from`/`to` is the window the routine plays (a\n"
         "// tracked move from its policy's first tick to the end of the move, moved by the policy's lag; the\n"
-        "// spin from its policy's start until it is walking again; a jump from the episode's start until the\n"
+        "// spin from its policy's start until it is walking again; a jump from its policy's start until the\n"
         "// landing has settled). `method` is 'bundle' for a rollout through the crabcraft bundle's\n"
         "// controller and 'direct rollout' for one episode of the policy's own training environment.\n"
         "export const BREAK_CLIPS = {\n" + "\n".join(rows) + "\n} as const;\n"
@@ -591,6 +601,12 @@ def provenance(raw: Raw, more: dict) -> dict:
         "physics": "MuJoCo, training contact/solver setup, per-mode timestep (tools/motion/jumper_sim.py)",
         **more,
     }
+
+
+def bundle_task(raw: Raw) -> str:
+    """The task a bundle recording's mode was built from (bundle.json `built_from`)."""
+    manifest = json.loads((Path(raw.meta["bundle"]) / "bundle.json").read_text("utf-8"))
+    return manifest["built_from"][raw.meta["source"]]["task"]
 
 
 def bundle_provenance(raw: Raw) -> dict:

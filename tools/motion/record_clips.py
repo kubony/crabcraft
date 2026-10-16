@@ -11,9 +11,11 @@ bundle's own pad bindings to enter jump / gestures / dances / claws / skills. Wr
 
 The six skills (attack_swipe, attack_slam, cast, hit_react, death, sit) are the `jumper.skill_*`
 policies, which only the crabcraft bundle carries: record them with `--bundle` pointing at it. So are
-five of the breakdance clips: the four `jumper.break_*` moves and the spin (`jumper.power_spin_feet`),
-on the bundle's Home chords. The 720 jump spin and the back flip are not in the bundle (they take off
-only from their training environment's reset); `record_rollouts.py` records those two.
+the seven breakdance clips, on the bundle's Home chords: the four `jumper.break_*` moves, the spin
+(`jumper.power_spin_feet`), the 720 jump spin (`jumper.power_jumpspin720`) and the back flip
+(`jumper.power_backflip`). The last three have no recording and no clock, so nothing ends them: each is
+let go with its own chord after a fixed time, as a person would, the same time Robot Mode's host waits
+before it presses the switch for them (src/robot/sim/core.ts, AUTO_LEAVE_S).
 """
 from __future__ import annotations
 
@@ -80,9 +82,10 @@ SKILLS = {
     "sit": ("L3", "skill_sit"),
 }
 
-# The crabcraft bundle's breakdance modes (deploy/crabcraft.manifests.json): Home + a pad button,
-# from locomotion. Game clip id -> (pad button held with Home, bundle mode, seconds the policy is
-# left running before its switch is pressed again, or None for a recording that ends by itself).
+# The crabcraft bundle's breakdance modes (deploy/crabcraft.manifests.json): Home + a pad button
+# (or the d-pad's up), from locomotion. Game clip id -> (pad control held with Home, bundle mode,
+# seconds the policy is left running before its switch is pressed again, or None for a recording
+# that ends by itself).
 BREAKS = {
     "break_toprock": ("A", "break_toprock", None),
     "break_sixstep": ("X", "break_sixstep", None),
@@ -90,7 +93,14 @@ BREAKS = {
     "break_oneclaw": ("L3", "break_oneclaw", None),
     # No recording and no clock: it spins until let go. 3.5 s is the spin-up and about six turns.
     "break_spin": ("LB", "power_spin", 3.5),
+    # No recording and no clock either: each jumps once and stands. Let go after the landing has
+    # settled, at Robot Mode's own times (src/robot/sim/core.ts, AUTO_LEAVE_S).
+    "break_jumpspin": ("RB", "power_jumpspin", 1.4),
+    "break_backflip": ("dpad_up", "power_backflip", 1.2),
 }
+
+# The d-pad is a pad axis pair, not a button: control name -> (x, y).
+DPAD = {"dpad_up": (0, 1), "dpad_down": (0, -1), "dpad_left": (-1, 0), "dpad_right": (1, 0)}
 
 STAND = 1.5  # seconds standing before anything is asked
 
@@ -197,21 +207,28 @@ def record_skill(cid: str) -> Host:
 def record_break(cid: str) -> Host:
     """Home held, the move's button pressed and let go, Home let go: the bundle's own chord.
 
-    A recording plays out and hands back by itself; the spin, which has no end of its own, is left
-    running for its seconds and then let go with the same chord, as a person would. Then until the
-    walking policy is running again, and 1.2 s of standing after, as for the skills."""
+    A recording plays out and hands back by itself; the spin and the two jumps, which have no end of
+    their own, are left running for their seconds from the handover and then let go with the same
+    chord, as a person would. Then until the walking policy is running again, and 1.2 s of standing
+    after, as for the skills."""
     button, mode, hold = BREAKS[cid]
     h = new_host()
     if mode not in h.contracts:
         raise SystemExit(f"{cid}: the bundle {h.bundle} has no mode {mode}; record the breakdance "
                          "with --bundle <the crabcraft bundle>")
 
+    def control(down: bool) -> None:
+        if button in DPAD:
+            h.pad(dpad=DPAD[button] if down else (0, 0))
+        else:
+            h.button(button, down)
+
     def chord() -> None:
         h.button("home", True)
         h.run(0.04)
-        h.button(button, True)
+        control(True)
         h.run(0.04)
-        h.button(button, False)
+        control(False)
         h.run(0.04)
         h.button("home", False)
 
@@ -308,7 +325,7 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=ROOT / "scratch" / "motion-raw")
     ap.add_argument("--only", default="",
                     help="clip ids, comma-separated; `skills` for the six skills, `breaks` for the "
-                         "five breakdance clips the bundle carries")
+                         "seven breakdance clips")
     ap.add_argument("--bundle", type=Path, default=None,
                     help="the bundle to drive (default: the jumper checkout's example bundle)")
     args = ap.parse_args()
