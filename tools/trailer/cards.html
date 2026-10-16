@@ -188,7 +188,10 @@
     card.style.cssText = 'position:absolute;inset:0;';
     const en = q.get('en') ?? '';
     const zh = q.get('zh') ?? '';
-    const enSize = Math.round((port ? 54 : 46) * u);
+    // font=plain sets a long caption (the making-of's whole sentences) in Alegreya, easier to read
+    // on a phone than Cinzel's capitals.
+    const plain = q.get('font') === 'plain';
+    const enSize = Math.round((port ? (plain ? 50 : 54) : (plain ? 48 : 46)) * u);
     const zhSize = Math.round((port ? 36 : 30) * u);
     // Lower third by default; 'band' lays a dark gradient band under it for shots whose bottom is
     // busy with the game's own UI, 'top' puts it at the top.
@@ -232,19 +235,87 @@
       lz.style.cssText += `margin-top:${6 * u}px;font-size:${Math.round((port ? 28 : 25) * u)}px;line-height:1.3;`;
       afterFonts = () => requestAnimationFrame(() => (document.body.dataset.ready = '1'));
     }
+    if (pos === 'chapter') {
+      // A chapter title, top left on a dark band (the making-of's "Bug #1: ..."): the part before
+      // the colon in a red chip, the rest in gold capitals beside it, the Chinese under them.
+      const [kick, ...rest] = en.split(': ');
+      const [kickZh, ...restZh] = zh.split('：');
+      const x = (port ? 56 : 84) * u;
+      const band = el('div', '', card);
+      band.style.cssText = `position:absolute;left:0;right:0;top:0;height:${(port ? 400 : 190) * u}px;` +
+        'background:linear-gradient(180deg, rgba(5,6,10,0.88) 0%, rgba(5,6,10,0.6) 55%, transparent 100%);';
+      const box = el('div', '', card);
+      box.style.cssText = `position:absolute;left:${x}px;right:${x}px;top:${(port ? 150 : 34) * u}px;`;
+      const row = el('div', '', box);
+      row.style.cssText = `display:flex;align-items:center;flex-wrap:wrap;gap:${10 * u}px ${18 * u}px;`;
+      const chip = el('span', 'en', row, kick);
+      chip.style.cssText += `font-size:${Math.round((port ? 32 : 28) * u)}px;line-height:1;letter-spacing:0.1em;color:#fff;text-shadow:none;` +
+        `background:#d8392f;border-radius:${8 * u}px;padding:${8 * u}px ${14 * u}px ${6 * u}px;box-shadow:0 2px 10px rgba(0,0,0,0.6);`;
+      const title = el('span', 'en gold', row, rest.join(': '));
+      title.style.cssText += `font-size:${Math.round((port ? 50 : 46) * u)}px;line-height:1.1;letter-spacing:0.05em;`;
+      const tz = el('div', 'zh', box, restZh.length ? `${kickZh}：${restZh.join('：')}` : kickZh);
+      tz.style.cssText += `margin-top:${10 * u}px;font-size:${Math.round((port ? 34 : 30) * u)}px;line-height:1.3;`;
+      afterFonts = () => requestAnimationFrame(() => (document.body.dataset.ready = '1'));
+    }
+    if (pos === 'label' || pos === 'stamp') {
+      // A label for one panel of the making-of's side-by-side footage ('label': a coloured chip,
+      // BEFORE or AFTER and its Chinese, over a line saying what the panel shows), or a rubber stamp
+      // over a take ('stamp': REJECTED). Laid out at the top left; the page records the box in
+      // body.dataset.clip, and tools/trailer/cards.mjs saves only that box.
+      const s = (port ? 1.15 : 1) * u;
+      const tone = { red: ['#e5483f', '#fff'], green: ['#35d39a', '#06130d'], gold: ['#e9c46a', '#1a1204'] }[q.get('tone') ?? 'gold'];
+      const box = el('div', '', card);
+      box.style.cssText = `position:absolute;left:${(pos === 'stamp' ? 40 : 8) * s}px;top:${(pos === 'stamp' ? 40 : 8) * s}px;display:flex;flex-direction:column;align-items:flex-start;gap:${6 * s}px;`;
+      const head = el('div', '', box);
+      if (pos === 'label') {
+        head.style.cssText = `display:flex;align-items:baseline;gap:${10 * s}px;background:${tone[0]};color:${tone[1]};border-radius:${8 * s}px;` +
+          `padding:${7 * s}px ${14 * s}px ${5 * s}px;box-shadow:0 2px 10px rgba(0,0,0,0.55);`;
+        const he = el('span', '', head, en);
+        he.style.cssText = `font-family:Cinzel,serif;font-weight:700;letter-spacing:0.1em;font-size:${Math.round(26 * s)}px;line-height:1;`;
+        const hz = el('span', '', head, zh);
+        hz.style.cssText = `font-family:'Songti SC','STSong',serif;font-weight:700;letter-spacing:0.08em;font-size:${Math.round(22 * s)}px;line-height:1;`;
+      } else {
+        head.style.cssText = `margin:${18 * s}px ${12 * s}px ${22 * s}px;transform:rotate(-7deg);border:${6 * s}px solid #ff4b3e;border-radius:${10 * s}px;` +
+          `box-shadow:inset 0 0 0 ${3 * s}px rgba(255,75,62,0.55);padding:${10 * s}px ${26 * s}px ${8 * s}px;background:rgba(20,4,4,0.45);text-align:center;color:#ff4b3e;`;
+        const he = el('div', '', head, en);
+        he.style.cssText = `font-family:Cinzel,serif;font-weight:900;letter-spacing:0.14em;font-size:${Math.round(58 * s)}px;line-height:1;`;
+        const hz = el('div', '', head, zh);
+        hz.style.cssText = `font-family:'Songti SC','STSong',serif;font-weight:700;letter-spacing:0.3em;font-size:${Math.round(32 * s)}px;line-height:1.2;margin-top:${6 * s}px;`;
+      }
+      if (q.get('enLine') || q.get('zhLine')) {
+        const plate = el('div', '', box);
+        plate.style.cssText = `background:rgba(5,6,10,0.74);border-radius:${8 * s}px;padding:${6 * s}px ${12 * s}px ${7 * s}px;`;
+        const le = el('div', 'en', plate, q.get('enLine') ?? '');
+        le.style.cssText += `font-family:Alegreya,serif;font-weight:700;letter-spacing:0.02em;font-variant-numeric:lining-nums;font-size:${Math.round(24 * s)}px;line-height:1.25;`;
+        const lz = el('div', 'zh', plate, q.get('zhLine') ?? '');
+        lz.style.cssText += `font-size:${Math.round(20 * s)}px;line-height:1.3;letter-spacing:0.06em;`;
+      }
+      afterFonts = () => {
+        let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity];
+        for (const e of [box, ...box.querySelectorAll('*')]) {
+          const r = e.getBoundingClientRect();
+          [x0, y0, x1, y1] = [Math.min(x0, r.left), Math.min(y0, r.top), Math.max(x1, r.right), Math.max(y1, r.bottom)];
+        }
+        const pad = 8;
+        document.body.dataset.clip = JSON.stringify({ x: Math.max(0, Math.floor(x0 - pad)), y: Math.max(0, Math.floor(y0 - pad)),
+          width: Math.ceil(x1 - x0 + 2 * pad), height: Math.ceil(y1 - y0 + 2 * pad) });
+        requestAnimationFrame(() => (document.body.dataset.ready = '1'));
+      };
+    }
     const base = pos === 'top' ? H * 0.06 : port ? H * (pos === 'low' ? 0.75 : 0.665) : H * (pos === 'band' ? 0.845 : 0.835);
     if (pos === 'band') {
       const band = el('div', '', card);
       band.style.cssText = `position:absolute;left:0;right:0;top:${H * 0.7}px;bottom:0;` +
         'background:linear-gradient(180deg, rgba(5,6,10,0) 0%, rgba(5,6,10,0.78) 38%, rgba(5,6,10,0.9) 100%);';
     }
-    // The tag and the lower third lay out their own text above.
-    const own = pos === 'tag' || pos === 'lower';
+    // The tag, the lower third, the chapter, the label and the stamp lay out their own text above.
+    const own = ['tag', 'lower', 'chapter', 'label', 'stamp'].includes(pos);
     const shadeEl = own ? document.createElement('div') : el('div', 'cap-shade', card);
     const w = port ? W * 1.1 : W * 0.62;
     shadeEl.style.cssText += `top:${base - enSize * 1.1}px;width:${w}px;height:${enSize * 4.2}px;margin-left:0;`;
     const e = el('div', 'cap en', own ? document.createElement('div') : card, en);
-    e.style.cssText += `top:${base}px;font-size:${enSize}px;line-height:1.2;padding:0 ${port ? 60 : 120}px;`;
+    e.style.cssText += `top:${base}px;font-size:${enSize}px;line-height:1.2;padding:0 ${port ? 60 : 120}px;` +
+      (plain ? 'font-family:Alegreya,serif;font-weight:800;letter-spacing:0.01em;font-variant-numeric:lining-nums;' : '');
     const z = el('div', 'cap zh', own ? document.createElement('div') : card, zh);
     // Measure the English block once the fonts are in, so a wrapped line pushes the Chinese down.
     if (!own) afterFonts = () => {

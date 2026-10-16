@@ -76,10 +76,16 @@ async function captions() {
     // A lower third's second line (what the move is), in both languages.
     if (c.enLine) q.set('enLine', c.enLine);
     if (c.zhLine) q.set('zhLine', c.zhLine);
+    // A panel label's colour (red for BEFORE, green for AFTER), a long caption's plain font.
+    if (c.tone) q.set('tone', c.tone);
+    if (c.font) q.set('font', c.font);
     await page.goto(`${base}/tools/trailer/cards.html?${q}`);
     await page.waitForFunction(() => window.__cardsReady === true && document.body.dataset.ready === '1', null, { timeout: 30000 });
     const file = resolve(outDir, `cap-${c.id}-${layout}.png`);
-    await page.screenshot({ path: file, omitBackground: true });
+    // A panel label or a stamp is saved as its own box (body.dataset.clip), for the making-of's
+    // plates (making-of/plates.mjs) to place.
+    const clip = await page.evaluate(() => document.body.dataset.clip ?? null);
+    await page.screenshot({ path: file, omitBackground: true, ...(clip ? { clip: JSON.parse(clip) } : {}) });
     console.log(`  wrote ${file}`);
   }
   await ctx.close();
