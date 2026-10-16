@@ -2,18 +2,25 @@
 // browser worker runs, the bundle's controller wasm, onnxruntime-web (wasm backend) and MuJoCo
 // WASM, loaded from public/. Drives the robot through standing, 30 s of walking, dances, a gesture,
 // the jump, each of the six skills and the seven breakdance moves (the four jumper.break_*
-// recordings, the spin, the 720 jump spin and the back flip), and prints what happened (exit 1 when
-// one of them fails to enter, finish or hand back, or a jump does not take off and land upright).
+// recordings, the spin, the 720 jump spin and the back flip), then the live breakdance routine
+// (src/robot/sim/routine.ts) several times from different starts, and prints what happened (exit 1
+// when a move fails to enter, finish or hand back, a jump does not take off and land upright, or a
+// routine run does not play every move on its downbeat and end walking upright without a Safe Hold).
 //
-//   node tools/robot-sim-check.ts [--quick]
+//   node tools/robot-sim-check.ts [--quick] [--routine N] [--routine-only]
+// --routine N: routine runs (default 5); --routine-only: skip everything before the routine.
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { RobotSim } from '../src/robot/sim/core.ts';
+import { BEAT_S, LiveRoutine, ROUTINE } from '../src/robot/sim/routine.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const pub = (p: string) => join(root, 'public', p);
 const quick = process.argv.includes('--quick');
+const routineOnly = process.argv.includes('--routine-only');
+const routineArg = process.argv.indexOf('--routine');
+const routineRuns = routineArg >= 0 ? Number(process.argv[routineArg + 1]) : 5;
 
 const loadMujoco = (await import(join(root, 'node_modules/@mujoco/mujoco/mujoco.js'))).default;
 const mj = await loadMujoco();
@@ -114,6 +121,161 @@ const tap = async (code: string) => {
   press(code, false);
 };
 
+// Foot contacts with the floor, for the jumps' take-off and touchdown.
+const geomId = (name: string) => mj.mj_name2id(sim.model, mj.mjtObj.mjOBJ_GEOM.value, name) as number;
+const floorGeom = geomId('terrain');
+const footGeoms = ['LF_palm_pad_b_link', 'RF_palm_pad_b_link', 'LM_foot_tip_link', 'RM_foot_tip_link', 'LR_foot_tip_link', 'RR_foot_tip_link']
+  .map((f) => geomId(`${f}_meshcol`));
+if (floorGeom < 0 || footGeoms.some((g) => g < 0)) throw new Error('the scene has no terrain or foot geoms by those names');
+const feetDown = (): number => {
+  const on = new Set<number>();
+  // `data.contact` copies the contacts into a new vector on every read: read it once, free it.
+  const contacts = sim.data.contact;
+  for (let i = 0; i < sim.data.ncon; i++) {
+    const c = contacts.get(i);
+    if (!c) continue;
+    const other = c.geom1 === floorGeom ? c.geom2 : c.geom2 === floorGeom ? c.geom1 : -1;
+    if (footGeoms.includes(other) && c.dist < 1e-3) on.add(other);
+    c.delete?.();
+  }
+  contacts.delete?.();
+  return on.size;
+};
+
+/**
+ * The live breakdance routine (src/robot/sim/routine.ts), run `runs` times, each from the start
+ * keyframe (the routine travels up to about half a metre, and the desk has toys and a stack of books
+ * on it) and then from a different start: standing, still holding the walk-back key after 1.2 s of
+ * walking, holding J after turning, holding D after strafing, and just handed back from the
+ * six-step. Nothing is pressed after the start but what the routine presses (the held key is let
+ * go a second in). A run is clean when every move is entered on its press and handed back to
+ * walking, each policy starts within 100 ms of its downbeat, the spin is ended on a beat, no bar
+ * slips, the robot never goes to the Safe Hold and it ends walking upright.
+ */
+async function checkRoutine(runs: number): Promise<number> {
+  const starts = ['standing', 'walking', 'turning', 'strafing', 'after a move'];
+  let clean = 0;
+  const offs: Record<string, number[]> = {};
+  const leads: Record<string, number[]> = {};
+  const touch: Record<string, number[]> = {};
+  for (let r = 0; r < runs; r++) {
+    const start = starts[r % starts.length];
+    const held = { walking: 'ArrowDown', turning: 'KeyJ', strafing: 'KeyD' }[start as 'walking'] as string | undefined;
+    // A different stand and a different push each time round the starts, so no two runs repeat.
+    const lap = Math.floor(r / starts.length);
+    sim.reset();
+    await run(1.0 + 0.37 * lap, '  settle');
+    if (held) {
+      press(held, true);
+      await run((start === 'turning' ? 1.5 : 1.2) - 0.15 * lap, `  ${start} before the routine`);
+    }
+    if (start === 'after a move') {
+      press('ShiftLeft', true); press('Digit2', true);
+      await run(0.1, '  Shift+Digit2 down');
+      press('Digit2', false); press('ShiftLeft', false);
+      for (let i = 0; i < 2000 && !(sim.mode === 'locomotion' && sim.runningPolicy && sim.log.at(-1)?.from === 'break_sixstep'); i++) await sim.tick();
+    }
+    const logFrom = sim.log.length;
+    const p0 = [sim.data.qpos[0], sim.data.qpos[1]];
+    let far = 0;
+    const rt = new LiveRoutine();
+    sim.startRoutine(rt);
+    let safe = false;
+    let maxTilt = 0;
+    let minZ = Infinity;
+    // Per jump: its flights (all six feet off the floor), the highest one is the jump.
+    const air: Record<string, { liveAt: number; z0: number; cur: { up: number; zMax: number } | null; best: { up: number; down: number; rise: number } | null }> = {};
+    for (let i = 0; i < 70 / 0.005 && rt.state === 'running'; i++) {
+      await sim.tick();
+      if (held && i === 200) press(held, false); // let go a second in, as a person would
+      if (sim.mode === 'safe') safe = true;
+      const u = sim.baseUpright();
+      minZ = Math.min(minZ, u.z);
+      far = Math.max(far, Math.hypot(sim.data.qpos[0] - p0[0], sim.data.qpos[1] - p0[1]));
+      if (sim.mode !== 'power_backflip') maxTilt = Math.max(maxTilt, u.tilt);
+      // The jumps: when all six feet leave the floor and come back (contacts read first: reading
+      // them can grow the WASM heap, which detaches any qpos view taken before).
+      if ((sim.mode === 'power_jumpspin' || sim.mode === 'power_backflip') && sim.runningPolicy) {
+        const rec = rt.moves.find((m) => m.mode === sim.mode);
+        const a = (air[sim.mode] ??= { liveAt: rec?.liveAt ?? sim.simTime, z0: sim.data.qpos[2], cur: null, best: null });
+        const feet = feetDown();
+        const z = sim.data.qpos[2];
+        if (!a.cur && feet === 0) a.cur = { up: sim.simTime - a.liveAt, zMax: z };
+        if (a.cur) {
+          a.cur.zMax = Math.max(a.cur.zMax, z);
+          if (feet > 0) {
+            const rise = a.cur.zMax - a.z0;
+            if (!a.best || rise > a.best.rise) a.best = { up: a.cur.up, down: sim.simTime - a.liveAt, rise };
+            a.cur = null;
+          }
+        }
+      }
+    }
+    if (held) press(held, false);
+    await run(1, '  after the routine');
+    const end = sim.baseUpright();
+    const moves = sim.log.slice(logFrom).map((l) => `${l.from}->${l.to}`);
+    const fails: string[] = [];
+    if (rt.state !== 'done') fails.push(`ended ${rt.state}: ${rt.why}`);
+    if (rt.slips) fails.push(`${rt.slips} bar(s) slipped`);
+    if (safe) fails.push('went to the Safe Hold');
+    if (!(sim.mode === 'locomotion' && sim.runningPolicy) || end.tilt * 57.3 > 10 || end.z < 0.08) {
+      fails.push(`ended in ${sim.mode} at tilt ${(end.tilt * 57.3).toFixed(1)} deg, z ${end.z.toFixed(3)}`);
+    }
+    const rows: string[] = [];
+    rt.moves.forEach((m, i) => {
+      const plan = ROUTINE[i];
+      if (!moves.includes(`locomotion->${m.mode}`) || !moves.includes(`${m.mode}->locomotion`)) fails.push(`${m.mode} was not entered and handed back`);
+      if (m.pressAt === null || m.liveAt === null || m.backAt === null) {
+        fails.push(`${m.mode} did not run (${JSON.stringify(m)})`);
+        return;
+      }
+      const off = m.liveAt - m.downbeat;
+      (offs[m.mode] ??= []).push(off);
+      (leads[m.mode] ??= []).push(m.liveAt - m.pressAt);
+      if (Math.abs(off) > 0.1) fails.push(`${m.mode} started ${(off * 1000).toFixed(0)} ms off its downbeat`);
+      const beat = (t: number) => (t - rt.t0) / BEAT_S;
+      let extra = '';
+      if (plan.holdBeats !== undefined) {
+        const b = m.endPressAt === null ? NaN : beat(m.endPressAt);
+        if (!(Math.abs(b - Math.round(b)) < 0.01)) fails.push(`${m.mode} was not ended on a beat (beat ${b.toFixed(3)})`);
+        extra = ` ended by its switch on beat ${b.toFixed(2)}`;
+      }
+      const a = air[m.mode];
+      if (a) {
+        const b = a.best;
+        if (!b || b.rise < 0.05) fails.push(`${m.mode} did not take off and land`);
+        else (touch[m.mode] ??= []).push(b.down);
+        extra = b ? ` take-off ${b.up.toFixed(3)} s, touchdown ${b.down.toFixed(3)} s after the policy start, ${b.rise.toFixed(3)} m up` : '';
+      }
+      rows.push(`    ${m.mode.padEnd(15)} press beat ${beat(m.pressAt).toFixed(2)} lead ${(m.liveAt - m.pressAt).toFixed(3)} s (planned ${m.leadPlanned?.toFixed(3)}), live on bar ${plan.bar + rt.slips} ` +
+        `${off >= 0 ? '+' : ''}${(off * 1000).toFixed(0)} ms, walking again ${(m.backAt - m.liveAt).toFixed(3)} s later (beat ${beat(m.backAt).toFixed(2)})${extra}`);
+    });
+    const ok = fails.length === 0;
+    if (ok) clean++;
+    console.log(`routine run ${r + 1} from ${start}: ${ok ? 'clean' : 'FAILED'} | ${rt.state}, ${(sim.simTime - rt.t0).toFixed(2)} s, slips ${rt.slips}, ` +
+      `safe ${safe}, max tilt ${(maxTilt * 57.3).toFixed(1)} deg (the flip aside), min z ${minZ.toFixed(3)}, end ${sim.mode} tilt ${(end.tilt * 57.3).toFixed(1)} deg z ${end.z.toFixed(3)}, ` +
+      `from (${p0[0].toFixed(2)}, ${p0[1].toFixed(2)}) m, at most ${far.toFixed(2)} m away`);
+    console.log(rows.join('\n'));
+    for (const f of fails) console.log(`    fail: ${f}`);
+  }
+  const range = (a: number[]) => `${Math.min(...a).toFixed(3)} to ${Math.max(...a).toFixed(3)}`;
+  const ms = (a: number[]) => `${Math.round(Math.min(...a) * 1000)} to ${Math.round(Math.max(...a) * 1000)} ms`;
+  console.log(`routine: ${clean} of ${runs} runs clean; policy start against its downbeat: ${Object.entries(offs).map(([m, a]) => `${m} ${ms(a)}`).join(', ')}; ` +
+    `leads (s): ${Object.entries(leads).map(([m, a]) => `${m} ${range(a)}`).join(', ')}; touchdown after the policy start (s): ${Object.entries(touch).map(([m, a]) => `${m} ${range(a)}`).join(', ')}`);
+  return runs - clean;
+}
+
+if (routineOnly) {
+  const failed = await checkRoutine(routineRuns);
+  sim.dispose();
+  if (failed) {
+    console.error(`${failed} routine run(s) were not clean`);
+    process.exit(1);
+  }
+  process.exit(0);
+}
+
 await run(3, 'stand');
 press('KeyW', true);
 const walk = await run(quick ? 8 : 30, 'walk W');
@@ -213,22 +375,6 @@ for (const [mode, code, clip] of BREAKS) {
 // handed back to the walking policy by the host's own press of its switch (core.ts AUTO_LEAVE_S).
 // The turn in the air is the body rate integrated over that flight: about the vertical for the
 // 720, nose-up about the body's pitch axis for the flip.
-const geomId = (name: string) => mj.mj_name2id(sim.model, mj.mjtObj.mjOBJ_GEOM.value, name) as number;
-const floorGeom = geomId('terrain');
-const footGeoms = ['LF_palm_pad_b_link', 'RF_palm_pad_b_link', 'LM_foot_tip_link', 'RM_foot_tip_link', 'LR_foot_tip_link', 'RR_foot_tip_link']
-  .map((f) => geomId(`${f}_meshcol`));
-if (floorGeom < 0 || footGeoms.some((g) => g < 0)) throw new Error('the scene has no terrain or foot geoms by those names');
-const feetDown = (): number => {
-  const on = new Set<number>();
-  for (let i = 0; i < sim.data.ncon; i++) {
-    const c = sim.data.contact.get(i);
-    if (!c) continue;
-    const other = c.geom1 === floorGeom ? c.geom2 : c.geom2 === floorGeom ? c.geom1 : -1;
-    if (footGeoms.includes(other) && c.dist < 1e-3) on.add(other);
-    c.delete?.();
-  }
-  return on.size;
-};
 const JUMPS: [string, string, 'yaw' | 'pitch', number][] = [
   ['power_jumpspin', 'Digit6', 'yaw', 450], ['power_backflip', 'Digit7', 'pitch', 330],
 ];
@@ -319,8 +465,10 @@ if (Object.keys(skills).length) console.log('skills', JSON.stringify(skills));
 if (Object.keys(breaks).length) console.log('breaks', JSON.stringify(breaks));
 if (Object.keys(jumps).length) console.log('jumps', JSON.stringify(jumps));
 console.log('log', sim.log.map((l) => `${l.from}->${l.to}`).join(' '));
+const routineFailed = routineRuns > 0 ? await checkRoutine(routineRuns) : 0;
 sim.dispose();
 if (skillsFailed) {
   console.error(`${skillsFailed} skill(s) or breakdance move(s) did not enter, finish and hand back to locomotion (or a jump did not take off, turn and land upright)`);
-  process.exit(1);
 }
+if (routineFailed) console.error(`${routineFailed} routine run(s) were not clean`);
+if (skillsFailed || routineFailed) process.exit(1);
