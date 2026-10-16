@@ -262,5 +262,17 @@
     "credit": "Kenney RPG Audio",
     "license": "CC0-1.0",
     "source": "https://kenney.nl/assets/rpg-audio"
+  },
+  {
+    "id": "music-breaking",
+    "files": [
+      "music-breaking.ogg",
+      "music-breaking.mp3"
+    ],
+    "loop": false,
+    "volume": 0.9,
+    "credit": "Original beat for World of Crabcraft, synthesised (no samples) by tools/trailer/breakdance/beat.py",
+    "license": "Apache-2.0",
+    "source": "tools/trailer/breakdance/beat.py (procedural), arranged on the live routine by tools/robot-routine-music.mjs"
   }
 ]

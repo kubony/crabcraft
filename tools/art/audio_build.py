@@ -443,5 +443,6 @@ for id_, fn, kind, loop, vol, credit, lic, source in ENTRIES:
     print(f'{id_:20s} {len(x) / SR:6.2f}s  in {before:6.1f} -> {after:6.1f} LUFS  peak {20 * np.log10(np.abs(x).max()):5.1f} dBFS  ogg {so / 1024:7.1f} KB  mp3 {sm / 1024:7.1f} KB', flush=True)
     index[id_] = {'id': id_, 'files': [f'{id_}.ogg', f'{id_}.mp3'], 'loop': loop, 'volume': vol, 'credit': credit, 'license': lic, 'source': source}
 order = [e[0] for e in ENTRIES]
-json.dump([index[k] for k in order if k in index], open(idx_path, 'w'), indent=2)
+# Tracks made elsewhere (the live routine's music, tools/robot-routine-music.mjs) keep their entries.
+json.dump([index[k] for k in order if k in index] + [v for k, v in index.items() if k not in order], open(idx_path, 'w'), indent=2)
 print('wrote', idx_path)
