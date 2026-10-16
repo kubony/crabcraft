@@ -468,6 +468,7 @@ function postFrame(s: RobotSim): void {
       ticksPerSec: dReal > 0.25 ? (last.ticks - first.ticks) / dReal : 0,
     },
     transitions: s.log.splice(0).map((t) => ({ from: t.from, to: t.to, why: t.why })),
+    autoLeft: s.autoLeft.splice(0).map((a) => ({ mode: a.mode, after: a.after, keys: a.keys })),
     motionLeft: dur && motionStart && motionStart.mode === s.mode ? Math.max(0, dur - (s.simTime - motionStart.at)) : null,
   };
   post(msg, [poses.buffer, q.buffer, target.buffer, tau.buffer]);

@@ -3,9 +3,10 @@
 //   game   boots ?screen=game&debug=1 with a saved crab, presses B, follows the routine through
 //          window.cc.state() and fails unless all six moves play in order and it ends completed;
 //          then starts it again and walks (W) to check that moving ends it;
-//   robot  opens Robot Mode (?screen=robot), switches into each live breaking mode on Shift + its
-//          digit, and fails unless each one runs and hands back to walking (the spin is let go
-//          with Shift + 5 again).
+//   robot  opens Robot Mode (?screen=robot), switches into each of the seven live breaking modes on
+//          Shift + its digit, and fails unless each one runs and hands back to walking: the spin is
+//          let go with Shift + 5 again; the 720 and the back flip are pressed nothing more, and must
+//          hand back by the page's own press (its log says "page pressed") without a Safe Hold.
 // Any console error or uncaught exception fails the run.
 //
 //   node tools/breakdance-check.mjs [--url http://localhost:5206] [--out dir] [--only game|robot]
@@ -26,14 +27,19 @@ mkdirSync(outDir, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const SPEC = { race: 'human', sex: 'male', classId: 'warrior', shell: 0, crest: 0, led: 0, name: 'Pinchwick' };
 const ROUTINE = ['break_toprock', 'break_sixstep', 'break_spin', 'break_jumpspin', 'break_backflip', 'break_oneclaw'];
-// Robot Mode's live breaking modes: [mode, HUD label, key, seconds held before letting go (0: ends by itself)]
+// Robot Mode's live breaking modes: [mode, HUD label, key, seconds held before letting go (0: ends by
+// itself; -1: a jump, which the page ends by pressing its switch again after the landing)]
 const LIVE = [
   ['break_toprock', 'Toprock', 'Digit1', 0],
   ['break_sixstep', 'Six-step', 'Digit2', 0],
   ['break_clawstand', 'Claw Stand', 'Digit3', 0],
   ['break_oneclaw', 'One Claw', 'Digit4', 0],
   ['power_spin', 'Spin', 'Digit5', 4],
+  ['power_jumpspin', '720', 'Digit6', -1],
+  ['power_backflip', 'Back Flip', 'Digit7', -1],
 ];
+// Seconds after the policy shows live to take the jumps' screenshot: about the top of the jump.
+const AIR_SHOT = { power_jumpspin: 0.35, power_backflip: 0.25 };
 
 async function open(url, spec) {
   const browser = await chromium.launch({
@@ -175,6 +181,31 @@ async function checkRobot() {
         continue;
       }
       const t0 = Date.now();
+      if (hold < 0) {
+        // A jump: nothing more is pressed. It must come back to walking by the page's own press,
+        // never through the Safe Hold.
+        await sleep(AIR_SHOT[mode] * 1000);
+        await shot(mode);
+        let safe = false;
+        let back = false;
+        while (Date.now() - t0 < 15000) {
+          const name = await modeName();
+          if (name === 'Safe Hold') safe = true;
+          if (name === 'Walk' && (await live())) {
+            back = true;
+            break;
+          }
+          await sleep(40);
+        }
+        const pressed = await page.evaluate(() => [...document.querySelectorAll('.rm-log div')].some((d) => /page pressed/.test(d.textContent ?? '')));
+        if (safe) fails.push(`${mode}: went to the Safe Hold`);
+        if (!back) fails.push(`${mode}: did not hand back to walking`);
+        if (!pressed) fails.push(`${mode}: the log does not show the page's press`);
+        if (back && !safe) console.log(`  robot: ${mode} ran live and was handed back to walking by the page after ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+        await shot(`${mode}-after`);
+        await sleep(800);
+        continue;
+      }
       await sleep(hold > 0 ? hold * 1000 * 0.6 : mode === 'break_sixstep' ? 2200 : 3000);
       await shot(mode);
       if (hold > 0) {

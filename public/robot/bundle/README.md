@@ -52,6 +52,10 @@ models/jump.onnx                  jump's policy, onnx
 high_jump_flat.trajectory.json    the recording jump is driven by
 locomotion.json                   locomotion's contract: observation layout, joint order, gains
 models/locomotion.onnx            locomotion's policy, onnx
+power_backflip.json               power_backflip's contract: observation layout, joint order, gains
+models/power_backflip.onnx        power_backflip's policy, onnx
+power_jumpspin.json               power_jumpspin's contract: observation layout, joint order, gains
+models/power_jumpspin.onnx        power_jumpspin's policy, onnx
 power_spin.json                   power_spin's contract: observation layout, joint order, gains
 models/power_spin.onnx            power_spin's policy, onnx
 skill_cast.json                   skill_cast's contract: observation layout, joint order, gains

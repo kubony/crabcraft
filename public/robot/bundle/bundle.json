@@ -166,6 +166,22 @@
       "observation": 415,
       "action": 20
     },
+    "power_backflip": {
+      "models": {
+        "onnx": "models/power_backflip.onnx"
+      },
+      "contract": "power_backflip.json",
+      "observation": 406,
+      "action": 20
+    },
+    "power_jumpspin": {
+      "models": {
+        "onnx": "models/power_jumpspin.onnx"
+      },
+      "contract": "power_jumpspin.json",
+      "observation": 406,
+      "action": 20
+    },
     "power_spin": {
       "models": {
         "onnx": "models/power_spin.onnx"
@@ -246,6 +262,8 @@
     "gesture_paw: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
     "gesture_salute: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
     "jump: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
+    "power_backflip: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
+    "power_jumpspin: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
     "power_spin: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
     "skill_cast: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
     "skill_flinch: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
@@ -253,13 +271,13 @@
     "skill_sit: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
     "skill_slam: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
     "skill_swipe: its contract has no `controller` block, so a consumer falls back to its own key bindings. Re-export to carry the task's controls.yaml.",
-    "not ready for the board: break_clawstand, break_oneclaw, break_sixstep, break_toprock, claw_left, claw_right, dance_brazilian, dance_crab, dance_dream_wings, dance_maze, gesture_bow, gesture_hello, gesture_paw, gesture_salute, jump, locomotion, power_spin, skill_cast, skill_flinch, skill_powerdown, skill_sit, skill_slam, skill_swipe carry no .rknn, and the board runs them on a stub. deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/break_clawstand/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/break_oneclaw/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/break_sixstep/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/break_toprock/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/five_foot/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/five_foot/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/dance_brazilian/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/dance/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/dance_dream_wings/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/dance_maze/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/gesture_bow/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/gesture_hello/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/gesture_paw/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/gesture_salute/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/jump/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/posture/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/power_spin_feet/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/skill_cast/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/skill_flinch/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/skill_powerdown/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/skill_sit/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/skill_slam/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/skill_swipe/out/crabcraft -- then build this bundle again.",
+    "not ready for the board: break_clawstand, break_oneclaw, break_sixstep, break_toprock, claw_left, claw_right, dance_brazilian, dance_crab, dance_dream_wings, dance_maze, gesture_bow, gesture_hello, gesture_paw, gesture_salute, jump, locomotion, power_backflip, power_jumpspin, power_spin, skill_cast, skill_flinch, skill_powerdown, skill_sit, skill_slam, skill_swipe carry no .rknn, and the board runs them on a stub. deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/break_clawstand/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/break_oneclaw/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/break_sixstep/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/break_toprock/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/five_foot/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/five_foot/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/dance_brazilian/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/dance/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/dance_dream_wings/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/dance_maze/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/gesture_bow/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/gesture_hello/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/gesture_paw/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/gesture_salute/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/jump/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/posture/out/example; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/power_backflip/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/power_jumpspin720/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/power_spin_feet/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/skill_cast/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/skill_flinch/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/skill_powerdown/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/skill_sit/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/skill_slam/out/crabcraft; deploy/convert/.venv/bin/python deploy/convert/onnx2rknn.py --bundle tasks/jumper/skill_swipe/out/crabcraft -- then build this bundle again.",
     "reference: 24 frames, 18 of them inferences (6 in warm start or ramp)"
   ],
   "files": {
     "README.md": {
-      "bytes": 25571,
-      "sha256": "aafe63ea344344be76c85e4fa96c8e2036d56572245c2a60c6d05b51c9372a8a"
+      "bytes": 25899,
+      "sha256": "6ac9d42b08e2ddf7e3341d53bd3d4b230df9302f013f804f0b1177cfab45227e"
     },
     "bow.motion.trajectory.json": {
       "bytes": 143332,
@@ -302,8 +320,8 @@
       "sha256": "be95c575ad917648c05b4c5155a8b836aa1aaeb4926f3a5bec774abf5953a7ce"
     },
     "controller.toml": {
-      "bytes": 21837,
-      "sha256": "6ed29c662bc4e576304d49cd03ab80fc19e99966f30c668b60d2c3f097e8eba3"
+      "bytes": 23583,
+      "sha256": "26cd07c77d8c4d6f9b05c634d1050a79f07510c99239b28a0ebc1ae9382fd832"
     },
     "dance_brazilian.json": {
       "bytes": 7107,
@@ -366,8 +384,8 @@
       "sha256": "6204effa319eba88e16b3d23bc1a8d005c59c3e0d074cac80f2ba233aab0e5d2"
     },
     "manual.en.json": {
-      "bytes": 48397,
-      "sha256": "3bef53293cb277460ebdb80105eb3704272676a34b55bdac2b32149a2e1c8d1a"
+      "bytes": 51543,
+      "sha256": "6928f444b7e189299fe418f98dfb68a9fc5be6361cd4bdd1e9f97186ba855f2e"
     },
     "maze.motion.trajectory.json": {
       "bytes": 165743,
@@ -433,6 +451,14 @@
       "bytes": 1552128,
       "sha256": "a6e0864c425d0604dfa6f11a82ac9e17d5396858dbed3b7dfe70188dba1b02ef"
     },
+    "models/power_backflip.onnx": {
+      "bytes": 1533624,
+      "sha256": "abc91f5ed6c9b4c24762973109b5ea0d855df4dc25f816da4f628498451c6b50"
+    },
+    "models/power_jumpspin.onnx": {
+      "bytes": 1533624,
+      "sha256": "6e7dc4e220c5f65fd6621de7c20bea2b08543a58c89208d4b83681a7ba5d3238"
+    },
     "models/power_spin.onnx": {
       "bytes": 1533624,
       "sha256": "e9e9d5692f525ef8f4cda20e452bbee7d44495c1a98848c9f865e59771f022d2"
@@ -469,6 +495,14 @@
       "bytes": 102094,
       "sha256": "4e4ac350a6b6ff33749c385d3a963552e1565ef8ecfd3ad0405c3aacfca66295"
     },
+    "power_backflip.json": {
+      "bytes": 7427,
+      "sha256": "1a52622db331d25ab08f5fc4bd050580592762578f1333920d724a526f6c7064"
+    },
+    "power_jumpspin.json": {
+      "bytes": 7433,
+      "sha256": "fdad269f575b6679d27e9d2e7e09e9d667598cf399447e79df452a6b43618277"
+    },
     "power_spin.json": {
       "bytes": 7419,
       "sha256": "ecc01c4935ee67d0bab774ab46a40f923c3960e2fee4558d708f2756fdd315ad"
@@ -479,19 +513,19 @@
     },
     "reference.json": {
       "bytes": 183501,
-      "sha256": "bb548cf446eaef96f99c5e0a8217dff20f51990f03978f9278cbe9eca82683e3"
+      "sha256": "4dd08690e4c3128f35f03c978334b063188107dc008bc43b096e84663a2b7c3f"
     },
     "runtime/mjlab/macosx-11.0-arm64/controller.so": {
-      "bytes": 1652832,
-      "sha256": "2ba85c958cf1c4fb865b57e8e7fdceb69baff0aa9fe8a7100f909e3e25180693"
+      "bytes": 1652800,
+      "sha256": "f17a16ccd25617a09e9b78418de3762e6dcd7add158437982942ee96721b3792"
     },
     "runtime/web/controller.js": {
       "bytes": 29783,
       "sha256": "dde2baa0c7ed5fa5de30e6d53128721959853929c29fa131f64de8100380e59e"
     },
     "runtime/web/controller.wasm": {
-      "bytes": 1359841,
-      "sha256": "c9b71605891b2cc39b153af5936a7380f5803de2423e5778d0780213e5763abd"
+      "bytes": 1359878,
+      "sha256": "5b1f2d2bf43bec14af5353ba4f94ff8357ab184e56970138628a2f9b1fa19684"
     },
     "salute.motion.trajectory.json": {
       "bytes": 98320,
@@ -1131,6 +1165,55 @@
         "key": [
           "key_5",
           "keypad_5"
+        ],
+        "on": "toggle",
+        "with": "shift",
+        "from": [
+          "locomotion"
+        ]
+      }
+    },
+    "power_jumpspin": {
+      "task": "jumper.power_jumpspin720",
+      "from": "logs/jumper/jumper.power_jumpspin720/2026-10-15_21-46-53/model_5996.pt",
+      "export": "tasks/jumper/power_jumpspin720/out/crabcraft",
+      "pad": {
+        "button": "RB",
+        "on": "toggle",
+        "with": "home",
+        "from": [
+          "locomotion"
+        ]
+      },
+      "keys": {
+        "key": [
+          "key_6",
+          "keypad_6"
+        ],
+        "on": "toggle",
+        "with": "shift",
+        "from": [
+          "locomotion"
+        ]
+      }
+    },
+    "power_backflip": {
+      "task": "jumper.power_backflip",
+      "from": "logs/jumper/jumper.power_backflip/2026-10-16_11-26-26/model_3997.pt",
+      "export": "tasks/jumper/power_backflip/out/crabcraft",
+      "skip_tilt_check": true,
+      "pad": {
+        "button": "dpad_up",
+        "on": "toggle",
+        "with": "home",
+        "from": [
+          "locomotion"
+        ]
+      },
+      "keys": {
+        "key": [
+          "key_7",
+          "keypad_7"
         ],
         "on": "toggle",
         "with": "shift",

@@ -31,6 +31,8 @@ export const MODE_LABEL: Record<string, string> = {
   break_clawstand: 'Claw Stand',
   break_oneclaw: 'One Claw',
   power_spin: 'Spin',
+  power_jumpspin: '720',
+  power_backflip: 'Back Flip',
   safe: 'Safe Hold',
 };
 
@@ -297,10 +299,10 @@ export class Hud {
     // The six skills trained for this game (jumper.skill_*), the same moves the RPG plays.
     const skills = ['skill_swipe', 'skill_slam', 'skill_cast', 'skill_flinch', 'skill_powerdown', 'skill_sit'].filter(has);
     if (skills.length) dock.append(group('Skills', ...skills.map((m) => btn(m, MODE_LABEL[m]))));
-    // The game's breakdance, the moves the bundle can run: the four tracked ones (jumper.break_*)
-    // and the spin. The 720 and the back flip are recordings in the game only: neither policy
-    // takes off from a robot a mode switch has stood at HOME, so they are not modes here.
-    const breaks = ['break_toprock', 'break_sixstep', 'break_clawstand', 'break_oneclaw', 'power_spin'].filter(has);
+    // The game's breakdance, all seven moves live: the four tracked ones (jumper.break_*), the spin,
+    // the 720 jump spin and the back flip. The two jumps have no end of their own; the sim core
+    // presses their switch again after the landing (core.ts AUTO_LEAVE_S), and the log says so.
+    const breaks = ['break_toprock', 'break_sixstep', 'break_clawstand', 'break_oneclaw', 'power_spin', 'power_jumpspin', 'power_backflip'].filter(has);
     if (breaks.length) dock.append(group('Breaking', ...breaks.map((m) => btn(m, MODE_LABEL[m]))));
     const claws = ['claw_left', 'claw_right'].filter(has);
     if (claws.length) dock.append(group('Claw', ...claws.map((m) => btn(m, m === 'claw_left' ? 'Left' : 'Right'))));
@@ -319,6 +321,7 @@ export class Hud {
         kbd('N M', 'body height'),
         kbd('Ctrl', 'end a motion'),
         ...(has('power_spin') ? [kbd('Shift+5', 'spin, again to stop')] : []),
+        ...(has('power_jumpspin') || has('power_backflip') ? [kbd('Shift+6 7', 'jumps, end by themselves')] : []),
         kbd('Esc', 'let go'),
         ...(this.actions.appearance ? [kbd('T', 'robot or crab')] : []),
         kbd('Drag', 'orbit'),
@@ -429,6 +432,14 @@ export class Hud {
       const t = Math.min(1, Math.abs(f.tau[i]) / 1.7464);
       j.tq.style.left = `${Math.min(pq, pq + (f.tau[i] >= 0 ? 0 : -t * 30)).toFixed(1)}%`;
       j.tq.style.width = `${(t * 30).toFixed(1)}%`;
+    }
+    // The page's own press of a jump's switch, said as such: the bundle has no end for these moves.
+    for (const a of f.autoLeft) {
+      const keys = a.keys.map((k) => k.replace(/^(Shift|Control|Alt)(Left|Right)$/, '$1').replace(/^(Digit|Numpad|Key)/, '')).join('+');
+      const line = h('div', null, h('span', null, `${f.simTime.toFixed(1)}s `), h('b', null, `page pressed ${keys}`),
+        h('span', null, `  to end ${MODE_LABEL[a.mode] ?? a.mode}, ${a.after} s after its handover (it has no end of its own)`));
+      this.log.append(line);
+      while (this.log.childElementCount > 5) this.log.firstElementChild!.remove();
     }
     for (const tr of f.transitions) {
       const line = h('div', null, h('span', null, `${f.simTime.toFixed(1)}s `), h('b', null, `${tr.from} > ${tr.to}`), h('span', null, `  ${tr.why}`));

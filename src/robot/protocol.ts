@@ -87,6 +87,9 @@ export interface FrameMsg {
   tau: Float32Array;
   stats: FrameStats;
   transitions: { from: string; to: string; why: string }[];
+  /** The host pressed a mode's own switch for the person (core.ts AUTO_LEAVE_S): which mode, how long
+   * after its handover, and the key codes it pressed. */
+  autoLeft: { mode: string; after: number; keys: string[] }[];
   /** Remaining seconds of a recorded motion, if one is playing. */
   motionLeft: number | null;
 }

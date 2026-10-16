@@ -1,9 +1,9 @@
 // Headless check of Robot Mode's simulation core under Node: the same src/robot/sim/core.ts the
 // browser worker runs, the bundle's controller wasm, onnxruntime-web (wasm backend) and MuJoCo
 // WASM, loaded from public/. Drives the robot through standing, 30 s of walking, dances, a gesture,
-// the jump, each of the six skills and the breakdance moves the bundle carries (the four
-// jumper.break_* recordings and the spin), and prints what happened (exit 1 when one of them fails
-// to enter, finish or hand back).
+// the jump, each of the six skills and the seven breakdance moves (the four jumper.break_*
+// recordings, the spin, the 720 jump spin and the back flip), and prints what happened (exit 1 when
+// one of them fails to enter, finish or hand back, or a jump does not take off and land upright).
 //
 //   node tools/robot-sim-check.ts [--quick]
 import { readFileSync, readdirSync } from 'node:fs';
@@ -205,12 +205,122 @@ for (const [mode, code, clip] of BREAKS) {
   await run(1, 'settle');
 }
 
+// The two jumps (jumper.power_jumpspin720 on Shift + 6, jumper.power_backflip on Shift + 7), each
+// switched into from standing and again from walking forward (W held for 2 s and let go with the
+// press); the check presses nothing after that. Each must take off (all
+// six feet off the floor with the base over 1 cm above its height at the handover), land upright
+// (on its feet again, under 30 degrees of tilt 0.3 s after the touchdown, never in `safe`) and be
+// handed back to the walking policy by the host's own press of its switch (core.ts AUTO_LEAVE_S).
+// The turn in the air is the body rate integrated over that flight: about the vertical for the
+// 720, nose-up about the body's pitch axis for the flip.
+const geomId = (name: string) => mj.mj_name2id(sim.model, mj.mjtObj.mjOBJ_GEOM.value, name) as number;
+const floorGeom = geomId('terrain');
+const footGeoms = ['LF_palm_pad_b_link', 'RF_palm_pad_b_link', 'LM_foot_tip_link', 'RM_foot_tip_link', 'LR_foot_tip_link', 'RR_foot_tip_link']
+  .map((f) => geomId(`${f}_meshcol`));
+if (floorGeom < 0 || footGeoms.some((g) => g < 0)) throw new Error('the scene has no terrain or foot geoms by those names');
+const feetDown = (): number => {
+  const on = new Set<number>();
+  for (let i = 0; i < sim.data.ncon; i++) {
+    const c = sim.data.contact.get(i);
+    if (!c) continue;
+    const other = c.geom1 === floorGeom ? c.geom2 : c.geom2 === floorGeom ? c.geom1 : -1;
+    if (footGeoms.includes(other) && c.dist < 1e-3) on.add(other);
+    c.delete?.();
+  }
+  return on.size;
+};
+const JUMPS: [string, string, 'yaw' | 'pitch', number][] = [
+  ['power_jumpspin', 'Digit6', 'yaw', 450], ['power_backflip', 'Digit7', 'pitch', 330],
+];
+const jumps: Record<string, Record<string, unknown>> = {};
+for (const [mode, code, axis, minTurn] of JUMPS) for (const start of ['standing', 'walking']) {
+  if (!bundle.modes[mode]) continue;
+  if (start === 'walking') {
+    press('KeyW', true);
+    await run(2, `  walk before ${mode}`);
+  }
+  const before = sim.log.length;
+  const autoBefore = sim.autoLeft.length;
+  press('ShiftLeft', true); press(code, true);
+  if (start === 'walking') press('KeyW', false);
+  for (let i = 0; i < 20; i++) await sim.tick();
+  press(code, false); press('ShiftLeft', false);
+  let tHand: number | null = null;
+  let z0 = 0;
+  let flying = false;
+  let flight: { t0: number; t1: number | null; turn: number; zMax: number } | null = null;
+  let tTouch: number | null = null;
+  let tiltAfter: number | null = null;
+  let tiltMax = 0;
+  let safe = false;
+  let tBack: number | null = null;
+  const t0 = sim.simTime;
+  while (sim.simTime < t0 + 8) {
+    await sim.tick();
+    if (sim.mode === 'safe') safe = true;
+    if (tHand === null && sim.mode === mode && sim.runningPolicy) {
+      tHand = sim.simTime;
+      z0 = sim.data.qpos[2];
+    }
+    if (tHand !== null && tBack === null) {
+      // Contacts first: reading them can grow the WASM heap, which detaches any qpos view taken before.
+      const air = feetDown() === 0;
+      const q = sim.data.qpos as Float64Array;
+      const v = sim.data.qvel as Float64Array;
+      const tilt = sim.baseUpright().tilt * 57.2958;
+      tiltMax = Math.max(tiltMax, tilt);
+      const w = q[3], x = q[4], y = q[5], zq = q[6];
+      // body rate about the world vertical: the third row of R times the body-frame rate
+      const yawRate = 2 * (x * zq - w * y) * v[3] + 2 * (y * zq + w * x) * v[4] + (1 - 2 * (x * x + y * y)) * v[5];
+      const rate = axis === 'yaw' ? yawRate : -v[4];
+      if (!flight && air && !flying) {
+        flying = true;
+        flight = { t0: sim.simTime - tHand, t1: null, turn: 0, zMax: q[2] };
+      }
+      if (flying && flight) {
+        flight.turn += rate * 0.005 * 57.2958;
+        flight.zMax = Math.max(flight.zMax, q[2]);
+        if (!air) {
+          flying = false;
+          flight.t1 = sim.simTime - tHand;
+          if (flight.zMax - z0 > 0.01) tTouch = sim.simTime;
+          else flight = null; // a shuffle, not the jump
+        }
+      }
+      if (tTouch !== null && tiltAfter === null && sim.simTime >= tTouch + 0.3) tiltAfter = tilt;
+    }
+    if (tHand !== null && tBack === null && sim.mode === 'locomotion' && sim.runningPolicy) tBack = sim.simTime;
+    if (tBack !== null && sim.simTime > tBack + 0.5) break;
+  }
+  const moves = sim.log.slice(before).map((l) => `${l.from}->${l.to}`);
+  const auto = sim.autoLeft.slice(autoBefore).filter((a) => a.mode === mode);
+  const entered = moves.includes(`locomotion->${mode}`);
+  const tookOff = !!flight && flight.zMax - z0 > 0.01;
+  const turn = flight ? flight.turn : 0;
+  const landed = tookOff && tiltAfter !== null && tiltAfter < 30 && !safe;
+  const back = moves.includes(`${mode}->locomotion`) && auto.length === 1 && sim.mode === 'locomotion' && sim.runningPolicy;
+  const key = `${mode} from ${start}`;
+  jumps[key] = {
+    entered, tookOff, landedUpright: landed, back, safe,
+    handoverAfterPressS: tHand === null ? null : +(tHand - t0).toFixed(3),
+    takeoffS: flight ? +flight.t0.toFixed(3) : null, touchdownS: flight?.t1 != null ? +flight.t1.toFixed(3) : null,
+    riseM: flight ? +(flight.zMax - z0).toFixed(3) : 0, airTurnDeg: +turn.toFixed(1),
+    tiltMaxDeg: +tiltMax.toFixed(1), tilt0p3sAfterTouchdownDeg: tiltAfter === null ? null : +tiltAfter.toFixed(1),
+    hostPressedAfterS: auto[0] ? +(auto[0].at - (tHand ?? 0)).toFixed(3) : null,
+    walkingAgainAfterHandoverS: tBack === null || tHand === null ? null : +(tBack - tHand).toFixed(3),
+  };
+  console.log(`${key.padEnd(26)} ${JSON.stringify(jumps[key])}`);
+  if (!entered || !tookOff || !landed || !back || turn < minTurn) skillsFailed++;
+  await run(1, 'settle');
+}
+
 console.log(JSON.stringify({ walkMinZ: walk.minZ, walkMaxTiltDeg: walk.maxTilt * 57.3, walkDist: walk.d, jumpApex: jump.maxZ }));
 if (Object.keys(skills).length) console.log('skills', JSON.stringify(skills));
 if (Object.keys(breaks).length) console.log('breaks', JSON.stringify(breaks));
+if (Object.keys(jumps).length) console.log('jumps', JSON.stringify(jumps));
 console.log('log', sim.log.map((l) => `${l.from}->${l.to}`).join(' '));
 sim.dispose();
 if (skillsFailed) {
-  console.error(`${skillsFailed} skill(s) or breakdance move(s) did not enter, finish and hand back to locomotion`);
+  console.error(`${skillsFailed} skill(s) or breakdance move(s) did not enter, finish and hand back to locomotion (or a jump did not take off, turn and land upright)`);
   process.exit(1);
 }

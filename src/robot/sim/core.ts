@@ -19,6 +19,21 @@ import type { WebFsmLike, BundleContract, RobotPackage } from './types';
 export const TICK_S = 0.005;
 const TICK_US = 5000;
 
+/**
+ * Modes this host leaves by itself, and when: seconds after the mode's policy starts (the
+ * controller's handover), in simulated time. The 720 jump spin and the back flip have no recording
+ * and no clock, so nothing in the bundle ends them: each jumps once and then stands at its home
+ * pose until its switch is pressed again, which on a robot the operator does after the landing.
+ * Here the host presses that switch for the person, with the bundle's own keyboard binding (the
+ * modifier and the key, held 40 ms), at the moment the game's clips of the two moves let go
+ * (tools/motion/record_clips.py BREAKS). On those recordings, through the bundle's controller, the
+ * 720 lands 0.63 s after the handover and has settled by 1.03 s; the back flip lands at 0.47 s and
+ * has settled by 0.67 s. The spin is not here: it is a held move, ended when the person wants.
+ */
+export const AUTO_LEAVE_S: Readonly<Record<string, number>> = { power_jumpspin: 1.4, power_backflip: 1.2 };
+/** Ticks the host's own press of a switch is held for (40 ms). */
+const AUTO_PRESS_TICKS = 8;
+
 export interface SimInit {
   /** The loaded @mujoco/mujoco module (MainModule). */
   mj: any;
@@ -34,6 +49,8 @@ export interface SimInit {
   WebFsm: new (config: string, contracts: string, robot: string, nowUs: number, trajectories?: string) => WebFsmLike;
   /** Runs `mode`'s policy (bundle.json modes.<mode>.models.onnx) on one observation. */
   infer: (mode: string, obs: Float32Array) => Promise<Float32Array>;
+  /** Modes the host leaves by itself and when (default AUTO_LEAVE_S); `{}` turns it off. */
+  autoLeave?: Readonly<Record<string, number>>;
 }
 
 export interface BodyPose {
@@ -103,6 +120,14 @@ export class RobotSim {
   };
   /** Transitions reported by the controller since the last drain. */
   log: { at: number; from: string; to: string; rule: number; why: string }[] = [];
+  /** Each time the host pressed a mode's switch for the person (AUTO_LEAVE_S), since the last drain. */
+  autoLeft: { mode: string; at: number; after: number; keys: string[] }[] = [];
+  /** Per mode the host leaves by itself: when, and the key codes of its switch, modifier first. */
+  private readonly autoLeave = new Map<string, { after: number; codes: string[] }>();
+  /** Sim seconds at which the current mode's policy started; null while it has not. */
+  private policySince: number | null = null;
+  private autoPressed = false;
+  private autoRelease: { atTick: number; codes: string[] } | null = null;
   readonly bodies: BodyPose[] = [];
   readonly toyBodies: BodyPose[] = [];
   readonly baseBody: number;
@@ -164,7 +189,29 @@ export class RobotSim {
     this.contractsJson = JSON.stringify(init.contracts);
     this.trajectoriesJson = JSON.stringify(init.trajectories);
     this.fsm = this.buildFsm();
+    this.findAutoLeave(init.autoLeave ?? AUTO_LEAVE_S);
     this.reset();
+  }
+
+  /** The keyboard switch of each mode in `table`, as the bundle binds it. A mode the bundle does
+   * not carry, or reaches by no key, is left to the person. */
+  private findAutoLeave(table: Readonly<Record<string, number>>): void {
+    const bindings = JSON.parse(this.fsm.bindings()) as { name: string; key: string | null; with: string | null }[];
+    const keys = (JSON.parse(this.fsm.inputs()) as { keys: { name: string; code: [string, string] | string | null }[] }).keys;
+    const codeOf = (name: string): string | undefined => {
+      const k = keys.find((x) => x.name === name) ?? keys.find((x) => x.name === `key_left_${name}`);
+      const c = k?.code;
+      return (Array.isArray(c) ? c[0] : c) ?? undefined;
+    };
+    const modes = this.fsm.modes();
+    for (const [mode, after] of Object.entries(table)) {
+      if (!modes.includes(mode)) continue;
+      const b = bindings.find((x) => x.name === mode && x.key && !/^keypad_/.test(x.key));
+      const key = b?.key ? codeOf(b.key) : undefined;
+      const mod = b?.with ? codeOf(b.with) : null;
+      if (!key || mod === undefined) continue;
+      this.autoLeave.set(mode, { after, codes: mod ? [mod, key] : [key] });
+    }
   }
 
   /** A fresh controller, as the bundle's README builds one. */
@@ -200,6 +247,9 @@ export class RobotSim {
     this.fsm = this.buildFsm();
     this.pendingKeys = [];
     this.inferTimes = [];
+    this.policySince = null;
+    this.autoPressed = false;
+    this.autoRelease = null;
     this.setTimestep(this.contracts[this.fsm.mode()]?.control.sim_dt ?? 0.005);
   }
 
@@ -260,6 +310,18 @@ export class RobotSim {
       fsm.letGo(now);
       this.pendingLetGo = false;
     }
+    // A mode the host leaves by itself (AUTO_LEAVE_S): its own switch, pressed and let go.
+    const auto = this.autoLeave.get(this.mode);
+    if (auto && !this.autoPressed && this.policySince !== null && this.simTime - this.policySince >= auto.after - 1e-9) {
+      this.autoPressed = true;
+      for (const code of auto.codes) this.pendingKeys.push({ code, down: true, repeat: false });
+      this.autoRelease = { atTick: this.tickIndex + AUTO_PRESS_TICKS, codes: auto.codes };
+      this.autoLeft.push({ mode: this.mode, at: this.simTime, after: auto.after, keys: auto.codes });
+    }
+    if (this.autoRelease && this.tickIndex >= this.autoRelease.atTick) {
+      for (const code of [...this.autoRelease.codes].reverse()) this.pendingKeys.push({ code, down: false, repeat: false });
+      this.autoRelease = null;
+    }
     // A key that goes down and up between two ticks would never be seen down: the controller
     // reads key levels once per tick. Hold its release (and everything after it) for a tick.
     const downNow = new Set<string>();
@@ -299,7 +361,10 @@ export class RobotSim {
     if (this.mode !== prev) {
       this.setTimestep(this.contracts[this.mode]?.control.sim_dt ?? 0.005);
       this.inferTimes.length = 0;
+      this.policySince = null;
+      this.autoPressed = false;
     }
+    if (this.runningPolicy && this.policySince === null) this.policySince = this.simTime;
     const entries = fsm.take_log();
     if (entries.length > 2) this.log.push(...(JSON.parse(entries) as RobotSim['log']));
 
