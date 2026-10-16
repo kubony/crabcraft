@@ -4,9 +4,10 @@
 // the jump, each of the six skills and the seven breakdance moves (the four jumper.break_*
 // recordings, the spin, the 720 jump spin and the back flip), then the live breakdance routine
 // (src/robot/sim/routine.ts) several times from different starts, and prints what happened (exit 1
-// when a move fails to enter, finish or hand back, the six-step does not turn its full turn, a jump
-// does not take off and land upright, or a routine run does not play every move on its downbeat and
-// end walking upright without a Safe Hold).
+// when a mode in the bundle lets its joint targets past the joint stops, a move fails to enter,
+// finish or hand back, the six-step does not turn its full turn, a jump does not take off and land
+// upright, or a routine run does not play every move on its downbeat and end walking upright without
+// a Safe Hold).
 //
 //   node tools/robot-sim-check.ts [--quick] [--routine N] [--routine-only]
 // --routine N: routine runs (default 5); --routine-only: skip everything before the routine.
@@ -72,6 +73,27 @@ const sim = new RobotSim({
 // Reference replay on a fresh controller (BUNDLE.md "Replaying it").
 const refText = readFileSync(join(bundleDir, 'reference.json'), 'utf8');
 console.log('reference replay:', sim.buildFsm().checkReference(refText));
+
+// Every mode's joint targets stop at the joint stops. The controller clamps each mode's decoded
+// targets there unless its `[[fsm.state]]` sets `target_margin` (radians past each stop), and
+// Jumper's deploy.py writes that key, and bundle.json's built_from records it, only for a mode whose
+// manifest gives it one above 0. The spin and the 720 once shipped with 1.7 rad; both have since
+// trained under the clamp and the bundle sets no margin (jumper/README.md), so a bundle that brings
+// one back fails here. Comment lines are not keys: the toml says in a comment that none is set.
+const margins: string[] = [];
+for (const block of readFileSync(join(bundleDir, 'controller.toml'), 'utf8').split(/^\[\[fsm\.state\]\]\s*$/m).slice(1)) {
+  const body = block.split(/^\[/m)[0];
+  const name = /^\s*name\s*=\s*"([^"]+)"/m.exec(body)?.[1] ?? '(unnamed)';
+  const margin = /^\s*target_margin\s*=\s*([^\s#]+)/m.exec(body)?.[1];
+  if (margin !== undefined && !(Number(margin) === 0)) margins.push(`controller.toml state ${name}: target_margin = ${margin}`);
+}
+for (const [mode, entry] of Object.entries<any>(bundle.built_from ?? {})) {
+  if (entry && typeof entry === 'object' && entry.target_margin !== undefined && entry.target_margin !== 0) {
+    margins.push(`bundle.json built_from ${mode}: target_margin ${entry.target_margin}`);
+  }
+}
+console.log(margins.length ? `target_margin: ${margins.join('; ')}` : 'target_margin: none, every mode clamped at the joint stops');
+const stopsFailed = margins.length;
 
 let minZ = Infinity;
 let maxTilt = 0;
@@ -270,11 +292,9 @@ async function checkRoutine(runs: number): Promise<number> {
 if (routineOnly) {
   const failed = await checkRoutine(routineRuns);
   sim.dispose();
-  if (failed) {
-    console.error(`${failed} routine run(s) were not clean`);
-    process.exit(1);
-  }
-  process.exit(0);
+  if (stopsFailed) console.error(`${stopsFailed} mode(s) let their joint targets past the joint stops (target_margin)`);
+  if (failed) console.error(`${failed} routine run(s) were not clean`);
+  process.exit(failed || stopsFailed ? 1 : 0);
 }
 
 await run(3, 'stand');
@@ -400,13 +420,16 @@ for (const [mode, code, clip] of BREAKS) {
 // handed back to the walking policy by the host's own press of its switch (core.ts AUTO_LEAVE_S).
 // The turn in the air is the body rate integrated over that flight: about the vertical for the
 // 720, nose-up about the body's pitch axis for the flip. The 720 ships trained with its targets
-// clamped at the joint stops, as the controller clamps every other mode's (no `target_margin`): on
-// this core it turns 682 to 750 degrees in the air in 24 trials from standing and walking, and 680
-// and 686 in this check. Its floor, 660, sits under that and over what the export before it turned
-// clamped at the stops (at most 653 through the bundle's controller), so a bundle that brings back
-// an export that needs the margin, without the margin, fails here.
+// clamped at the joint stops, as the controller clamps every other mode's, and resting level after
+// its landing (jumper.power_jumpspin720, rs-720u): on this core it turns 721 to 753 degrees in the
+// air in 24 trials from standing and walking, and 728 and 745 in this check; through the bundle's
+// controller in Jumper's own host, 719 to 744 in 24. Its floor, 700, is 21 degrees under the least
+// this core has turned in those 24 starts and 20 under two full turns, which the game says it makes
+// (src/game/ending.ts): a 720 under 700 no longer turns about two turns. The export before this
+// one, which rested 10 degrees nose-up, turned 680 and 686 in this check and would fail it. The
+// flip's floor stays 330.
 const JUMPS: [string, string, 'yaw' | 'pitch', number][] = [
-  ['power_jumpspin', 'Digit6', 'yaw', 660], ['power_backflip', 'Digit7', 'pitch', 330],
+  ['power_jumpspin', 'Digit6', 'yaw', 700], ['power_backflip', 'Digit7', 'pitch', 330],
 ];
 const jumps: Record<string, Record<string, unknown>> = {};
 for (const [mode, code, axis, minTurn] of JUMPS) for (const start of ['standing', 'walking']) {
@@ -501,4 +524,5 @@ if (skillsFailed) {
   console.error(`${skillsFailed} skill(s) or breakdance move(s) did not enter, finish and hand back to locomotion (or a jump did not take off, turn and land upright)`);
 }
 if (routineFailed) console.error(`${routineFailed} routine run(s) were not clean`);
-if (skillsFailed || routineFailed) process.exit(1);
+if (stopsFailed) console.error(`${stopsFailed} mode(s) let their joint targets past the joint stops (target_margin)`);
+if (skillsFailed || routineFailed || stopsFailed) process.exit(1);
