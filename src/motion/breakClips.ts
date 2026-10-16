@@ -9,8 +9,8 @@ export const BREAK_CLIPS = {
     task: 'jumper.power_backflip',
     method: 'bundle',
     from: 0.675,
-    to: 1.595,
-    events: { apex: 0.985, hit: 1.14, land: 1.14, let_go: 1.88, policy_end: 1.92, policy_start: 0.675, settled: 1.345, takeoff: 0.835 },
+    to: 1.71,
+    events: { apex: 0.965, hit: 1.135, land: 1.135, let_go: 1.88, policy_end: 1.92, policy_start: 0.675, settled: 1.46, takeoff: 0.835 },
   },
   break_clawstand: {
     task: 'jumper.break_clawstand',
@@ -23,8 +23,8 @@ export const BREAK_CLIPS = {
     task: 'jumper.power_jumpspin720',
     method: 'bundle',
     from: 0.675,
-    to: 1.955,
-    events: { apex: 1.1, hit: 1.305, land: 1.305, let_go: 2.075, policy_end: 2.115, policy_start: 0.675, settled: 1.705, takeoff: 0.895 },
+    to: 2.03,
+    events: { apex: 1.125, hit: 1.4, land: 1.4, let_go: 2.075, policy_end: 2.115, policy_start: 0.675, settled: 1.78, takeoff: 0.895 },
   },
   break_oneclaw: {
     task: 'jumper.break_oneclaw',

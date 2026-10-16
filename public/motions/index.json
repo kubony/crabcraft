@@ -29,11 +29,11 @@
    "source": "power_backflip",
    "kind": "break",
    "fps": 50.0,
-   "frameCount": 198,
-   "duration": 3.96,
+   "frameCount": 203,
+   "duration": 4.06,
    "loop": false,
-   "speed": 0.04663,
-   "bytes": 14014
+   "speed": 0.03882,
+   "bytes": 13989
   },
   {
    "id": "break_clawstand",
@@ -51,11 +51,11 @@
    "source": "power_jumpspin",
    "kind": "break",
    "fps": 50.0,
-   "frameCount": 208,
-   "duration": 4.16,
+   "frameCount": 204,
+   "duration": 4.08,
    "loop": false,
-   "speed": 0.04037,
-   "bytes": 14454
+   "speed": 0.0128,
+   "bytes": 14113
   },
   {
    "id": "break_oneclaw",

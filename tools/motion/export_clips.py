@@ -113,6 +113,15 @@ def moving_average(x: np.ndarray, win: int) -> np.ndarray:
     return out.squeeze()
 
 
+def body_rate(quat: np.ndarray, t: np.ndarray) -> np.ndarray:
+    """The base's body-frame angular velocity (rad/s) from its sampled orientation (w, x, y, z):
+    the vector part of 2 conj(q) dq/dt."""
+    dq = np.gradient(quat, t, axis=0)
+    w, v = quat[:, :1], -quat[:, 1:]
+    dw, dv = dq[:, :1], dq[:, 1:]
+    return 2.0 * (w * dv + dw * v + np.cross(v, dv))
+
+
 class Raw:
     def __init__(self, path: Path, model: mujoco.MjModel):
         z = np.load(path)
@@ -457,23 +466,36 @@ def break_events(raw: Raw, events: dict, T: np.ndarray) -> dict:
     events["hit"] = [rel(land)]
     if "let_go" in raw.marks:
         events["let_go"] = [rel(raw.marks["let_go"][0])]
-    # Settled: the first moment after the landing from which, for 0.2 s, the body stands within
-    # 20 mm of its height at the start, tilts less than 6 degrees and turns slower than 45 deg/s,
-    # and the joints' fastest speed, averaged over 0.1 s, stays under 8 rad/s. The 720 goes on
-    # turning on its feet for a while after it lands, and the flip stands 10 to 14 mm lower after
-    # its landing than at the handover. Both policies keep their legs busy at HOME (they run at
-    # 200 Hz with no clock), so "still" is not a threshold they ever cross; this is.
-    qd = moving_average(np.abs(np.gradient(raw.q, raw.t, axis=0)).max(axis=1), int(round(0.1 / DT)))
-    wz = moving_average(np.abs(np.gradient(raw.yaw, raw.t)), int(round(0.1 / DT)))
+    # Settled: the hand-back moment of the jumper checkout's tools/eval_calm.py, read off the rollout,
+    # with its calm held 0.2 s rather than 0.3: the first moment after the landing from which, for the
+    # next 0.2 s, the 20 gait joints' speeds averaged over 0.1 s stay under 0.2 rad/s RMS, the base's
+    # roll and pitch rate so averaged under 5 deg/s and its tilt under 10 degrees, and over the span the
+    # joint speed and the roll and pitch rate are under 1.0 rad/s and 15 deg/s RMS. Both jumps come to
+    # rest after their landing (the flip 7 to 8 degrees nose-down, its rear and middle legs swung back,
+    # until the ramp to locomotion's HOME brings it level); the 720 does so 0.99 to 1.14 s after the
+    # handover, which leaves under 0.3 s before its let-go at 1.4 s. If it is not found before the
+    # let-go, the let-go stands in.
+    gait = [j for j, name in enumerate(JOINT_NAMES) if name not in ("LF_J4_joint", "RF_J4_joint")]
+    qd = np.gradient(raw.q[:, gait], raw.t, axis=0)
+    rate = body_rate(raw.quat, raw.t)[:, :2]
+    k_sm, n = int(round(0.1 / DT)), int(round(0.2 / DT))
     x_, y_ = raw.quat[:, 1], raw.quat[:, 2]
     tilt = np.degrees(np.arccos(np.clip(1 - 2 * (x_ * x_ + y_ * y_), -1, 1)))
-    quiet = (qd < 8.0) & (wz < np.radians(45)) & (tilt < 6) & (np.abs(raw.pos[:, 2] - z0) < 0.020)
-    n = int(round(0.2 / DT))
-    settled = float(raw.t[i1 - 1])
-    for i in range(int(np.searchsorted(raw.t, land)), len(raw.t) - n):
-        if quiet[i:i + n].all():
+    drift = np.sqrt((moving_average(qd, k_sm) ** 2).mean(axis=1))
+    sway = np.degrees(np.linalg.norm(moving_average(rate, k_sm), axis=1))
+    still = (drift < 0.2) & (sway < 5.0) & (tilt < 10.0)
+    speed_sq = moving_average((qd ** 2).mean(axis=1), n)
+    rate_sq = moving_average((np.degrees(rate) ** 2).mean(axis=1), n)
+    i_go = int(np.searchsorted(raw.t, raw.marks["let_go"][0])) if "let_go" in raw.marks else i1
+    settled = None
+    for i in range(int(np.searchsorted(raw.t, land)), i_go - n + 1):
+        c = i + n // 2
+        if still[i:i + n].all() and speed_sq[c] < 1.0 and rate_sq[c] < 15.0 ** 2:
             settled = float(raw.t[i])
             break
+    if settled is None:
+        print(f"    jump: not at rest before the let-go; the let-go stands in for the settle")
+        settled = float(raw.t[min(i_go, len(raw.t) - 1)])
     events["settled"] = [rel(settled)]
     start = rel(raw.t[i0]) if bundle else 0.0
     window = [start, rel(min(float(T[-1]), settled + 0.25))]
@@ -618,8 +640,10 @@ def bundle_provenance(raw: Raw) -> dict:
     mjlab = manifest["runtimes"]["mjlab"]
     built = (manifest.get("built_from") or {}).get(raw.meta["source"], {})
     # The skills were recorded through the bundle as feat/crabcraft-skills built it; the breakdance
-    # through the one feat/crabcraft-dance built, which adds its modes. Same controller source.
-    branch = "feat/crabcraft-dance" if raw.meta["kind"] == "break" else "feat/crabcraft-skills"
+    # through the one feat/crabcraft-dance built, which adds its modes, and the two jumps through the
+    # one feat/crabcraft-final built (record_clips.py notes the branch the bundle's checkout is on).
+    branch = raw.meta.get("jumper_branch") or (
+        "feat/crabcraft-dance" if raw.meta["kind"] == "break" else "feat/crabcraft-skills")
     return {
         "bundle": f"crabcraft bundle, scripts/deploy.py --manifests deploy/crabcraft.manifests.json "
                   f"(jumper branch {branch}, controller source {mjlab['commit'][:7]})",
