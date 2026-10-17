@@ -139,10 +139,10 @@ index 92561af..d20632f 100644
  Values are rounded to five decimals. `q` and `q_cmd` are different tables at different
 diff --git a/deploy/crabcraft.controller.toml b/deploy/crabcraft.controller.toml
 new file mode 100644
-index 0000000..ae8c88f
+index 0000000..e007e35
 --- /dev/null
 +++ b/deploy/crabcraft.controller.toml
-@@ -0,0 +1,290 @@
+@@ -0,0 +1,294 @@
 +# The crabcraft bundle's state machine: the jumper bundle's cascade
 +# (`jumper.controller.toml`, which this copies rule for rule and number for
 +# number) plus the six skills "World of Crabcraft" plays, `jumper.skill_*`
@@ -203,20 +203,24 @@ index 0000000..ae8c88f
 +# most): toprock 4.6, six-step 0.0, and the two freezes 34.4 -- held for 1.68 s
 +# with 15.6 degrees to spare, and the policies hold them at 34.3 to 34.8. The
 +# spin has no clip; measured through this controller (docs/CRABCRAFT_POWER.md,
-+# "The bundle within the stops", 24 trials from standing and walking, its
-+# targets clamped at the stops): 7.2 to 9.2 degrees at most. The export before
-+# it, on its own policy (native MuJoCo, no randomisation): 9.0.
++# "The spin on its feet", and the same to the last digit in "The bundle that
++# keeps its feet and sticks the 720", 24 trials from standing and walking, its
++# targets clamped at the stops): 6.5 to 10.3 degrees at most, riding higher on
++# its legs than the export before it (7.2 to 9.2 here, "The bundle within the
++# stops").
 +#
 +# The 720 jump spin, measured through this controller (docs/CRABCRAFT_POWER.md,
-+# "The 720 at rest", 24 trials from standing and walking, its targets clamped at
-+# the stops like every other mode's, and the same again in "The bundle within
-+# the stops"): 30.8 to 35.0 degrees at most, in the air,
-+# where it leans as it turns. In its own environment, with the training's
-+# randomisation, 42.4 at the most of 64 flights (two seeds). It now charges that
-+# lean past 30 degrees (`tilt_past`); the export before it peaked at 35.8 to 42.7
-+# through this controller and at 49.3 in its own environment ("Within the
-+# stops"), and the one before that, its targets let 1.7 rad past the stops, at
-+# 31.7 to 40.8 here ("The final bundle").
++# "The 720 sticks its landing", 24 trials from standing and walking that did
++# not choose it, its targets clamped at the stops like every other mode's, and
++# the same to the last digit in "The bundle that keeps its feet and sticks the
++# 720"): 28.4 to 34.1 degrees at most, in the air, where it leans as it turns.
++# In its own environment, with the training's randomisation, 43.3 at the most
++# of 64 flights (two seeds). It charges that lean past 30 degrees
++# (`tilt_past`), as the export before it did, which peaked at 30.8 to 35.0 here
++# and 42.4 in its own environment ("The 720 at rest"); the one before that at
++# 35.8 to 42.7 through this controller and at 49.3 in its own environment
++# ("Within the stops"), and the one before that, its targets let 1.7 rad past
++# the stops, at 31.7 to 40.8 here ("The final bundle").
 +#
 +# The back flip (`jumper.power_backflip`) does not fit under this number and is
 +# not meant to: it passes 177 degrees in the air. Under this rule it went to
@@ -435,7 +439,7 @@ index 0000000..ae8c88f
 +enter = "locomotion"
 diff --git a/deploy/crabcraft.manifests.json b/deploy/crabcraft.manifests.json
 new file mode 100644
-index 0000000..61a9044
+index 0000000..7b35a31
 --- /dev/null
 +++ b/deploy/crabcraft.manifests.json
 @@ -0,0 +1,249 @@
@@ -657,9 +661,9 @@ index 0000000..61a9044
 +        },
 +        "power_spin": {
 +          "task": "jumper.power_spin_feet",
-+          "_note": "crabcraft's spin: counter-clockwise in place on its feet, 2.3 rev/s (docs/CRABCRAFT_POWER.md). Reward-driven, with no recording and no clock, so it does not end by itself: it spins for as long as the mode is held, and its switch pressed again, or Menu (Ctrl) on its own, hands back: the ramp to locomotion's HOME stops the turning 0.15 to 0.36 s after the press, 61 to 101 degrees on, and the walking policy runs again 1.0 to 1.07 s after it. 200 Hz at kp 20, its targets clamped at the stops like every other mode's (`_target_margin`). Through this controller, 12 trials each from standing and walking: 2.29 and 2.30 rev/s on average from 2 s to 6 s after the handover (2.25 to 2.32), tilt 9.2 degrees at most, within 0.18 m of its spot, none in `safe` (docs/CRABCRAFT_POWER.md, \"The spin within the stops\", and the same to the last digit in \"The bundle within the stops\", beside the 720 that rests level). The export is this machine's: tasks/jumper/power_spin_feet/out/crabcraft (sp-sa model_5800), committed without its checkpoint copy.",
++          "_note": "crabcraft's spin: counter-clockwise in place on its feet, 2.3 rev/s (docs/CRABCRAFT_POWER.md). Reward-driven, with no recording and no clock, so it does not end by itself: it spins for as long as the mode is held, and its switch pressed again, or Menu (Ctrl) on its own, hands back: the ramp to locomotion's HOME stops the turning 0.14 to 0.35 s after the press, 63 to 92 degrees on, and the walking policy runs again 1.0 to 1.06 s after it. 200 Hz at kp 20, its targets clamped at the stops like every other mode's (`_target_margin`). Through this controller, 12 trials each from standing and walking: 2.27 and 2.28 rev/s on average from 2 s to 6 s after the handover (2.24 to 2.30), a calf, a claw's palm or the shell on the floor over 1 N in 23% and 21% of the ticks (the export before it: 43% and 42%), tilt 10.3 degrees at most, within 0.17 m of its spot, none in `safe` (docs/CRABCRAFT_POWER.md, \"The spin on its feet\", and the same to the last digit in \"The bundle that keeps its feet and sticks the 720\", beside the 720 that comes to rest two turns round). The export is this machine's: tasks/jumper/power_spin_feet/out/crabcraft (ft-nb6100 model_6150), committed without its checkpoint copy.",
 +          "policy": "tasks/jumper/power_spin_feet/out/crabcraft",
-+          "_target_margin": "0, the stops themselves: the export trained under this controller's clamp (jumper.power_spin_feet's TARGET_MARGIN, docs/CRABCRAFT_POWER.md \"The spin within the stops\"). The export before it, pw-spin-c20L model_2998, trained with nothing clamped and pointed 11% of its targets past a joint's stop, by up to 1.3 rad, to keep its PD at full torque to the end of each stroke; it needed 1.7 rad here to spin 2.33 and 2.34 rev/s from standing and walking (2.05 and 2.03 clamped), holding a joint against its stop at a median 1.20 N*m in 2.4% of joint-steps for as long as the mode was held and sending targets as far as 3.15 rad. This one, clamped: 2.29 and 2.30 rev/s, no joint pushed into its stop, every target sent within the stops (2.58 rad at most). It leans on its calves more: 2.15 rev/s in its environment with calves, palms and shell at friction 0.4, against the export before's 2.24 with its margin. None of this has run on a physical Jumper.",
++          "_target_margin": "0, the stops themselves: the export trained under this controller's clamp (jumper.power_spin_feet's TARGET_MARGIN, docs/CRABCRAFT_POWER.md \"The spin within the stops\"). The export before it, pw-spin-c20L model_2998, trained with nothing clamped and pointed 11% of its targets past a joint's stop, by up to 1.3 rad, to keep its PD at full torque to the end of each stroke; it needed 1.7 rad here to spin 2.33 and 2.34 rev/s from standing and walking (2.05 and 2.03 clamped), holding a joint against its stop at a median 1.20 N*m in 2.4% of joint-steps for as long as the mode was held and sending targets as far as 3.15 rad. sp-sa model_5800, the first trained clamped: 2.29 and 2.30 rev/s, no joint pushed into its stop, every target sent within the stops (2.58 rad at most), and a non-foot part on the floor in 42% to 43% of the ticks. This one, ft-nb6100 model_6150, trained on from it with that charged by the parts' height (\"The spin on its feet\"): 2.27 and 2.28 rev/s, every target sent within the stops (2.71 rad at most), a joint pushing into its stop at 0.1 to 0.3 N*m in 0.01% of joint-steps or fewer. None of this has run on a physical Jumper.",
 +
 +          "target_margin": 0,
 +          "pad": {"button": "LB", "with": "home", "on": "toggle", "from": ["locomotion"]},
@@ -667,16 +671,16 @@ index 0000000..61a9044
 +        },
 +        "power_jumpspin": {
 +          "task": "jumper.power_jumpspin720",
-+          "_note": "crabcraft's 720 jump spin: jumps and turns about two turns counter-clockwise in the air, landing on its feet (docs/CRABCRAFT_POWER.md). Reward-driven, with no recording and no clock, so it does not end by itself: it takes off 0.22 s after the handover, lands 0.695 to 0.725 s after it and has come to rest 1.025 to 1.09 s after it, within 0.9 degrees of level, its largest gait joint 0.15 rad from HOME (RR_J1) and 0.09 rad RMS -- near HOME but not at it, where it would jump again (docs/CRABCRAFT_POWER.md, \"The 720 at rest\"); left running it stands so and does not jump again (held to 3.7 s after the handover), and its switch pressed again, or Menu (Ctrl) on its own, hands back -- any time after the landing. The walking policy runs again 0.44 s after the switch, and 1.5 s after it the robot stands within 0.9 degrees of level, 0.21 rad from HOME at most. 200 Hz at kp 20, its targets clamped at the stops like every other mode's (`_target_margin`). Through this controller, from standing and walking: 24 of 24 landed upright, 719 to 744 degrees in the air (727 and 733 on average), 0.35 to 0.37 m of rise, tilt 35.0 degrees at most, in the air, none in `safe` (docs/CRABCRAFT_POWER.md, \"The 720 at rest\", and the same to the last digit in \"The bundle within the stops\", beside the spin within the stops). The export is this machine's: tasks/jumper/power_jumpspin720/out/crabcraft (rs-720u model_14800), committed without its checkpoint copy.",
++          "_note": "crabcraft's 720 jump spin: jumps and turns about two turns counter-clockwise in the air, landing on its feet, and comes to rest two turns round from the way it faced at the handover (docs/CRABCRAFT_POWER.md). Reward-driven, with no recording and no clock, so it does not end by itself: it takes off 0.22 to 0.225 s after the handover, lands 0.735 to 0.755 s after it and has come to rest 1.03 to 1.15 s after it, 704.8 to 733.9 degrees round from the way it faced at the handover (724.1 from standing and 719.2 walking on average), within 1.3 degrees of level, its largest gait joint 0.16 rad from HOME (RM_J0) and 0.10 rad RMS -- near HOME but not at it, where it would jump again (docs/CRABCRAFT_POWER.md, \"The 720 at rest\", \"The 720 sticks its landing\"); left running it stands so and does not jump again (held to 3.7 s after the handover), and its switch pressed again, or Menu (Ctrl) on its own, hands back -- any time after the landing. The walking policy runs again 0.43 s after the switch, and 1.5 s after it the robot stands within 0.9 degrees of level, 0.21 rad from HOME at most. 200 Hz at kp 20, its targets clamped at the stops like every other mode's (`_target_margin`). Through this controller, from standing and walking, 12 trials each that were not used to choose it: 24 of 24 landed upright, 709 to 742 degrees in the air (733.0 and 724.5 on average), 0.385 to 0.399 m of rise, tilt 34.1 degrees at most, in the air, none in `safe` (docs/CRABCRAFT_POWER.md, \"The 720 sticks its landing\", and the same to the last digit in \"The bundle that keeps its feet and sticks the 720\", beside the spin on its feet). On crabcraft's browser core (MuJoCo WASM, this controller's wasm, onnxruntime-web), 12 trials each from standing and walking: 707 to 749 degrees in the air, at rest 1.075 to 1.155 s after the handover, 694.9 to 748.4 degrees round (720.5 and 722.7 on average), every trial upright, none in `safe`. The export is this machine's: tasks/jumper/power_jumpspin720/out/crabcraft (st-720i model_18500), committed without its checkpoint copy.",
 +          "policy": "tasks/jumper/power_jumpspin720/out/crabcraft",
-+          "_target_margin": "0, the stops themselves: the export trained under this controller's clamp (jumper.power_jumpspin720's TARGET_MARGIN, docs/CRABCRAFT_POWER.md \"Within the stops\"). The export before it, cm-720-g model_7250, trained with nothing clamped and parked targets up to 4 rad past a joint's stop to keep its PD at full torque; it needed 1.7 rad here to turn 705 to 718 degrees in the air on average from standing and walking (566 to 606 clamped), holding a joint against its stop at up to 1.746 N*m in 6.2% of joint-steps over the 1.5 s after the handover and sending targets as far as 4.45 rad. sf-720c model_11048, the first trained clamped: 705 to 715 degrees on average, a joint pushing into its stop in 0.4% to 0.5% of those joint-steps at a median 0.27 N*m, every target sent within the stops (3.40 rad at most). This one, rs-720u model_14800, trained on from it under the same clamp (\"The 720 at rest\"): 727 and 733 degrees on average, a joint pushing into its stop in 0.4% of those joint-steps at a median 0.30 N*m, every target sent within the stops (3.67 rad at most; \"The bundle within the stops\"). None of this has run on a physical Jumper.",
++          "_target_margin": "0, the stops themselves: the export trained under this controller's clamp (jumper.power_jumpspin720's TARGET_MARGIN, docs/CRABCRAFT_POWER.md \"Within the stops\"). The export before it, cm-720-g model_7250, trained with nothing clamped and parked targets up to 4 rad past a joint's stop to keep its PD at full torque; it needed 1.7 rad here to turn 705 to 718 degrees in the air on average from standing and walking (566 to 606 clamped), holding a joint against its stop at up to 1.746 N*m in 6.2% of joint-steps over the 1.5 s after the handover and sending targets as far as 4.45 rad. sf-720c model_11048, the first trained clamped: 705 to 715 degrees on average, a joint pushing into its stop in 0.4% to 0.5% of those joint-steps at a median 0.27 N*m, every target sent within the stops (3.40 rad at most). rs-720u model_14800, trained on from it under the same clamp (\"The 720 at rest\"): 727 and 733 degrees on average, a joint pushing into its stop in 0.4% of those joint-steps at a median 0.30 N*m, every target sent within the stops (3.67 rad at most; \"The bundle within the stops\"). This one, st-720i model_18500, trained on under the same clamp from st-720g model_18100, itself from model_14800 by way of a distilled takeoff (\"The 720 sticks its landing\"): 733.0 and 724.5 degrees on average, a joint pushing into its stop in 0.8% of those joint-steps (0.6% to 1.0% per trial) at a median 0.26 N*m, every target sent within the stops (3.44 rad at most). None of this has run on a physical Jumper.",
 +          "target_margin": 0,
 +          "pad": {"button": "RB", "with": "home", "on": "toggle", "from": ["locomotion"]},
 +          "keys": {"key": ["key_6", "keypad_6"], "with": "shift", "on": "toggle", "from": ["locomotion"]}
 +        },
 +        "power_backflip": {
 +          "task": "jumper.power_backflip",
-+          "_note": "crabcraft's back flip: jumps and flips nose-up through a whole turn in the air, landing on its feet (docs/CRABCRAFT_POWER.md). Reward-driven, with no recording and no clock, so it does not end by itself: it takes off 0.16 to 0.165 s after the handover, lands 0.455 to 0.47 s after it and has come to rest 0.82 to 0.925 s after it; left running it stands still within 1.0 degree of level, its gait joints 0.22 rad from HOME at most (the middle legs' J2) and 0.11 rad RMS, and does not jump again (held to 3.7 s after the handover), and its switch pressed again, or Menu (Ctrl) on its own, hands back -- any time after the landing. The walking policy runs again 0.49 s after the switch, and 1.5 s after it the robot stands within 1.0 degree of level, 0.21 rad from HOME at most, as locomotion stands on its own (0.21). 200 Hz at kp 20, its targets clamped at the stops (`_target_margin`). Through this controller, from standing and walking: 24 of 24 landed upright, 377 to 390 degrees nose-up in the air, 0.19 to 0.20 m of rise, none in `safe` (docs/CRABCRAFT_POWER.md, \"The bundle with the three\"); again beside the spin and the 720 within the stops, 12 trials: 377 to 385 degrees, at rest 0.855 to 0.905 s after the handover, every target sent within the stops (4.38 rad at most; \"The bundle within the stops\"). The export is this machine's: tasks/jumper/power_backflip/out/crabcraft (lg-flip-dx model_7900, which comes to rest near HOME, level: \"Resting near HOME\"), committed without its checkpoint copy.",
++          "_note": "crabcraft's back flip: jumps and flips nose-up through a whole turn in the air, landing on its feet (docs/CRABCRAFT_POWER.md). Reward-driven, with no recording and no clock, so it does not end by itself: it takes off 0.16 to 0.165 s after the handover, lands 0.455 to 0.47 s after it and has come to rest 0.82 to 0.925 s after it; left running it stands still within 1.0 degree of level, its gait joints 0.22 rad from HOME at most (the middle legs' J2) and 0.11 rad RMS, and does not jump again (held to 3.7 s after the handover), and its switch pressed again, or Menu (Ctrl) on its own, hands back -- any time after the landing. The walking policy runs again 0.49 s after the switch, and 1.5 s after it the robot stands within 1.0 degree of level, 0.21 rad from HOME at most, as locomotion stands on its own (0.21). 200 Hz at kp 20, its targets clamped at the stops (`_target_margin`). Through this controller, from standing and walking: 24 of 24 landed upright, 377 to 390 degrees nose-up in the air, 0.19 to 0.20 m of rise, none in `safe` (docs/CRABCRAFT_POWER.md, \"The bundle with the three\"); again beside the spin and the 720 within the stops, 12 trials: 377 to 385 degrees, at rest 0.855 to 0.905 s after the handover, every target sent within the stops (4.38 rad at most; \"The bundle within the stops\"), and the same 12 to the last digit beside the spin on its feet and the 720 that sticks its landing (\"The bundle that keeps its feet and sticks the 720\"). The export is this machine's: tasks/jumper/power_backflip/out/crabcraft (lg-flip-dx model_7900, which comes to rest near HOME, level: \"Resting near HOME\"), committed without its checkpoint copy.",
 +          "_skip_tilt_check": "Why: a flip passes upside down (177 degrees through this controller) and the cascade's `tilted` rule, 50 degrees, sends it to `safe`, damping only, at the top of the flip, 0.22 s after the handover -- it then comes down limp, 62 to 67 degrees tilted 0.3 s after touching down (docs/CRABCRAFT_POWER.md, \"Through the bundle's controller\"). With the fallback lifted for this mode only it landed 12 of 12 in simulation, under 2.7 degrees of tilt 0.3 s after the touchdown. What it costs: while this mode is the state nothing catches a tilt -- a weak takeoff that tips onto its back, or a robot knocked over mid-move, keeps running the flip's policy instead of dropping to damping, until the mode is left (its switch, Menu or Ctrl, or no operator input for `command_timeout_ms`, which releases every latch). `feedback_stale` still applies, and the tick that enters is still checked, so a robot already tilted cannot be switched into it. None of this has run on a physical Jumper: the policy was trained and measured only in MuJoCo, and a first try on a robot wants a soft floor and a hand on the release.",
 +          "policy": "tasks/jumper/power_backflip/out/crabcraft",
 +          "skip_tilt_check": true,
@@ -1689,10 +1693,10 @@ index 0000000..eed59af
 +
 diff --git a/docs/CRABCRAFT_POWER.md b/docs/CRABCRAFT_POWER.md
 new file mode 100644
-index 0000000..3b50847
+index 0000000..8e3265e
 --- /dev/null
 +++ b/docs/CRABCRAFT_POWER.md
-@@ -0,0 +1,2273 @@
+@@ -0,0 +1,2950 @@
 +# Crabcraft power moves: a spin, a jump spin and a back flip
 +
 +"World of Crabcraft" wants a routine that could win a breaking battle. The footwork,
@@ -1726,12 +1730,18 @@ index 0000000..3b50847
 +past the stops too, and now ships from `sf-720c`, trained on from `cm-720-g` with its targets
 +clamped at the stops as the controller clamps every other mode's ("Within the stops"), and since
 +from `rs-720u`, which comes to rest near `HOME`, level, and leans less in the air ("The 720 at
-+rest"). The spin was the last mode with a margin, and now ships from `sp-sa`, trained on from
++rest"). The spin was the last mode with a margin, and then shipped from `sp-sa`, trained on from
 +`pw-spin-c20L` with its targets clamped at the stops too ("The spin within the stops"). "The final
 +bundle" measured the bundle before these; "The bundle with the three" measures the one that
 +carries the three, "The 720 at rest" and "The spin within the stops" each the bundle with its own
 +new mode, and "The bundle within the stops" the one that carries both, in which no mode keeps a
-+margin.
++margin. "The spin on its feet" finds why the spin put a calf, a palm or the shell on the floor in
++43% of its steps although its task charged it -- training on Warp hardly saw the contact -- and
++trains one that does so in 22% at nearly the same speed, which ships.
++"The 720 sticks its landing" brings the 720's rest to two turns from where it started,
++from 780 and 788 degrees through the controller to 724 and 719, and the 720 now ships from
++`st-720i`, trained on for it. "The bundle that keeps its feet and sticks the 720" measures the
++bundle that carries both.
 +
 +## What all three share
 +
@@ -3830,6 +3840,641 @@ index 0000000..3b50847
 +`tools/robot-sim-check.ts` passed (the 720 728 and 745 degrees in the air from standing and
 +walking), and its live routine (`--routine-only --routine 10`) ran 10 of 10 clean.
 +
++## The spin on its feet
++
++`sp-sa`'s `model_5800` spins 2.29 to 2.30 rev/s through the controller within the stops ("The spin
++within the stops"), and puts a calf, a claw's palm or the shell on the floor over 1 N in 43% of its
++steps (`tools/eval_power.py`, DR off, 4 environments; `model_2998` 33 to 35%). Its task charges that
++at -20 a step. This section finds why the charge did not keep it off the floor, charges it where it
++reaches, and measures what keeping to the feet costs.
++
++### Why the charge did not reach it
++
++**Training and measuring simulate that contact differently.** Every run here trains on MuJoCo Warp
++and every number in the tables is native MuJoCo's, as are the bundle's host and the browser. For a
++mesh against the plane, Warp writes up to four contact points (`mujoco_warp`'s `plane_convex`: the
++deepest vertex and up to three more within 1 mm of its depth), native MuJoCo one. A foot held up by
++four points is stiffer, so under Warp the foot carries the load and a calf lying on the floor
++beside it carries next to none. From one native state of `model_5800` (the left-rear calf 0.67 mm
++into the floor, its foot 8.7 mm), the two backends find the same penetrations to the micrometre;
++Warp gives the calf's four contacts 0 N and the foot's 21.7 N, native gives the calf 8.95 N and the
++foot 10.4 N. Over a rollout (DR off, 4 environments, seed 1, 2 s to 6 s):
++
++| `model_5800` | rev/s | a non-foot part over 1 N | a non-foot part under the floor (its hull's lowest point below 0) | non-foot share of the ground's normal force |
++|---|---|---|---|---|
++| `warp:cpu` | 2.326 | 4.3% of steps | 42.5% | 1.2% |
++| `native:cpu` | 2.311 | 43.9% | 61.3% | 20.2% (the left-rear calf 7.4%, the left claw's palm 7.7%, the right-rear calf 2.9%) |
++
++So `illegal_contact`, which reads `body_ground_contact`'s net force over 1 N, was paid in training
++in about a tenth of the steps a part was on the floor: `sp-sa` ended at -1.62 a second at -20, 8% of
++steps with the training's randomisation, where native with the same randomisation has 27%. The
++policy was never charged for what the game's simulation leans on. ("Found along the way" saw the
++disagreement on `pw-spin-c20`; this is its cause.)
++
++Standing at `HOME` the claws' palms are 0.7 mm (native) to 1.2 mm (Warp) above the floor, beside
++the pads they walk on, and the calves 4.0 to 5.4 mm; native stands the base 1.1 mm lower.
++
++### What changed
++
++`jumper.power_spin_feet` gets `nonfoot_on_ground` (`tasks/jumper/power_spin_feet/mdp/`): 1 in a step
++in which any non-foot collision geom's lowest point is under `NONFOOT_ON_GROUND_HEIGHT` (0 m) above
++the floor, at `NONFOOT_ON_GROUND_WEIGHT` a second. The height is geometry: each geom's convex hull
++(35 geoms, 2026 vertices) placed by its world pose, the same number on either backend; it matches
++MuJoCo's own `mj_geomDistance` to the floor within 7.5e-9 m (`tests/test_spin_feet_clearance.py`
++holds it to 1e-5 on a robot thrown about by random actions). For `model_5800` the share of steps
++with a part under 0 m under Warp, 42.5%, is native's share with one pushing over 1 N, 44%. Nothing
++else changed: `illegal_contact` stays at -20, the observation, the motor model, `rl/` and
++`tasks/jumper/common/` are as they were, and the targets are decoded at the stops
++(`TARGET_MARGIN` 0).
++
++`tools/eval_power.py --floor-friction MU` is the contact test without the side effect
++`--nonfoot-friction` has (below): the floor and every non-foot geom at `MU`, priorities as trained,
++so a part lying on the floor grips less and two legs touching still slide.
++
++### Runs
++
++Through the GPU queue (`~/crabcraft-train/queue/`, `train_calm_repo.sh` on the checkouts
++`~/crabcraft-train/jumper-feet` and `jumper-feet-b`). `ft-a` and `ft-b` resumed `model_5800` with
++its action noise floored at 0.15 (`tools/cap_noise.py ... 10 0.15`: two joints were at 0.093 and
++0.005) on `warp:cuda`, 4096 environments. When their native speed had settled (below), the last two
++trained on native MuJoCo itself, `--backend native --device cpu --num_envs 1024` (8 threads), the
++physics every table here measures with. The first three were stopped by hand once their trend
++was clear (exit 143), to free their GPU for the queue; `ft-nb6100` ran its 85 minutes. "Reward" is
++the log's last `Mean reward`.
++
++| run | queue job | slot | commit | backend | from | iterations | wall | s/iteration | reward |
++|---|---|---|---|---|---|---|---|---|---|
++| `ft-a` | 20261017-085701-feet-a | `legion`, RTX 5090 Laptop | 4d3027b (`nonfoot_on_ground` -20) | warp, 4096 | `model_5800` | 5800 to 7581 | 2867 s | 1.53 | 60.86 |
++| `ft-b` | 20261017-085702-feet-b | `worv-worker-02`, RTX 5080 | 1456d4e (-8) | warp, 4096 | `model_5800` | 5800 to 6671 | 920 s | 1.03 | 62.81 |
++| `ft-n5800` | 20261017-100614-feet-n5800 | `worv-worker-02`, Ryzen 7 9700X | 1456d4e (-8) | native, 1024 | `model_5800` | 5800 to 6159 | 2946 s | 8.1 | 24.11 |
++| **`ft-nb6100`** | 20261017-100615-feet-nb6100 | `legion`, Core Ultra 9 275HX | 1456d4e (-8) | native, 1024 | `ft-b`'s `model_6100` | 6100 to 6263 | 5121 s | 27 | 27.98 |
++
++The rewards are not comparable across backends: native's charges are paid on every touch. 1456d4e
++is 4d3027b with the weight at -8, on the experiment branch `exp/crabcraft-spin-feet-w8`.
++`legion` ran native at a third of `worv-worker-02`'s pace: its process took 21 cores where 8
++simulation threads were asked for; why was not looked into.
++
++### How it got there
++
++`tools/eval_power.py --task spin_feet --target-margin 0 --stop-window 6`, DR off, 4 environments,
++seed 1 (the seed checkpoints were picked on): rev/s from 2 s to 6 s, the median share of steps with
++a non-foot part on the floor over 1 N, rev/s with calves, palms and shell at friction 0.4
++(`--nonfoot-friction 0.4`), and the share of joint-steps the policy points past a stop and by how
++far at most (the clamp holds them at the stop).
++
++| checkpoint | rev/s | non-foot on the floor | rev/s at 0.4 | pointed past a stop |
++|---|---|---|---|---|
++| `model_5800` | 2.314 | 43.0% | 2.154 | 8.3%, 0.50 rad |
++| `ft-a` 6000 | 2.127 | 24.1% | 2.031 | 9.9%, 0.54 |
++| `ft-a` 6500 | 2.151 | 17.4% | 2.079 | 11.3%, 0.64 |
++| `ft-a` 7150 | 2.141 | 18.4% | 2.106 | 11.6%, 0.60 |
++| `ft-a` 7550 | 2.124 | 19.1% | 2.109 | 11.8%, 0.57 |
++| `ft-b` 5850 | 2.296 | 40.5% | 2.147 | 8.1%, 0.45 |
++| `ft-b` 5900 | 2.295 | 37.0% | 2.157 | 7.9%, 0.49 |
++| `ft-b` 5950 | 2.226 | 27.5% | 2.139 | 8.2%, 0.45 |
++| `ft-b` 6000 | 2.219 | 20.5% | 2.122 | 8.0%, 0.47 |
++| `ft-b` 6100 | 2.242 | 19.2% | 2.114 | 8.7%, 0.47 |
++| `ft-b` 6250 | 2.162 | 24.4% | 2.089 | 9.3%, 0.59 |
++| `ft-b` 6650 | 2.118 | 21.1% | 2.079 | 9.8%, 0.61 |
++| `ft-n5800` 5900 | 2.140 | 27.7% | 2.089 | 8.0%, 0.59 |
++| `ft-n5800` 6100 | 2.105 | 21.7% | 2.064 | 8.0%, 0.47 |
++| **`ft-nb6100` 6150** | **2.282** | **21.9%** | 2.147 | 8.6%, 0.52 |
++| `ft-nb6100` 6200 | 2.191 | 18.8% | 2.119 | 8.9%, 0.48 |
++| `ft-nb6100` 6250 | 2.129 | 20.7% | 2.107 | 9.0%, 0.49 |
++
++**The charge works within 200 iterations, and costs the Warp-trained spin its native speed.** Both
++Warp runs took the floor contact from 43% to 18 to 24% in their first 200 to 450 iterations, and
++from 350 iterations on both spun 2.09 to 2.16 rev/s on native, 6 to 10% under `model_5800`,
++however long they trained on; `ft-b`'s 6100, at 2.242, is the one checkpoint above that.
++Under Warp they were nearly as fast as before: `ft-a`'s 7150 spins 2.277 rev/s there (its training
++`spin_rate` came back to 13.4 a second against `sp-sa`'s 13.6) with a part under the floor in 0.6%
++of steps, its parts held a median 3.3 mm up. Native puts the robot lower on its one-point feet, and
++those parts touch in 18% of steps; the spin lost what it had been taking from them.
++
++**Making Warp's feet softer does not make it native.** Giving the feet the impedance at which four
++Warp points hold the load as one native point does (`solimp` 0.5 / 0.69 for 0.8 / 0.9) moved
++`ft-a`'s 7150 to native's speed (2.116 against 2.138) and `model_5800` far below it (2.147 against
++2.311); with the non-foot geoms softened the same way, 2.091 and 2.099. The difference is the
++contact's geometry, one point that pivots against a patch that does not, and no impedance makes
++one into the other. It was not tried in training.
++
++**Training on native wins the speed back, from a policy already on its feet.** `ft-n5800`, native
++from `model_5800`, spent its 360 iterations taking the contact down (43% to 22%) and its speed with
++it (2.10 rev/s). `ft-nb6100`, native from `ft-b`'s `model_6100` (2.242, 19%), was at 2.282 rev/s and
++22% after 50 iterations. Native runs are noisy at 1024 environments: its next two checkpoints spun
++2.191 and 2.129, so `model_6150` was picked on seed 1 and held against seeds 11 and 12 and the
++controller below.
++
++### Results
++
++**In its environment**, as "The spin within the stops" measured, on seeds that picked nothing (11
++and 12; 1 above), DR off 4 environments and DR on 32. "Pushing into a stop" is a joint within 0.02
++rad of its stop with its actuator pushing into it at 0.1 N*m or more, and the median of that force;
++"largest target sent" is after the clamp.
++
++| policy | seed | DR | rev/s, mean (min to max) | best 1 s | drift at 6 s, median (largest) | tilt, largest | falls | non-foot on the floor | pointed past a stop | largest target sent | pushing into a stop |
++|---|---|---|---|---|---|---|---|---|---|---|---|
++| `model_5800` | 11 | off | 2.300 (2.294 to 2.312) | 2.37 | 0.07 m (0.13) | 10.9 | 0 of 4 | 43.0% | 8.3%, 0.52 | 2.75 rad, within | 0 |
++| `model_5800` | 12 | off | 2.299 (2.259 to 2.327) | 2.37 | 0.10 m (0.15) | 11.0 | 0 of 4 | 42.6% | 8.3%, 0.48 | 2.75 rad, within | 0 |
++| `model_5800` | 11 | on | 2.284 (2.092 to 2.375) | 2.45 | 0.10 m (0.26) | 11.1 | 0 of 32 | 32.2% | 8.4%, 0.52 | 2.75 rad, within | 0.01% at 0.36 N*m |
++| `model_5800` | 12 | on | 2.277 (2.128 to 2.362) | 2.42 | 0.09 m (0.18) | 11.4 | 0 of 32 | 38.4% | 8.4%, 0.55 | 2.75 rad, within | 0.02% at 0.37 N*m |
++| **`ft-nb6100` 6150** | 11 | off | **2.272 (2.231 to 2.301)** | 2.35 | 0.07 m (0.14) | 8.2 | 0 of 4 | **21.6%** | 8.6%, 0.47 | 2.75 rad, within | 0.01% at 0.25 N*m |
++| **`ft-nb6100` 6150** | 12 | off | **2.291 (2.260 to 2.308)** | 2.36 | 0.06 m (0.12) | 8.1 | 0 of 4 | **22.5%** | 8.6%, 0.46 | 2.76 rad, within | 0.01% at 0.23 N*m |
++| **`ft-nb6100` 6150** | 11 | on | **2.238 (2.074 to 2.345)** | 2.40 | 0.13 m (0.26) | 11.9 | 0 of 32 | **9.4%** | 8.6%, 0.54 | 2.75 rad, within | 0.04% at 0.27 N*m |
++| **`ft-nb6100` 6150** | 12 | on | **2.243 (2.093 to 2.345)** | 2.41 | 0.11 m (0.26) | 11.7 | 0 of 32 | **14.6%** | 8.7%, 0.56 | 2.84 rad, within | 0.06% at 0.27 N*m |
++
++**With the parts' grip taken down**, DR off, 4 environments. `--nonfoot-friction 0.4` is the test
++"The spin within the stops" and "What it leans on" ran: it gives every non-foot geom priority 1 and
++condim 3 at 0.4, and so also turns two legs touching each other -- condim 1, frictionless, as
++trained -- into a contact that grips at 0.4. `--floor-friction 0.4` takes the floor contact alone
++down; "legs only" (a measurement script, not in the tools: non-foot geoms at condim 3 and 0.4 with
++the priorities as trained, so the floor pair keeps the plane's 1.0) the legs' contact with each
++other alone.
++
++| contacts | `model_5800`, seed 1 | `model_5800`, seed 11 | `ft-nb6100` 6150, seed 1 | `ft-nb6100` 6150, seed 11 |
++|---|---|---|---|---|
++| as trained | 2.314 | 2.300 | 2.282 | 2.272 |
++| the floor at 0.4 (`--floor-friction 0.4`) | 2.285 | 2.263 | 2.241 | 2.234 |
++| legs gripping each other at 0.4 | 2.188 | -- | 2.156 | -- |
++| both (`--nonfoot-friction 0.4`) | 2.154 | 2.157 | 2.147 | 2.139 |
++
++No falls in any. **What the 0.4 test took from `model_5800` was its legs sliding over each other,
++not its calves on the floor**: a slippery floor costs it 0.03 rev/s (1.3%), legs that grip each
++other 0.13 (5%). The spin on its feet loses about as much to each: 0.04 on the floor at 0.4, 0.13
++to the legs. A real leg is plastic against plastic, so the frictionless leg contact is the model's, and
++neither policy is trained against it.
++
++**Through the bundle's controller.** The bundle built from `deploy/crabcraft.manifests.json` as it
++stands (`scripts/deploy.py --manifests deploy/crabcraft.manifests.json --allow-incomplete`, the
++controller 0cf350a, its 187 tests passing; `deploy.py --check-reference`: observation and targets
++worst 0.000e+00, "this host matches the reference"), crabcraft's `jumper_sim.Host` as "The spin
++within the stops" ran it, with `power_spin`'s ONNX swapped for each candidate's export (the same
++contract; inference only), 12 trials from standing and 12 walking at 0.28 m/s, held 6 s. "Non-foot
++on the floor" counts host ticks from the handover to the press with a non-foot geom pressing on the
++floor over 1 N, as `eval_power` counts them.
++
++| policy | start | rev/s, mean (min to max) | non-foot on the floor | tilt, largest | drift, largest | in `safe` | largest target sent | pushing into a stop | walking again after the press |
++|---|---|---|---|---|---|---|---|---|---|
++| `model_5800` | standing | 2.291 (2.248 to 2.320) | 42.6% (39.6 to 44.5) | 9.2 | 0.18 m | 0 | 2.55 rad, within | 0 | 0.875 to 0.945 s |
++| `model_5800` | walking | 2.299 (2.274 to 2.323) | 42.4% (41.0 to 44.3) | 8.8 | 0.17 m | 0 | 2.58 rad, within | 0 | 0.905 to 0.945 s |
++| `ft-b` 5950 | standing | 2.236 (2.207 to 2.268) | 27.2% | 10.7 | 0.12 m | 0 | 2.63 rad, within | 0.003% | 0.87 to 0.905 s |
++| `ft-b` 5950 | walking | 2.233 (2.202 to 2.266) | 25.9% | 8.3 | 0.12 m | 0 | 2.75 rad, within | 0.002% | 0.87 to 0.905 s |
++| `ft-b` 6000 | standing | 2.215 (2.195 to 2.242) | 20.4% | 7.7 | 0.12 m | 0 | 2.63 rad, within | 0.003% | 0.86 to 0.925 s |
++| `ft-b` 6000 | walking | 2.210 (2.171 to 2.235) | 19.5% | 8.0 | 0.10 m | 0 | 2.75 rad, within | 0.005% | 0.89 to 0.945 s |
++| **`ft-nb6100` 6150** | standing | **2.270 (2.239 to 2.301)** | **22.7% (20.6 to 24.8)** | 8.3 | 0.15 m | 0 | 2.60 rad, within | 0.005%, at 0.1 to 0.3 N*m | 0.885 to 0.94 s |
++| **`ft-nb6100` 6150** | walking | **2.282 (2.239 to 2.303)** | **20.7% (19.7 to 21.6)** | 10.3 | 0.17 m | 0 | 2.71 rad, within | 0.01%, at 0.2 to 0.3 N*m | 0.895 to 0.935 s |
++
++Every trial was walking again after its switch, none went to `safe` before or after it. `ft-nb6100`
++6150 stops turning 0.14 to 0.345 s after the shift key goes down, 63 to 92 degrees on (`model_5800`:
++0.145 to 0.355 s, 61 to 101), walks again 1.005 to 1.06 s after it, tilts 6.6 degrees at most in
++between, and 1.5 s later stands 0.78 to 2.12 degrees from level within 4 cm of where the press found
++it.
++
++### What it costs, and what it saves
++
++**The floor.** The spin's parts are on the floor in 21 to 23% of its ticks through the controller
++instead of 42 to 43%, 9 to 15% with the training's randomisation instead of 32 to 38%. The body
++rides higher on its legs (the review's frame sheet).
++
++**The speed.** 2.270 and 2.282 rev/s through the controller against 2.291 and 2.299 (99%); the
++slowest of its 24 trials 2.239, of `model_5800`'s 2.248. In its environment 2.27 to 2.29 against
++2.30 (DR off), 2.24 against 2.28 (DR on).
++
++**The stops.** Every target within the stops, 2.71 rad at the most; through the controller a joint
++arrives at its stop and pushes 0.1 to 0.3 N*m into it in 0.005 to 0.01% of joint-steps, where
++`model_5800` never did (in its environment with randomisation, 0.04 to 0.06% against 0.01 to
++0.02%).
++
++**Slippery parts.** No better than `model_5800` at the 0.4 test as it stands, 2.147 against 2.154,
++and 0.04 rev/s slower than it on a slippery floor alone (2.241 against 2.285). Neither leans on the
++floor's grip for its speed; both lose 0.12 to 0.13 rev/s if their legs grip each other.
++
++None of this has run on a physical Jumper.
++
++### Shipped
++
++`tasks/jumper/power_spin_feet/out/crabcraft` is `ft-nb6100`'s `model_6150`, exported as "Shipped"
++describes (the checkpoint copied first under `logs/jumper/jumper.power_spin_feet/2026-10-17_10-33-53/`):
++observation 406, action 20, every observed term deployable, the `HOME` pose matching; the ONNX
++within 1.91e-06 of the torch policy on export's 8 random observations and 1.79e-06 over a
++1199-step replay rollout. `NONFOOT_ON_GROUND_WEIGHT` is -8, as it trained (its last 50 iterations
++on native MuJoCo, which the task does not record: `--backend native` on the command line).
++`deploy/crabcraft.manifests.json`'s notes for `power_spin` measure it. The bundle rebuilt from the
++manifest (`scripts/deploy.py --manifests deploy/crabcraft.manifests.json --allow-incomplete`; 187
++tests; `--check-reference` worst 0.000e+00, "this host matches the reference") differs from the one
++before in `power_spin.onnx` alone, `controller.toml` unchanged, and through it the 24 trials of the
++table above come out to the last digit.
++
++It meets the floor (22%, under the 25% aimed at and the 33% asked) and the speed through the
++controller (2.270 and 2.282 rev/s against the 2.25 asked), within the stops, with no fall and none
++in `safe`. It does not reach 2.20 rev/s at the 0.4 test as that test has always run (2.147;
++`model_5800` 2.154), which takes most of that from legs gripping each other rather than from the
++floor; on a slippery floor alone it spins 2.241. `sp-sa`'s `model_5800` stays reproducible:
++`NONFOOT_ON_GROUND_WEIGHT` back at 0. The checkpoints, with the runs' logs, are on the Mac under the
++worktree's ignored `out/feet/runs/` and on `legion` under `~/crabcraft-train/runs/ft-a/`, `ft-b/`,
++`ft-n5800/` and `ft-nb6100/`; none is committed.
++
++**The review** (the worktree's ignored `out/review/`): `review_feet_realtime.mp4` and
++`review_feet_quarter.mp4` (2 s to 4 s after the handover at a quarter speed), `model_5800` and
++`ft-nb6100`'s 6150 side by side through the controller, the camera beside the robot 1 degree above
++the floor, each caption with the turns so far and the share of ticks with a non-foot part on the
++floor, and a red bar while one is; `review_feet_sheet.png`, a frame every 1/16 s from 2.0 s, red
++where a part is on the floor (7 of 16 frames for `model_5800`, 4 of 16 for the new one).
++
++## The 720 sticks its landing
++
++`rs-720u`'s `model_14800` turns two turns in the air and comes to rest facing 60 to 68 degrees
++past where it started: 780 degrees round from the policy's start through the bundle's
++controller from standing, 788 walking. A breaker's 720 lands facing the way it took off. This
++section measured where the extra turn comes from and trained six runs to take it out. The
++fourth, `st-720g`, brought the rest to 738 and 736 degrees with its ground turn aimed too high;
++the sixth, `st-720i`, trained on from it with the ground turn aimed at 11 degrees and the rest
++held nearer `HOME`. Its `model_18500`, on controller trials and environment seeds not used to
++choose it, comes to rest 724.1 and 719.2 degrees round from standing and walking (704.8 to
++733.9), walks again 0.43 s after the switch, passes everything else the 720 is held to, and
++ships ("What ships").
++
++### The heading
++
++Where the body faces: the yaw of its x axis projected on the floor, unwrapped step by step,
++counter-clockwise positive, from where it faced at the go (the policy's first step).
++`tools/eval_calm.py` reports it at its hand-back moment (`settled_after_go_s`) as
++`heading_at_rest_deg`, split at the jump command's takeoff and touchdown into the turn before
++the takeoff, in the air and after the touchdown, beside the integrated air turn (`turn_air_deg`)
++the other tables give. The jump command (`power_jumpspin/mdp/commands.py`) tracks the same
++heading for the rewards below: its value at the go (or at the spawn, for a reference-state
++spawn), and latched at the jump's own takeoff and touchdown. The actor's observation (406) and
++the critic's are unchanged.
++
++### Where the extra turn is
++
++`model_14800`, from the handover (`--hold 0.05 1.0 --pose-offset 0.1`, the targets clamped at the
++stops), and through the bundle's controller (crabcraft's `jumper_sim.Host`, 12 trials from
++standing and 12 walking, pressed again at 3.7 s); degrees, mean (min to max):
++
++| where | heading at rest | before the takeoff | in the air | after the touchdown | air turn, integrated |
++|---|---|---|---|---|---|
++| bundle, standing | **780.3** (770.1 to 791.7) | 80.2 | 693.2 | 6.9 | 727.0 (719.5 to 736.9) |
++| bundle, walking | **788.2** (772.3 to 804.1) | 79.8 | 701.8 | 6.6 | 733.1 (719.1 to 743.5) |
++| env, DR off 16, seed 5 | 785.0 (772.1 to 794.3) | 79.8 | 705.1 | 0.1 | |
++| env, DR on 32, seed 5 | 767.6 (649.1 to 802.7) | 73.6 | 689.1 | 4.8 | |
++
++It turns 80 degrees on its feet before it leaves the ground: the go starts it twisting at once,
++a first push lifts it briefly 0.095 s after the go with the body 21 degrees round, and the jump's
++own takeoff comes 0.22 to 0.23 s after the go, 80 degrees round (DR off, held 0.3 s). In the air its heading turns 693 to 702 degrees
++while the integrated world yaw rate gives 727 to 733: the body leans up to 35 degrees as it
++turns, and the yaw rate integrated over a leaning, coning body is not the turn of where it faces.
++After the touchdown it brakes within 10 degrees. Two turns at rest with the 700 degrees in the air
++the game checks (integrated) leave 30 to 40 degrees for the ground, against 87.
++
++### What changed
++
++All in `power_jumpspin/mdp/` and the 720's `env_cfg.py` (`stick_the_landing`), each weight a
++constant, set in this branch to what `st-720i` trained on (`rest_heading` 2.0, the floor at 705
++degrees and -4.0, `ground_turn` 8.0 about 11 degrees, `takeoff_twist` 0):
++
++- `rest_heading`: a tent on the heading at two turns, `STICK_HEADING_WIDTH` (90 degrees) either
++  side, paid every step once the jump has landed, ramped in over 0.2 s, HOME spawns only;
++- `landed_turn_short`: the integrated air turn short of `AIR_TURN_FLOOR`, up to 20 degrees short,
++  charged while the jump stands, so that the heading is not bought with less turn in the air;
++- `takeoff_twist`: the heading turned before the takeoff, charged;
++- `ground_turn`: a tent on the heading turned on the ground alone, before the takeoff and after
++  the touchdown, at `GROUND_TURN_TARGET` (11 degrees; 30 for `st-720g`), `GROUND_TURN_WIDTH` (60)
++  either side;
++- the rest near `HOME` ("The 720 at rest", `calm_target_excess`): each raw action beyond 0.25 of
++  `HOME`, squared and summed, at -10.0 a second, where `rs-720u` and `st-720g` had -2.0 beyond 0.35.
++
++`tools/cem_takeoff.py` searches an open-loop offset added to a policy's targets through its
++takeoff, piecewise linear in the time since the go, scored on the heading at rest and the air
++turn; `tools/eval_takeoff_offset.py` measures one over many handovers; `tools/distill_rest.py
++--takeoff-offset` distils the policy plus the offset into its actor (DAgger), the rest teacher off.
++
++### How it got there
++
++Six runs through the GPU queue, `warp:cuda`, 4096 environments, the actor's noise floored first:
++
++| run | queue job | GPU | commit | from | iterations | wall | reward | noise |
++|---|---|---|---|---|---|---|---|---|
++| `st-720a` | 20261017-084940-stick-st720a | `worv-worker-02`, RTX 5080 | 4502748 (`rest_heading` 4.0, floor 715 at -4.0) | `model_14800`, noise 0.1 | 14800 to 17799 | 3694 s | 61.93 | 0.08 |
++| `st-720b` | 20261017-084941-stick-st720b | `legion`, RTX 5090 Laptop | 02f1a87 (and `takeoff_twist` -2.0) | `model_14800`, noise 0.15 | 14800 to 15289, stopped by hand | 1742 s | 62.46 | 0.08 |
++| `st-720s` | 20261017-091808-stick-st720c | `legion` | 8430139 (`rest_heading` 8.0, floor 720 at -10.0) | `dst-s1`, noise 0.1 | 14800 to 15592, stopped by hand | 1548 s | 58.45 | 0.10 |
++| `st-720g` | 20261017-103253-stick-st720g | `worv-worker-02` | 8fe64f4 (`ground_turn` 8.0 at 30 degrees, `rest_heading` 2.0, floor 705 at -4.0) | `dst-s1`, noise 0.1 | 14800 to 18799 | 5003 s | 79.79 | 0.09 |
++| `st-720h` | 20261017-124022-stick-st720h | `worv-worker-02` | fffef1a (`ground_turn` at 11 degrees) | `st-720g`'s `model_18799`, noise 0.1 | 18799 to 22798 | 5010 s | 82.89 | 0.09 |
++| **`st-720i`** | 20261017-124457-stick-st720i | `legion` | 4da0748 (and the rest excess at -10.0 beyond 0.25) | `st-720g`'s `model_18100`, noise 0.1 | 18100 to 20899 | 5372 s | 78.08 | 0.09 |
++
++`st-720a`, `st-720g`, `st-720h` and `st-720i` exited 0; the other two were stopped once their
++direction was clear (below). `st-720s` ran under the queue id of the job it replaced before it was claimed. The
++branches are `exp/crabcraft-720-stick-twist`, `-w8`, `-ground`, `-ground11` and `-ground11r`.
++
++Heading at rest from the handover, DR off, 16 environments, seed 5, degrees:
++
++| checkpoint | heading at rest, mean (min to max) | before the takeoff | air, integrated | after the touchdown | worst joint from `HOME`, rad |
++|---|---|---|---|---|---|
++| `model_14800` | 785.0 (772.1 to 794.3) | 79.8 | 730 to 737 | 0.1 | 0.147 |
++| `st-720a` 15750 | 768.1 (745.2 to 779.9) | 74.0 | 722.2 | -2.7 | 0.164 |
++| `st-720a` 17799 | 775.7 (755.2 to 798.8) | 78.0 | 724.6 | -0.4 | 0.171 |
++| `st-720b` 15150 | 774.7 (753.4 to 794.3) | 81.6 | 719.9 | 3.3 | 0.150 |
++| teacher: `model_14800` and the CEM's offset | 738.6 (717.5 to 786.9) | 61.2 | 730.3 | -14.1 | 0.147 |
++| `dst-s1` | 740.8 (713.8 to 764.4) | 59.2 | 735.6 | -14.7 | 0.147 |
++| `st-720s` 15450 | 770.1 (730.8 to 787.1) | 66.9 | 743.9 | -5.3 | 0.211 |
++| `st-720g` 15400 | 733.6 (714.5 to 746.3) | 65.8 | 727.0 | -31.1 | 0.342 |
++| `st-720g` 16300 | 733.6 (715.8 to 749.3) | 69.1 | 720.8 | -31.2 | 0.232 |
++| **`st-720g` 18100** | 746.3 (734.4 to 753.6) | 72.7 | 734.1 | -40.1 | 0.222 |
++| `st-720g` 18700 | 749.6 (737.4 to 763.7) | 77.2 | 739.4 | -41.6 | 0.216 |
++| **`st-720i` 18500** | 735.0 (722.2 to 748.9) | 75.6 | 733.5 | -50.8 | 0.158 |
++
++**Paid for the heading at rest, PPO bought it in the air.** `st-720a` brought the rest from 785
++to 768 in its first 950 iterations, 6 degrees of it before the takeoff and the rest with less turn
++in the air, down to the floor; then it stalled and drifted back, 775.7 at its last checkpoint.
++A radian less in the air is 0.95 radian less heading, and `landed_turn`'s tent gives up only 1.27
++a second a radian for it: the cheapest part of the turn to give up is the part the game checks.
++Charging the turn before the takeoff (`st-720b`) moved nothing in 490 iterations.
++
++**A teacher showed the ground.** Open-loop offsets on the J0 and J1 targets through the first
++0.26 s after the go (`tools/cem_takeoff.py`, 20 generations of 64, one handover each) found a
++takeoff that turns 61 degrees on the feet instead of 80 and lands braking 14 degrees back, the air
++turn kept (730 integrated): the last generation's mean rests at 738.6 degrees over 16 handovers
++(the table). Single handovers reached 721 to 726, which did not hold over others; 16 more
++generations of 16 candidates scored over 4 handovers each brought the mean to 734.4 over 16, but
++its student fell in one of 32 flights with randomisation and landed another after 229 degrees of
++air turn, and was not used. Distilled into the actor (`dst-s1`, four DAgger rounds of 30 epochs, 64 environments with the
++training's randomisation), the first teacher rests at 740.8 without randomisation, and with it 2
++of 32 flights fell.
++
++**A steep floor raised the air turn.** `st-720s`, from `dst-s1` with the floor at 720 degrees and
++-10.0 a radian, kept the turn before the takeoff at 66 to 67 but raised the air turn to 738 to 748
++without randomisation within 300 to 650 iterations, and lost the landing's brake: the randomised flights
++turn 15 to 20 degrees less in the air, and to keep their low tail over the floor the whole
++distribution went up.
++
++**Paid for the ground alone** (`st-720g`), the air turn left to `landed_turn`, it kept the
++teacher's ground and deepened the brake, 30 to 42 degrees back after the touchdown, while PPO took
++back the falls: 32 of 32 upright with randomisation by its first checkpoint. Its ground turn came
++to 30 to 43 degrees from iteration 15700 on. What the target had been set from was wrong: it
++assumed two turns of integrated air turn, 686 degrees of heading at `model_14800`'s ratio (both
++policies' heading in the air is 0.95 to 0.97 of the integrated turn), but without randomisation
++and through the controller its air turn runs 721 to 743 integrated, over the tent's peak; with
++randomisation, which training sees, it centres on 710. So it rests 734 to 761 degrees round
++without randomisation, and its worst joint is 0.34 rad from `HOME` until iteration 15400 (0.30 at
++15700), inside 0.25 from 16000 on.
++Through the controller, 6 trials standing and 6 walking each: 752 and 744 at 15700, 759 and 745
++at 16300 (12 each), 753 and 735 at 16900, 742 and 740 at 17200, **734 and 740 at 18100**. The
++environment's handover and the controller's disagreed by up to 25 degrees for the same checkpoint
++mid-run (16300: 733.6 against 758.9 from standing), less by the end.
++
++### What `st-720g` reached
++
++`st-720g`'s `model_18100`, chosen as the checkpoint whose 12 trials of each start came nearest two
++turns through the controller. Through the bundle's controller (`deploy.py`'s v5 bundle with this
++ONNX in the 720's mode, the ONNX within 4.89e-06 of the torch policy on export's 8 random observations), 12 trials from standing and
++12 walking, pressed at 3.7 s for the rest and at Robot Mode's 1.4 s for the hand-back:
++
++| policy | start | heading at rest | before the takeoff | in the air | after the touchdown | air turn, integrated | rise | tilt, largest | at the 1.4 s press: tilt, worst joint | walking again after the switch | heading 1.5 s after the press |
++|---|---|---|---|---|---|---|---|---|---|---|---|
++| `model_14800` | standing | 780.3 (770.1 to 791.7) | 80.2 | 693.2 | 6.9 | 727.0 (719.5 to 736.9) | 0.356 to 0.366 m | 33.6 | 0.82, 0.147 rad | 0.44 s | 779.8 |
++| `model_14800` | walking | 788.2 (772.3 to 804.1) | 79.8 | 701.8 | 6.6 | 733.1 (719.1 to 743.5) | 0.349 to 0.373 m | 35.0 | 0.83, 0.147 rad | 0.44 s | 787.7 |
++| `model_18100` | standing | **738.2** (726.2 to 762.6) | 77.0 | 699.4 | -38.2 | 733.3 (725.5 to 750.8) | 0.386 to 0.393 m | 30.9 | 1.60, 0.222 rad (`RR_J1`) | **0.645 s** | 741.0 |
++| `model_18100` | walking | **736.2** (723.2 to 749.4) | 74.7 | 702.9 | -41.4 | 731.9 (714.3 to 749.4) | 0.383 to 0.396 m | 34.3 | 1.60, 0.222 rad | **0.645 s** | 739.0 |
++
++Every trial upright, none in `safe`, every target within the stops (3.48 rad at most), at rest
++1.035 to 1.15 s after the handover; two standing trials bounced over 1 cm. The hand-back's ramp
++turns it 3 degrees more. Against the acceptance (mean 720 +- 10, every trial within 25): the means
++are 18 and 16 past, the largest 43 and 29.
++
++In its environment, seeds 303 and 404 (not used to choose), from the handover as above:
++
++| policy | seed | DR | upright | turn in the air, mean (min to max) | apex rise | tilt, largest | heading at rest, mean (min to max) |
++|---|---|---|---|---|---|---|---|
++| `model_14800` | 303 | off | 16 of 16 | 732.2 (727.0 to 738.0) | 0.342 m | 36.4 | 787.2 (779.0 to 797.1) |
++| `model_14800` | 303 | on | 32 of 32 | 711.1 (589.0 to 766.5) | 0.345 m | 41.1 | 762.8 (647.9 to 812.1) |
++| `model_14800` | 404 | off | 16 of 16 | 731.7 (720.1 to 741.7) | 0.342 m | 36.6 | 787.9 (779.4 to 797.2) |
++| `model_14800` | 404 | on | 32 of 32 | 715.6 (612.1 to 755.9) | 0.339 m | 47.2 | 770.2 (682.2 to 812.9) |
++| `model_18100` | 303 | off | 16 of 16 | 737.4 (726.3 to 746.9) | 0.367 m | 33.8 | 748.3 (730.2 to 764.5) |
++| `model_18100` | 303 | on | 32 of 32 | 710.7 (668.9 to 739.5) | 0.373 m | 41.7 | 722.4 (674.0 to 759.5) |
++| `model_18100` | 404 | off | 16 of 16 | 735.3 (718.8 to 742.8) | 0.365 m | 34.7 | 749.2 (735.2 to 769.7) |
++| `model_18100` | 404 | on | 32 of 32 | 710.2 (654.7 to 743.8) | 0.373 m | 41.2 | 729.6 (678.8 to 760.8) |
++
++`tools/eval_calm.py` as "The 720 at rest" ran it (held 0.3 s; DR off 4, on 16), seeds 303 and
++404, `model_14800`'s in brackets: settled 1.11 s after the go without randomisation and 1.25 at the
++latest with it (1.035 and 1.315), its tilt at rest 1.57 and 2.05 at the worst (0.81 and 1.39), its
++worst joint 0.222 and 0.237 rad from `HOME` (0.147 and 0.163). With randomisation, from the
++handover held 0.05 to 1.0 s, its heading at rest is 20 to 26 degrees nearer two turns than
++without.
++
++### Why `st-720g` stopped there
++
++Not the spread: through the controller a start's trials lie within 37 degrees of each other, the
++24 within a 40-degree band, which two turns +- 25 would hold if centred, and nothing in the actor
++needs a heading for that. The ground turn's target was set for an air turn of two turns, and
++without randomisation the air turn runs 10 to 20 degrees over it, so 30 degrees on the ground
++leaves the rest 15 to 20 degrees past two turns. `exp/crabcraft-720-stick-ground11` (fffef1a) is
++`st-720g`'s config with the target at 11 degrees, the one change the measurements asked for
++("The ground at 11 degrees"). The walk back is the rest's distance from `HOME` (0.222 rad against
++0.147), which the ramp has to undo: the controller slides the setpoint to locomotion's `HOME`
++over `mode_switch_ramp_s` (1.0 s) and hands over once every joint is within `pose_reach_tol`
++(0.10 rad) of it, so a rest 0.222 rad out walks again 0.645 s after the switch and one 0.147 out
++0.44 s after it.
++
++### The ground at 11 degrees
++
++Two runs at once (the table above): `st-720h` on `exp/crabcraft-720-stick-ground11` from
++`model_18799`, and `st-720i` on `exp/crabcraft-720-stick-ground11r`, which also holds the rest
++nearer `HOME`, from `model_18100`. `model_18100` rests with its rear right `J1` 0.42 action units
++from `HOME` (0.21 rad of target), past the 0.35 margin by 0.07, which -2.0 charges 0.01 a second;
++-10.0 beyond 0.25 charges that rest 0.8 a second and `model_14800`'s (0.29 at the most) 0.03.
++
++Every checkpoint each run saved, every 50 iterations (81 of `st-720h`, 57 of `st-720i`), went
++through the bundle's controller as the selection set below has it: 12 trials from standing and 12
++walking pressed at 3.7 s, the same 24 pressed at 1.4 s. Some of them (degrees, seconds):
++
++| run | checkpoint | heading at rest, standing / walking | the 24, min to max | after the touchdown | at the 1.4 s press: tilt, worst joint (rad) | walking again |
++|---|---|---|---|---|---|---|
++| `st-720h` | 18800 | 751.7 / 743.9 | 730.7 to 766.1 | -42.8 | 1.87, 0.221 | 0.645 |
++| `st-720h` | 19150 | 720.4 / 720.1 | 697.6 to 742.6 | -52.6 | 1.64, 0.190 | 0.575 |
++| `st-720h` | 19500 | 722.5 / 714.6 | 692.8 to 733.6 | -61.0 | 2.20, 0.227 | 0.660 |
++| `st-720h` | 20000 | 706.7 / 719.5 | 695.4 to 734.6 | -62.9 | 1.73, 0.254 | 0.660 |
++| `st-720h` | 21000 | 705.1 / 727.9 | 687.6 to 750.7 | -62.7 | 2.22, 0.308 | 0.725 |
++| `st-720h` | 22000 | 719.7 / 720.9 | 700.4 to 753.5 | -62.9 | 2.48, 0.299 | 0.705 |
++| `st-720h` | 22798 | 731.7 / 721.3 | 683.3 to 744.9 | -61.7 | 1.91, 0.277 | 0.670 |
++| `st-720i` | 18100 | 733.8 / 740.9 | 719.1 to 765.7 | -38.7 | 1.59, 0.221 | 0.645 |
++| `st-720i` | 18300 | 725.5 / 730.1 | 693.7 to 752.1 | -46.2 | 1.02, 0.164 | 0.490 |
++| `st-720i` | **18500** | 723.4 / 722.8 | 699.7 to 753.1 | -52.7 | 1.27, 0.158 | 0.430 |
++| `st-720i` | 19000 | 731.2 / 722.8 | 679.9 to 751.2 | -53.8 | 1.56, 0.167 | 0.450 |
++| `st-720i` | 19500 | 723.2 / 728.4 | 684.9 to 742.9 | -62.2 | 1.45, 0.160 | 0.425 |
++| `st-720i` | 20000 | 697.4 / 717.8 | 679.1 to 747.8 | -56.2 | 1.49, 0.162 | 0.465 |
++| `st-720i` | 20500 | 702.4 / 708.4 | 679.8 to 725.2 | -58.8 | 1.94, 0.171 | 0.450 |
++| `st-720i` | 20899 | 726.2 / 720.0 | 684.1 to 743.8 | -62.2 | 1.60, 0.164 | 0.455 |
++
++Both brought the rest to two turns within 400 iterations: the brake after the touchdown deepened
++from 40 degrees to 53 to 64, while the turn before the takeoff stayed at 70 to 77. Without the
++tighter rest (`st-720h`) the rest moved away from `HOME` with the deeper brake, 0.19 rad at 19150
++and 0.25 to 0.33 from 20000 on, and the walk back with it, 0.66 to 0.74 s; with it (`st-720i`)
++the worst joint stayed at 0.15 to 0.19 rad and the walk back at 0.39 to 0.49 s from iteration
++18300 on. The mean of a start's 12 trials moved 10 degrees and more between checkpoints 50
++iterations apart (679 to 740 for `st-720i`'s standing start). What stops a checkpoint now is the
++spread, which "Why `st-720g` stopped there" found small: over 72 trials (below) the walking
++start's standard deviation is 10 to 15 degrees at the best checkpoints and 18 to 26 for most of
++`st-720i` after iteration 19000, the standing start's 5 to 9 at the best, so a few trials in a
++hundred lie more than 25 degrees from their checkpoint's own mean.
++
++### Choosing `model_18500`
++
++The selection set: the bundle rebuilt at this branch (`deploy.py --manifests
++deploy/crabcraft.manifests.json --allow-incomplete`; `--check-reference`: observation worst 0,
++targets worst 2.235e-08, "this host matches the reference") with the checkpoint's ONNX in the
++720's mode, trials 0 to 11 from standing and walking at both presses for every checkpoint; trials
++12 to 23 and 36 to 47 more, pressed at 3.7 s, for the 22 checkpoints whose first 24 passed
++everything but the heading with room (walking again by 0.59 s, the 1.4 s press within 1.9 degrees
++of level and 0.24 rad of `HOME`, every flight at least 705 degrees in the air, 0.35 m of rise, 39
++degrees of tilt at most, nothing past the stops) and rested within 8 degrees of two turns on
++average; and `eval_calm` at seed 5, DR off 16 and DR on 32, from the handover held 0.05 to 1.0 s.
++The rebuilt bundle gives `model_14800` and `model_18100` the same trials 0 to 11 as the v5 bundle
++above, to the last digit. Five checkpoints had one of their 72 trials past 720 +- 25, none fewer:
++
++| checkpoint | 72 trials, mean | standing, sd | walking, sd | walking again | at the 1.4 s press: tilt, worst joint |
++|---|---|---|---|---|---|
++| `st-720h` 19150 | 720.1 | 5.0 | 13.7 | 0.575 s | 1.64, 0.190 rad |
++| `st-720h` 19750 | 716.8 | 6.3 | 10.3 | 0.660 s | 1.99, 0.240 rad |
++| **`st-720i` 18500** | 723.1 | 7.3 | 12.7 | 0.430 s | 1.27, 0.158 rad |
++| `st-720i` 20850 | 718.6 | 8.7 | 15.0 | 0.435 s | 1.68, 0.166 rad |
++| `st-720i` 20899 | 720.4 | 8.8 | 13.3 | 0.455 s | 1.60, 0.164 rad |
++
++`model_18500` has the smallest walking spread of the four that walk back in time and the most room
++on everything else. Taking each start's 72-trial mean and spread as normal, 12 fresh trials of
++each would all fall within 25 degrees about half the time for it (0.50), 0.42 for 19150 and 0.44
++for 20899. On the whole selection set (degrees):
++
++| policy | standing, 36 trials: mean (sd, min to max) | walking, 36 trials | past 720 +- 25, of 72 | `eval_calm` seed 5, heading at rest: DR off / on |
++|---|---|---|---|---|
++| `model_14800` | 785.5 (9.5, 759.4 to 802.7) | 790.3 (9.4, 767.8 to 804.1) | 72 | 785.0 / 767.6 |
++| `model_18100` | 738.2 (8.1, 726.2 to 762.6) | 739.7 (10.4, 717.4 to 764.4) | 17 | 746.3 / 725.3 |
++| `model_18500` | 723.6 (7.3, 708.3 to 738.2) | 722.6 (12.7, 699.7 to 753.1) | 1 | 735.0 / 719.8 |
++
++### What ships
++
++`st-720i`'s `model_18500`, measured on what chose nothing: through the same controller, trials 24
++to 35 from standing and walking (a stand of 2.34 to 2.73 s before the switch), pressed at 3.7 s
++for the rest and at Robot Mode's 1.4 s for the hand-back, and the environment at seeds 606 and
++707. `model_14800` and `model_18100` on the same:
++
++| policy | start | heading at rest | before the takeoff | in the air | after the touchdown | air turn, integrated | rise | tilt, largest | at the 1.4 s press: tilt, worst joint | walking again after the switch | heading 1.5 s after the press |
++|---|---|---|---|---|---|---|---|---|---|---|---|
++| `model_14800` | standing | 779.7 (768.6 to 790.2) | 80.4 | 691.8 | 7.4 | 724.9 (709.2 to 735.4) | 0.361 to 0.371 m | 34.3 | 0.82, 0.147 rad | 0.44 s | 779.2 |
++| `model_14800` | walking | 788.8 (775.7 to 803.1) | 79.8 | 703.7 | 5.3 | 735.3 (723.2 to 750.1) | 0.352 to 0.374 m | 41.3 | 0.82, 0.147 rad | 0.44 s | 788.2 |
++| `model_18100` | standing | 744.6 (733.2 to 761.4) | 75.1 | 709.9 | -40.4 | 743.1 (731.2 to 759.0) | 0.385 to 0.395 m | 32.5 | 1.59, 0.222 rad | 0.645 s | 747.3 |
++| `model_18100` | walking | 743.0 (724.0 to 759.9) | 75.8 | 707.2 | -40.0 | 736.2 (719.9 to 748.6) | 0.380 to 0.396 m | 34.3 | 1.59, 0.222 rad | 0.645 s | 745.8 |
++| **`model_18500`** | standing | **724.1** (710.1 to 733.9) | 77.0 | 700.4 | -53.2 | 733.0 (728.8 to 742.2) | 0.385 to 0.399 m | 30.0 | 1.25, 0.158 rad (`RM_J0`) | **0.43 s** | 726.7 |
++| **`model_18500`** | walking | **719.2** (704.8 to 727.4) | 74.7 | 696.9 | -52.5 | 724.5 (709.0 to 736.0) | 0.385 to 0.395 m | 34.1 | 1.25, 0.158 rad | **0.43 s** | 721.8 |
++
++Every trial upright, none in `safe`, every target within the stops (3.44 rad at most), at rest
++1.03 to 1.15 s after the handover. Against the acceptance: the 24 rest 721.7 degrees round on
++average (720 +- 10), each between 704.8 and 733.9 (720 +- 25); every flight at least 709.0 degrees
++in the air and 0.385 m of rise, 34.1 degrees of tilt at most; at the 1.4 s press 1.26 degrees off
++level at the most and 0.158 rad from `HOME`; walking again 0.43 s after the switch. Ten of the 24
++bounced 1.0 to 1.4 cm 0.15 to 0.235 s after the touchdown (`model_14800`: three, 1.1 to 1.3 cm). A
++joint pushes into its stop in 0.8% of joint-steps over the 1.5 s after the handover (0.6% to 1.0%
++per trial) at a median 0.26 N*m, against `model_14800`'s 0.4% at 0.305. `model_18100`, chosen on
++trials 0 to 11, rests 6 to 7 degrees further round on these.
++
++In its environment, seeds 606 and 707, from the handover as above:
++
++| policy | seed | DR | upright | turn in the air, mean (min to max) | apex rise | tilt, largest | heading at rest, mean (min to max) |
++|---|---|---|---|---|---|---|---|
++| `model_14800` | 606 | off | 16 of 16 | 731.1 (710.3 to 749.3) | 0.345 m | 35.5 | 789.0 (778.3 to 801.1) |
++| `model_14800` | 606 | on | 32 of 32 | 714.1 (653.1 to 754.2) | 0.344 m | 40.8 | 769.5 (699.1 to 805.6) |
++| `model_14800` | 707 | off | 16 of 16 | 731.8 (723.9 to 741.1) | 0.344 m | 36.2 | 787.4 (772.7 to 797.2) |
++| `model_14800` | 707 | on | 32 of 32 | 709.2 (625.5 to 748.6) | 0.345 m | 40.9 | 761.4 (625.9 to 805.3) |
++| `model_18100` | 606 | off | 16 of 16 | 739.2 (725.9 to 745.6) | 0.365 m | 34.7 | 749.5 (728.9 to 756.4) |
++| `model_18100` | 606 | on | 32 of 32 | 715.9 (642.0 to 773.5) | 0.366 m | 48.0 | 732.4 (692.4 to 787.3) |
++| `model_18100` | 707 | off | 16 of 16 | 736.9 (718.9 to 745.2) | 0.369 m | 35.4 | 748.8 (724.9 to 768.2) |
++| `model_18100` | 707 | on | 32 of 32 | 711.5 (647.2 to 747.1) | 0.371 m | 42.1 | 727.4 (661.8 to 764.8) |
++| `model_18500` | 606 | off | 16 of 16 | 730.9 (712.9 to 741.7) | 0.378 m | 33.7 | 734.1 (704.4 to 748.7) |
++| `model_18500` | 606 | on | 32 of 32 | 714.1 (676.8 to 749.1) | 0.372 m | 43.3 | 719.2 (675.2 to 780.4) |
++| `model_18500` | 707 | off | 16 of 16 | 734.0 (716.3 to 743.0) | 0.380 m | 34.5 | 736.0 (709.8 to 750.8) |
++| `model_18500` | 707 | on | 32 of 32 | 709.6 (636.7 to 754.4) | 0.375 m | 42.6 | 713.2 (657.5 to 755.6) |
++
++`tools/eval_calm.py` as "The 720 at rest" ran it (held 0.3 s; DR off 4, on 16), seeds 606 and 707,
++`model_14800`'s in brackets: settled 1.025 s after the go without randomisation and 1.15 at the
++latest with it (1.035 and 1.11), its tilt at rest 1.24 and 1.57 at the worst (0.81 and 1.41), its
++worst joint 0.158 and 0.172 rad from `HOME` (0.147 and 0.161). Against the acceptance: 16 of 16 and
++32 of 32 upright at both seeds, the air turn within 2.2 degrees of `model_14800`'s on the same
++seeds (-0.2 to +2.2). The environment's heading at rest runs 12 to 14 degrees past the
++controller's 721.7 without randomisation (734.1 and 736.0) and centres near two turns with it
++(719.2 and 713.2), as `st-720g`'s did.
++
++Exported as "Shipped" describes, the checkpoint copied first under
++`logs/jumper/jumper.power_jumpspin720/2026-10-17_12-45-28/`: ONNX against torch 3.76e-06 on
++export's 8 random observations, 4.05e-06 over a 799-step replay rollout; the ONNX is the one the
++trials above swapped in, byte for byte. The bundle rebuilt with it (`--check-reference`:
++observation and targets worst 0.000e+00, "this host matches the reference") gives the 48
++held-out trials above to the last digit through its own 720 mode. The checkpoint is not
++committed; the export's `README.md` names it by the run.
++
++Review media, in the worktree's ignored `out/review/720_stick/`:
++`rs-720u_14800_vs_st-720i_18500_1x.mp4` and `_4x.mp4` (side by side through the rebuilt bundle's
++controller from standing, a fixed camera in front of the robot as it stood at the handover, a red
++arrow on the floor the way it faced then and a blue one on the body the way it faces, from the
++handover to 1 s after the later rest), and `_rest.png` (both at rest: 788.1 and 718.3 degrees
++round); `rs-720u_14800_vs_st-720g_18100_*` the same for `model_18100` (788.1 and 732.9). The
++checkpoints and the students are on the Mac under the worktree's ignored `out/stick/`, and on
++`legion` under `~/crabcraft-train/runs/st-720a/`, `st-720b/`, `st-720s/`, `st-720g/`, `st-720h/`,
++`st-720i/` and `~/crabcraft-train/stick/ckpt/`.
++
++## The bundle that keeps its feet and sticks the 720
++
++The `crabcraft` bundle with the spin on its feet (`ft-nb6100` `model_6150`, "The spin on its feet")
++and the 720 that sticks its landing (`st-720i` `model_18500`, "The 720 sticks its landing"), with
++the back flip and the six-step as in "The bundle within the stops", and still no `target_margin`
++anywhere. Each export's ONNX is its branch's byte for byte (md5 `dccfab6e...` for the spin,
++`e84850a7...` for the 720). `scripts/deploy.py --manifests deploy/crabcraft.manifests.json
++--allow-incomplete --bundle out/v8`; `deploy.py --check-reference out/v8/crabcraft`: 24 frames, 18
++inferences, observation and targets worst 0.000e+00, "this host matches the reference". `cargo test
++--no-default-features` in `deploy/fsm`: 187 passed.
++
++Measured with crabcraft's `jumper_sim.Host` through that bundle's controller as the two sections
++measured their own: the spin held 6 s from standing and walking at 0.28 m/s, trials 0 to 11; the 720
++on the trials that chose nothing, 24 to 35, pressed at 3.7 s for the rest and at Robot Mode's 1.4 s
++for the hand-back; the back flip and the six-step 6 and 6 as before. "Heading at rest" is the body's
++heading on the floor, unwrapped, from the policy's first step to the moment `eval_calm`'s hand-back
++test finds it at rest.
++
++| move | start | upright, `safe` | turn | heading at rest | base rise | tilt, largest | at rest after the handover | walking again after the switch | largest target | past a stop |
++|---|---|---|---|---|---|---|---|---|---|---|
++| spin | standing | 12 of 12, 0 | 2.270 (2.239 to 2.301) rev/s | | | 8.3 | | 0.885 to 0.94 s | 2.60 rad | 0 |
++| spin | walking | 12 of 12, 0 | 2.282 (2.239 to 2.303) rev/s | | | 10.3 | | 0.895 to 0.935 s | 2.71 rad | 0 |
++| 720 | standing | 12 of 12, 0 | 733.0 (728.8 to 742.2) in the air | 724.1 (710.1 to 733.9) | 0.393 (0.385 to 0.399) m | 30.0 | 1.125 (1.085 to 1.145) s | 0.43 s | 3.40 rad | 0 |
++| 720 | walking | 12 of 12, 0 | 724.5 (709.0 to 736.0) in the air | 719.2 (704.8 to 727.4) | 0.391 (0.385 to 0.395) m | 34.1 | 1.117 (1.03 to 1.15) s | 0.43 s | 3.44 rad | 0 |
++| back flip | standing | 6 of 6, 0 | 381 (379 to 382) nose-up | | 0.194 m | 178.7 | 0.894 (0.87 to 0.905) s | 0.495 s | 4.35 rad | 1.2e-07 (float32) |
++| back flip | walking | 6 of 6, 0 | 382 (377 to 385) nose-up | | 0.192 (0.188 to 0.196) m | 178.0 | 0.862 (0.855 to 0.87) s | 0.495 s | 4.38 rad | 1.2e-07 (float32) |
++| six-step | standing | 6 of 6, 0 | 357.7 | | | 1.1 | | 5.315 s after the handover, by itself | 2.40 rad | 0 |
++| six-step | walking | 6 of 6, 0 | 357.7 | | | 1.3 | | 5.315 s after the handover, by itself | 2.40 rad | 0 |
++
++Every row is its own section's to the last digit: the spin's and the 720's are "The spin on its
++feet" and "The 720 sticks its landing" (the spin's a calf, a palm or the shell on the floor in 22.7%
++and 20.7% of its ticks), the flip's and the six-step's "The bundle within the stops" (their result
++files are identical). No mode reads another's, and the controller is the same. The spin stopped
++turning 0.14 to 0.345 s after its switch, 63 to 92 degrees on, and 1.5 s after walking took over
++stood 0.78 to 2.12 degrees from level; within 0.17 m of its spot while it spun. The 720 took off
++0.22 to 0.225 s after the handover and landed at 0.735 to 0.755 s, 2.0 degrees from level at most
++0.3 s later (10 of the 24 hopped 1.0 to 1.4 cm once more before they stood); at the 1.4 s press it
++stood 1.24 to 1.26 degrees from level, its largest gait joint 0.157 to 0.158 rad from `HOME`
++(`RM_J0`), 0.096 to 0.097 rad RMS, its heading 0.2 degrees at most from where it came to rest, and
++1.5 s after the press 0.9 degrees and 0.21 rad, as locomotion stands. A joint pushed into its stop
++in 0.8% of the joint-steps over the 1.5 s after the handover, at a median 0.26 N*m.
++
++**On crabcraft's browser core** (`src/robot/sim/core.ts` under Node, MuJoCo WASM, the bundle's
++`controller.wasm`, onnxruntime-web; 12 trials each from standing and walking, the host's own press
++turned off and made at 3.7 s, in processes of 4 trials): the 720 turned 707.3 to 749.0 degrees in
++the air (735.0 and 729.5 on average) at 0.385 to 0.401 m, landed at 0.74 to 0.76 s, was at rest 1.075
++to 1.155 s after the handover within 1.6 degrees of level, and had come to rest 694.9 to 748.4
++degrees round from where it started, 720.5 from standing and 722.7 walking on average; every trial
++upright, none in `safe`. The walking starts spread wider than the standing ones (708.6 to 731.6);
++three of the 24 rest more than 25 degrees from two turns, the furthest 28.4. Robot Mode's press at
++1.4 s comes 0.245 s after the latest rest. Crabcraft's `tools/robot-sim-check.ts` passed, with a
++new check that the 720 comes to rest within 25 degrees of two turns (713.8 and 706.1 from standing
++and walking; the bundle before this one, with `rs-720u`, rests 782.2 and 796.7 in it and fails), and
++its live routine (`--routine-only --routine 10`) ran 10 of 10 clean.
++
 +## Found along the way
 +
 +**Non-foot parts are not frictionless against the floor.** `common/constants.py` gives
@@ -3845,7 +4490,10 @@ index 0000000..3b50847
 +1.79 and 1.87 rev/s. The calf geometry dips below the floor on both (left-middle calf's
 +lowest hull vertex at its 1st percentile: -7.8 mm native, -6.6 mm warp), so the
 +difference is in the force the contact produces, not in whether the leg reaches the
-+floor. Every policy here trained on warp; every number in the tables is native's.
++floor. Every policy here trained on warp; every number in the tables is native's. The cause is
++the number of contact points Warp gives a mesh against the plane, four to native's one, which
++makes a foot on Warp stiff enough to carry what a calf beside it carries on native ("The spin on
++its feet", "Why the charge did not reach it").
 +
 +## Reproduce
 +
@@ -3920,7 +4568,7 @@ index 0000000..3b50847
 +REPO=~/crabcraft-train/jumper-rest-b ~/crabcraft-train/calm/train_calm_repo.sh jumper.power_jumpspin720 2400 rs-720t \
 +    --checkpoint ~/crabcraft-train/rest/ckpt/dst-a_n10.pt                # 600cc68; to model_13447
 +REPO=~/crabcraft-train/jumper-rest-c ~/crabcraft-train/calm/train_calm_repo.sh jumper.power_jumpspin720 2400 rs-720u \
-+    --checkpoint ~/crabcraft-train/rest/ckpt/rs-720t_12700.pt            # 3dd8aa4; model_14800 ships
++    --checkpoint ~/crabcraft-train/rest/ckpt/rs-720t_12700.pt            # 3dd8aa4; model_14800 shipped until st-720i
 +```
 +
 +The spin within the stops resumed `pw-spin-c20L`'s `model_2998` with its noise floored at 0.15, on
@@ -3929,7 +4577,30 @@ index 0000000..3b50847
 +```bash
 +python tools/cap_noise.py pw-spin-c20L/model_2998.pt c20L_2998_std015.pt 10 0.15
 +REPO=~/crabcraft-train/jumper-spin ~/crabcraft-train/calm/train_calm_repo.sh jumper.power_spin_feet 3000 sp-sa \
-+    --checkpoint ~/crabcraft-train/spin/ckpt/c20L_2998_std015.pt     # b541e3b; model_5800 ships
++    --checkpoint ~/crabcraft-train/spin/ckpt/c20L_2998_std015.pt     # b541e3b; model_5800 shipped until ft-nb6100
++```
++
++The 720's stuck landing ("The 720 sticks its landing"): the takeoff offset searched and distilled
++on the Mac, then trained on through the queue on the commits of `exp/crabcraft-720-stick-ground`
++(8fe64f4) and `exp/crabcraft-720-stick-ground11r` (4da0748):
++
++```bash
++PYTHONPATH=. python tools/cem_takeoff.py rs-720u/model_14800.pt cem_j01 --iters 20 --pop 64 \
++    --joints J0J1 --knots 0,0.05,0.10,0.15,0.20 --end 0.26 --seed 1        # cem_j01/best.json
++PYTHONPATH=. python tools/distill_rest.py --task jumpspin720 --checkpoint rs-720u/model_14800.pt \
++    --out dst-s1.pt --envs 64 --rounds 4 --epochs 30 --takeoff-offset cem_j01/best.json --offset-key mu
++python tools/cap_noise.py dst-s1.pt dst-s1_n10.pt 10 0.1
++REPO=~/crabcraft-train/jumper-stick-g ~/crabcraft-train/calm/train_calm_repo.sh jumper.power_jumpspin720 4000 st-720g \
++    --checkpoint ~/crabcraft-train/stick/ckpt/dst-s1_n10.pt              # 8fe64f4; to model_18799
++python tools/cap_noise.py st-720g/model_18799.pt st-720g_18799_n10.pt 10 0.1
++REPO=~/crabcraft-train/jumper-stick-h ~/crabcraft-train/calm/train_calm_repo.sh jumper.power_jumpspin720 4000 st-720h \
++    --checkpoint ~/crabcraft-train/stick/ckpt/st-720g_18799_n10.pt       # fffef1a
++python tools/cap_noise.py st-720g/model_18100.pt st-720g_18100_n10.pt 10 0.1
++REPO=~/crabcraft-train/jumper-stick-i ~/crabcraft-train/calm/train_calm_repo.sh jumper.power_jumpspin720 2800 st-720i \
++    --checkpoint ~/crabcraft-train/stick/ckpt/st-720g_18100_n10.pt       # 4da0748; model_18500 ships
++# the heading at rest and its split, from the handover
++PYTHONPATH=. python tools/eval_calm.py --task jumpspin720 --checkpoint <model_N.pt> --dr off --envs 16 \
++    --hold 0.05 1.0 --pose-offset 0.1 --target-margin 0 --out out/stick/eval
 +```
 +
 +Anywhere else, `scripts/train.py --task jumper.power_spin
@@ -3965,6 +4636,16 @@ index 0000000..3b50847
 +# the spin decoded as the controller does at margin 0, the stops measured over the whole 6 s
 +PYTHONPATH=. python tools/eval_power.py --task spin_feet --checkpoint <model_N.pt> --dr on --envs 32 \
 +    --target-margin 0 --stop-window 6 --out out/spin/eval
++# the spin with a non-foot part's grip on the floor alone at 0.4 ("The spin on its feet")
++PYTHONPATH=. python tools/eval_power.py --task spin_feet --checkpoint <model_N.pt> --dr off --envs 4 \
++    --target-margin 0 --stop-window 6 --floor-friction 0.4 --out out/feet/eval
++# the spin on its feet: Warp from sp-sa's model_5800 (noise floored at 0.15), then native from ft-b's model_6100,
++# NONFOOT_ON_GROUND_WEIGHT -8 (1456d4e), through the queue's train_calm_repo.sh
++python tools/cap_noise.py sp-sa/model_5800.pt sa_5800_std015.pt 10 0.15
++REPO=~/crabcraft-train/jumper-feet-b ~/crabcraft-train/calm/train_calm_repo.sh jumper.power_spin_feet 5000 ft-b \
++    --checkpoint sa_5800_std015.pt                                     # stopped at 6671; model_6100 goes on
++REPO=~/crabcraft-train/jumper-feet-b ~/crabcraft-train/calm/train_calm_repo.sh jumper.power_spin_feet 5000 ft-nb6100 \
++    --checkpoint ftb_6100.pt --backend native --device cpu --num_envs 1024   # 85 min; model_6150 is the candidate
 +```
 diff --git a/docs/CRABCRAFT_SKILLS.md b/docs/CRABCRAFT_SKILLS.md
 new file mode 100644
@@ -8732,10 +9413,10 @@ index 0000000..8a46200
 +]
 diff --git a/tasks/jumper/power_jumpspin/mdp/commands.py b/tasks/jumper/power_jumpspin/mdp/commands.py
 new file mode 100644
-index 0000000..13a9750
+index 0000000..38f4de7
 --- /dev/null
 +++ b/tasks/jumper/power_jumpspin/mdp/commands.py
-@@ -0,0 +1,148 @@
+@@ -0,0 +1,206 @@
 +"""The reference-free jump's command, counting how far the body turns.
 +
 +`jumper.ref_free_jump`'s `RefFreeJumpCommand` already decides whose flight a
@@ -8761,6 +9442,16 @@ index 0000000..13a9750
 +quaternion is unwrapped easily at 200 Hz, but a pitch angle is not an angle a
 +flip passes through continuously -- at 90 degrees nose-up the Euler
 +decomposition swaps branches. The rate is what the IMU measures in any case.
++
++**And the heading, read off it** (the yaw axis only): where the body faces, the
++yaw of its x axis projected on the floor, unwrapped step by step from the spawn,
++and the same at the policy's start -- the go, or the spawn for a reference-state
++spawn, whose go is in the past. A turn integrated from the world yaw rate is not
++the change in where the body faces once the body tilts while it turns: the 720
++leans up to 35 degrees in the air, and `rs-720u`'s `model_14800` lands 727 degrees
++of integrated turn through the bundle's controller with its heading 693 round
++(`docs/CRABCRAFT_POWER.md`, "The 720 sticks its landing"). Where it faces at rest
++is the heading's to say.
 +"""
 +
 +from __future__ import annotations
@@ -8814,6 +9505,17 @@ index 0000000..13a9750
 +        #: settling terms (`calm.py`) are gated on.
 +        self.settle_steps = torch.zeros(n, device=self.device)
 +        self._last_rate = torch.zeros(n, device=self.device)
++        #: The heading (yaw axis only; module docstring): unwrapped since the spawn,
++        #: and at the policy's start; rad, counter-clockwise from above.
++        self.heading = torch.zeros(n, device=self.device)
++        self.start_heading = torch.zeros(n, device=self.device)
++        #: `heading_from_start` at the own flight's latest takeoff, and at the
++        #: jump's own takeoff, latched at its landing.
++        self.takeoff_heading = torch.zeros(n, device=self.device)
++        self.landed_takeoff_heading = torch.zeros(n, device=self.device)
++        #: `heading_from_start` at the jump's own touchdown, latched.
++        self.landed_touchdown_heading = torch.zeros(n, device=self.device)
++        self._last_heading = torch.zeros(n, device=self.device)
 +        self._landed_turn_metric = torch.zeros(n, device=self.device)
 +        self.metrics["landed_turn_deg"] = self._landed_turn_metric
 +
@@ -8824,6 +9526,16 @@ index 0000000..13a9750
 +            return data.root_link_ang_vel_w[:, 2]
 +        return -data.root_link_ang_vel_b[:, 1]
 +
++    def raw_heading(self) -> torch.Tensor:
++        """The yaw of the body's x axis projected on the floor now, rad, in (-pi, pi]."""
++        w, x, y, z = self.robot.data.root_link_quat_w.unbind(dim=1)
++        return torch.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
++
++    @property
++    def heading_from_start(self) -> torch.Tensor:
++        """How far the heading has turned since the policy's start, rad."""
++        return self.heading - self.start_heading
++
 +    def _resample_command(self, env_ids: torch.Tensor) -> None:
 +        super()._resample_command(env_ids)
 +        if self.cfg.reset_share > 0.0:
@@ -8833,7 +9545,9 @@ index 0000000..13a9750
 +                held & pick, torch.zeros_like(self.go_step[env_ids]), self.go_step[env_ids]
 +            )
 +        for t in (self.turn, self.flight_turn, self.landed_turn, self.peak_turn,
-+                  self.settle_steps):
++                  self.settle_steps, self.heading, self.start_heading,
++                  self.takeoff_heading, self.landed_takeoff_heading,
++                  self.landed_touchdown_heading):
 +            t[env_ids] = 0.0
 +        self.could_jump[env_ids] = self.can_jump[env_ids]
 +
@@ -8848,6 +9562,8 @@ index 0000000..13a9750
 +            # Reset path: the spawn state was just written; start the trapezoid
 +            # from its rate.
 +            self._last_rate[env_ids] = self.rate()[env_ids]
++            if self.cfg.axis == "yaw":
++                self._last_heading[env_ids] = self.raw_heading()[env_ids]
 +            return
 +        # Whether the step that just ran was flown -- `in_flight` as the last
 +        # update left it, before this one moves it on.
@@ -8859,6 +9575,16 @@ index 0000000..13a9750
 +        self.turn.add_(step)
 +        self.peak_turn.copy_(torch.maximum(self.peak_turn, self.turn))
 +        self.flight_turn.add_(step * was_flying.float())
++        if self.cfg.axis == "yaw":
++            raw = self.raw_heading()
++            d = raw - self._last_heading
++            self.heading.add_(torch.atan2(torch.sin(d), torch.cos(d)))
++            self._last_heading.copy_(raw)
++            # Up to and including the step the go comes on: the state the policy
++            # first acts on (`handover.py::handover_history`'s moment). A
++            # reference-state spawn's go is in the past and keeps the spawn's.
++            before_go = (self._env.episode_length_buf.float() - 1.0) < self.go_step
++            self.start_heading.copy_(torch.where(before_go, self.heading, self.start_heading))
 +
 +        super()._update_command(env_ids)
 +
@@ -8866,10 +9592,23 @@ index 0000000..13a9750
 +        self.flight_turn.masked_fill_(took_off, 0.0)
 +        jumped = self.landed & ~was_landed
 +        self.landed_turn.copy_(torch.where(jumped, self.flight_turn, self.landed_turn))
++        if self.cfg.axis == "yaw":
++            self.takeoff_heading.copy_(
++                torch.where(took_off, self.heading_from_start, self.takeoff_heading))
++            self.landed_takeoff_heading.copy_(
++                torch.where(jumped, self.takeoff_heading, self.landed_takeoff_heading))
++            self.landed_touchdown_heading.copy_(
++                torch.where(jumped, self.heading_from_start, self.landed_touchdown_heading))
 +        # Never turns false again within an episode: `landed` is latched and the
 +        # time since the go only grows.
 +        self.settle_steps.copy_(torch.where(self.settling, self.settle_steps + 1.0,
 +                                            torch.zeros_like(self.settle_steps)))
++
++    @property
++    def ground_turn(self) -> torch.Tensor:
++        """The heading turned on the ground, rad: from the policy's start to the jump's
++        takeoff, and from its touchdown to now. Meaningful once the jump has landed."""
++        return self.landed_takeoff_heading + self.heading_from_start - self.landed_touchdown_heading
 +
 +    @property
 +    def settling(self) -> torch.Tensor:
@@ -9058,10 +9797,10 @@ index 0000000..2b7c5ed
 +__all__ = ["turn_state"]
 diff --git a/tasks/jumper/power_jumpspin/mdp/rewards.py b/tasks/jumper/power_jumpspin/mdp/rewards.py
 new file mode 100644
-index 0000000..d47216a
+index 0000000..fc64982
 --- /dev/null
 +++ b/tasks/jumper/power_jumpspin/mdp/rewards.py
-@@ -0,0 +1,83 @@
+@@ -0,0 +1,166 @@
 +"""The rotation objective, for the turning jumps.
 +
 +Two terms, the rotation's version of `ref_free_jump`'s `apex_height` and
@@ -9087,6 +9826,21 @@ index 0000000..d47216a
 +
 +Neither pays for turning on the ground. Rotation built up before the takeoff is
 +paid only through what it carries into the air.
++
++**Where it faces at rest** (the 720's): `rest_heading` pays, once the jump has
++landed, for the heading being two turns round from where the policy started --
++a breaker's 720 lands facing the way it took off. `rs-720u`'s `model_14800`
++turned 80 degrees on its feet before its takeoff and came to rest 780 to 788
++degrees round through the bundle's controller. `landed_turn_short` charges an air
++turn under a floor, so that turning less in the air is not how the heading is
++bought, and `takeoff_twist` the heading turned before the takeoff.
++
++`ground_turn` pays for the heading turned on the ground alone -- before the takeoff
++and after the touchdown -- against a target, the air's part left to `landed_turn`.
++Paid for the whole heading, PPO bought it with less turn in the air, the cheapest
++part to give up: a radian less in the air is a radian less of heading, and the air
++turn is paid by `landed_turn`'s tent at 1.27 a second a radian, under any heading
++weight worth having.
 +"""
 +
 +from __future__ import annotations
@@ -9094,6 +9848,8 @@ index 0000000..d47216a
 +import math
 +
 +import torch
++
++from .calm import settle_gate
 +
 +
 +def landed_turn(
@@ -9144,7 +9900,73 @@ index 0000000..d47216a
 +    return (torch.acos(up) - limit).clamp(min=0.0) ** 2
 +
 +
-+__all__ = ["flight_turn_rate", "landed_turn", "tilt_past"]
++def rest_heading(
++    env,
++    command_name: str = "jump",
++    target: float = 4 * math.pi,
++    width: float = math.pi / 2,
++    start_s: float = 0.0,
++    full_s: float = 0.2,
++) -> torch.Tensor:
++    """max(0, 1 - |heading - `target`| / `width`), the heading being the command's
++    `heading_from_start` (rad), paid every step while the jump stands -- landed,
++    no second jump -- and gated from `start_s` after the landing, in full from
++    `full_s` (`calm.py::settle_gate`). A tent, linear on either side of the
++    target: a payment that never charges, so a fall does not escape it, and
++    whose pull does not vanish away from the target as an exponential's does.
++
++    Only the HOME spawns, handed over at their go (`go_step` > 0), are paid: a
++    reference-state spawn starts somewhere along the recording's crouch, and two
++    turns from there is no heading a controller ever asks for."""
++    cmd = env.command_manager.get_term(command_name)
++    tent = (1.0 - (cmd.heading_from_start - target).abs() / width).clamp(min=0.0)
++    paying = (cmd.landed & ~cmd.second_jump & (cmd.go_step > 0.0)).float()
++    return tent * paying * settle_gate(env, command_name, start_s, full_s)
++
++
++def ground_turn(
++    env,
++    command_name: str = "jump",
++    target: float = 0.0,
++    width: float = math.pi / 3,
++    start_s: float = 0.0,
++    full_s: float = 0.2,
++) -> torch.Tensor:
++    """max(0, 1 - |ground turn - `target`| / `width`), the ground turn being the
++    command's `ground_turn` (rad: the heading turned from the policy's start to the
++    jump's takeoff and from its touchdown to now), paid as `rest_heading` is: every
++    step while the jump stands, gated from `start_s` after the landing, the HOME
++    spawns only."""
++    cmd = env.command_manager.get_term(command_name)
++    tent = (1.0 - (cmd.ground_turn - target).abs() / width).clamp(min=0.0)
++    paying = (cmd.landed & ~cmd.second_jump & (cmd.go_step > 0.0)).float()
++    return tent * paying * settle_gate(env, command_name, start_s, full_s)
++
++
++def landed_turn_short(
++    env, command_name: str = "jump", floor: float = 4 * math.pi, max_short: float = 0.35
++) -> torch.Tensor:
++    """How far the jump's latched air turn (`landed_turn`, integrated) fell short of
++    `floor`, rad, up to `max_short`, every step while the jump stands; 0 at or past
++    the floor. Capped so that a weak jump, far short, is charged no more than one
++    just under the floor: charged without a cap, a jump 250 degrees short paid less
++    standing than falling."""
++    cmd = env.command_manager.get_term(command_name)
++    paying = (cmd.landed & ~cmd.second_jump).float()
++    return (floor - cmd.landed_turn).clamp(min=0.0, max=max_short) * paying
++
++
++def takeoff_twist(env, command_name: str = "jump", free: float = 0.0) -> torch.Tensor:
++    """The heading turned from the policy's start to the jump's own takeoff, past
++    `free`, rad (`landed_takeoff_heading`), every step while the jump stands; the
++    HOME spawns only, as `rest_heading`."""
++    cmd = env.command_manager.get_term(command_name)
++    paying = (cmd.landed & ~cmd.second_jump & (cmd.go_step > 0.0)).float()
++    return (cmd.landed_takeoff_heading - free).clamp(min=0.0) * paying
++
++
++__all__ = ["flight_turn_rate", "ground_turn", "landed_turn", "landed_turn_short", "rest_heading",
++           "takeoff_twist", "tilt_past"]
 diff --git a/tasks/jumper/power_jumpspin/mdp/stops.py b/tasks/jumper/power_jumpspin/mdp/stops.py
 new file mode 100644
 index 0000000..428be67
@@ -9417,10 +10239,10 @@ index 0000000..eb1a304
 +)
 diff --git a/tasks/jumper/power_jumpspin720/env_cfg.py b/tasks/jumper/power_jumpspin720/env_cfg.py
 new file mode 100644
-index 0000000..66de77d
+index 0000000..90382a0
 --- /dev/null
 +++ b/tasks/jumper/power_jumpspin720/env_cfg.py
-@@ -0,0 +1,140 @@
+@@ -0,0 +1,243 @@
 +"""jumper.power_jumpspin720 -- jumper.power_jumpspin with the turn capped at two turns.
 +
 +Everything is `jumper.power_jumpspin`'s (its `env_cfg.py` has the design) but the
@@ -9483,10 +10305,23 @@ index 0000000..66de77d
 +distilled (`tools/distill_rest.py`) into a student that ramps its own targets to
 +30% of where it rested, then trained on here -- `rs-720a` on the two rest charges
 +alone, `rs-720t` with `tilt_past` at -200 and `rs-720u`, from `rs-720t`'s
-+`model_12700`, at -600. `rs-720u`'s `model_14800` ships: it rests 0.8 degrees off
-+level, its worst joint 0.15 rad from HOME, turns 727 to 733 degrees in the air
-+through the controller and leans 35 degrees at most there
-+(`docs/CRABCRAFT_POWER.md`, "The 720 at rest").
++`model_12700`, at -600. `rs-720u`'s `model_14800` rests 0.8 degrees off level,
++its worst joint 0.15 rad from HOME, turns 727 to 733 degrees in the air through
++the controller and leans 35 degrees at most there (`docs/CRABCRAFT_POWER.md`,
++"The 720 at rest").
++
++## Facing where it started
++
++`model_14800` comes to rest 780 to 788 degrees round from the policy's start
++through the bundle's controller: it turns 80 degrees on its feet before it leaves
++the ground. `stick_the_landing` pays and charges for two turns at rest -- the
++heading at rest (`rest_heading`), the air turn under a floor (`landed_turn_short`),
++the turn on the ground (`ground_turn`, about 11 degrees); the turn before the
++takeoff (`takeoff_twist`) stays at weight 0 -- and the rest is held nearer HOME
++than before (`REST_EXCESS_*`). `st-720i`, trained on this from `st-720g`'s
++`model_18100`, ships its `model_18500`: through the controller it rests 724 and 719
++degrees round (704.8 to 733.9) and walks again 0.43 s after the switch
++(`docs/CRABCRAFT_POWER.md`, "The 720 sticks its landing").
 +"""
 +
 +from __future__ import annotations
@@ -9516,9 +10351,14 @@ index 0000000..66de77d
 +#: 0.41 and 0.028: 0.8 and 4.3 a second. Its targets ramped from 0.2 s after the
 +#: landing over 0.2 s to 30% of themselves stood it 2.2 degrees off level, its
 +#: worst joint 0.11 rad from HOME, at rest 1.185 s after the go, and charged
-+#: nothing beyond the margin.
-+REST_EXCESS_WEIGHT = -2.0
-+REST_EXCESS_MARGIN = 0.35
++#: nothing beyond the margin. `rs-720u` trained at -2.0 beyond 0.35. `st-720g`'s
++#: `model_18100` rests with its rear right `J1` 0.42 action units from HOME (0.21 rad
++#: of target, 0.222 rad of joint), and the controller's ramp back to walking then
++#: takes 0.645 s; `st-720i` trained at -10.0 beyond 0.25 (0.125 rad), which charges
++#: that rest 0.8 a second and `model_14800`'s (0.29 at the most) 0.03: its
++#: `model_18500` rests 0.158 rad from HOME and walks again 0.43 s after the switch.
++REST_EXCESS_WEIGHT = -10.0
++REST_EXCESS_MARGIN = 0.25
 +REST_TILT_WEIGHT = -150.0
 +REST_POSE_START_S = 0.2
 +REST_POSE_FULL_S = 0.4
@@ -9531,6 +10371,59 @@ index 0000000..66de77d
 +#: at -200 and `rs-720u`, which ships, on from it at this.
 +TILT_PAST_WEIGHT = -600.0
 +TILT_PAST_LIMIT = math.radians(30.0)
++
++#: Facing where it started, at rest (`power_jumpspin/mdp/rewards.py::rest_heading`):
++#: the heading two turns round from the policy's start, a tent `STICK_HEADING_WIDTH`
++#: wide on either side, paid at `STICK_HEADING_WEIGHT` a second once the jump has
++#: landed, from `STICK_HEADING_START_S` after the landing and in full from
++#: `STICK_HEADING_FULL_S`; 0 leaves it out. `model_14800` rests 65 degrees past it
++#: (DR off, from the handover): 0.28 of the tent.
++#:
++#: The `STICK_*`, `AIR_TURN_*`, `TAKEOFF_TWIST_*` and `GROUND_TURN_*` values here are
++#: the ones `st-720i` trained on (`exp/crabcraft-720-stick-ground11r`, 4da0748), whose
++#: `model_18500` ships (`docs/CRABCRAFT_POWER.md`, "The 720 sticks its landing"). The
++#: runs before it: `st-720a` 4.0 with the floor at 715 degrees and -4.0 (4502748);
++#: `st-720b` the same and `takeoff_twist` at -2.0 (`exp/crabcraft-720-stick-twist`);
++#: `st-720s` 8.0, the floor at 720 and -10.0 (`exp/crabcraft-720-stick-w8`); `st-720g`
++#: 2.0, the floor at 705 and -4.0, `ground_turn` at 8.0 about 30 degrees
++#: (`exp/crabcraft-720-stick-ground`); `st-720h` as `st-720i` with the rest at -2.0
++#: beyond 0.35 (`exp/crabcraft-720-stick-ground11`).
++STICK_HEADING_WEIGHT = 2.0
++STICK_HEADING_WIDTH = math.radians(90.0)
++STICK_HEADING_START_S = 0.0
++STICK_HEADING_FULL_S = 0.2
++
++#: The air turn's floor (`landed_turn_short`): each radian of integrated air turn
++#: short of `AIR_TURN_FLOOR`, up to `AIR_TURN_FLOOR_MAX`, at `AIR_TURN_FLOOR_WEIGHT`
++#: a second while the jump stands. Without it the cheapest heading is less turn in
++#: the air, where the game asks for 700 degrees: a radian less in the air buys
++#: 0.95 radian of heading, 2.4 a second at `rest_heading` 4.0, and `landed_turn`'s
++#: tent gives up 1.27 a second for it. Steep and high (`st-720s`, 720 degrees at
++#: -10.0), it raised the air turn to keep the randomised flights' low tail above it:
++#: 744 to 748 degrees without randomisation.
++AIR_TURN_FLOOR = math.radians(705.0)
++AIR_TURN_FLOOR_MAX = math.radians(20.0)
++AIR_TURN_FLOOR_WEIGHT = -4.0
++
++#: The heading turned before the takeoff (`takeoff_twist`), past
++#: `TAKEOFF_TWIST_FREE`, at `TAKEOFF_TWIST_WEIGHT` a second a radian while the jump
++#: stands; 0 leaves it out. `model_14800` turns 80 degrees on its feet before it
++#: leaves the ground; at -2.0 (`st-720b`) that did not move in 490 iterations.
++TAKEOFF_TWIST_WEIGHT = 0.0
++TAKEOFF_TWIST_FREE = 0.0
++
++#: The heading turned on the ground (`ground_turn`): before the takeoff and after the
++#: touchdown, a tent `GROUND_TURN_WIDTH` wide either side of `GROUND_TURN_TARGET`, at
++#: `GROUND_TURN_WEIGHT` a second once the jump has landed, gated as the rest heading;
++#: 0 leaves it out. Two turns of integrated air turn were 682 to 688 degrees of
++#: heading for `model_14800`, so 30 degrees on the ground was set for two turns at
++#: rest; `st-720g` came to 30 to 43, but without randomisation its air turn runs over
++#: two turns (721 to 743 integrated), so it rests 738 and 736 degrees round through
++#: the controller (`model_18100`). At 11 degrees `st-720i`'s `model_18500` turns 75
++#: to 77 on its feet before the takeoff and brakes 53 back after the touchdown.
++GROUND_TURN_WEIGHT = 8.0
++GROUND_TURN_TARGET = math.radians(11.0)
++GROUND_TURN_WIDTH = math.radians(60.0)
 +
 +
 +def env_cfg(asset: Path | None = None, play: bool = False) -> ManagerBasedRlEnvCfg:
@@ -9557,10 +10450,42 @@ index 0000000..66de77d
 +            func=jumpspin_mdp.rewards.tilt_past, weight=TILT_PAST_WEIGHT,
 +            params={"limit": TILT_PAST_LIMIT},
 +        )
++    return stick_the_landing(cfg)
++
++
++def stick_the_landing(cfg: ManagerBasedRlEnvCfg) -> ManagerBasedRlEnvCfg:
++    """Come to rest facing where the policy started, two turns round, the air turn
++    kept (`STICK_*`, `AIR_TURN_*`, `GROUND_TURN_*`, `TAKEOFF_TWIST_*` above). The actor's
++    observation and the critic's are unchanged."""
++    if STICK_HEADING_WEIGHT != 0.0:
++        cfg.rewards["rest_heading"] = RewardTermCfg(
++            func=jumpspin_mdp.rewards.rest_heading, weight=STICK_HEADING_WEIGHT,
++            params={"command_name": "jump", "target": LANDED_TURN_CAP,
++                    "width": STICK_HEADING_WIDTH, "start_s": STICK_HEADING_START_S,
++                    "full_s": STICK_HEADING_FULL_S},
++        )
++    if AIR_TURN_FLOOR_WEIGHT != 0.0:
++        cfg.rewards["landed_turn_short"] = RewardTermCfg(
++            func=jumpspin_mdp.rewards.landed_turn_short, weight=AIR_TURN_FLOOR_WEIGHT,
++            params={"command_name": "jump", "floor": AIR_TURN_FLOOR,
++                    "max_short": AIR_TURN_FLOOR_MAX},
++        )
++    if GROUND_TURN_WEIGHT != 0.0:
++        cfg.rewards["ground_turn"] = RewardTermCfg(
++            func=jumpspin_mdp.rewards.ground_turn, weight=GROUND_TURN_WEIGHT,
++            params={"command_name": "jump", "target": GROUND_TURN_TARGET,
++                    "width": GROUND_TURN_WIDTH, "start_s": STICK_HEADING_START_S,
++                    "full_s": STICK_HEADING_FULL_S},
++        )
++    if TAKEOFF_TWIST_WEIGHT != 0.0:
++        cfg.rewards["takeoff_twist"] = RewardTermCfg(
++            func=jumpspin_mdp.rewards.takeoff_twist, weight=TAKEOFF_TWIST_WEIGHT,
++            params={"command_name": "jump", "free": TAKEOFF_TWIST_FREE},
++        )
 +    return cfg
 +
 +
-+__all__ = ["env_cfg"]
++__all__ = ["env_cfg", "stick_the_landing"]
 diff --git a/tasks/jumper/power_jumpspin720/rl_cfg.py b/tasks/jumper/power_jumpspin720/rl_cfg.py
 new file mode 100644
 index 0000000..f9527d4
@@ -10076,10 +11001,10 @@ index 0000000..639b6e0
 +)
 diff --git a/tasks/jumper/power_spin_feet/env_cfg.py b/tasks/jumper/power_spin_feet/env_cfg.py
 new file mode 100644
-index 0000000..83a9e0b
+index 0000000..7832d62
 --- /dev/null
 +++ b/tasks/jumper/power_spin_feet/env_cfg.py
-@@ -0,0 +1,82 @@
+@@ -0,0 +1,116 @@
 +"""jumper.power_spin_feet -- jumper.power_spin with `illegal_contact` at -20.
 +
 +Everything is `jumper.power_spin`'s (its `env_cfg.py` has the design) but one
@@ -10116,6 +11041,18 @@ index 0000000..83a9e0b
 +`TARGET_MARGIN` 0 and the charge at -5.0, spins 2.29 to 2.30 rev/s through the
 +controller clamped at the stops and is what ships (`docs/CRABCRAFT_POWER.md`,
 +"The spin within the stops").
++
++## Non-foot parts on the floor, by geometry
++
++`illegal_contact` reads force, and under MuJoCo Warp, which collides a mesh with
++the plane at four points where native MuJoCo uses one, a calf on the floor beside
++a planted foot rarely pushes over 1 N: `model_5800` pushes in 4.3% of steps under
++Warp and in 44% under native MuJoCo, which the measurements, the bundle's host and
++the browser simulate with. `nonfoot_on_ground` (`mdp/`) charges a non-foot part's
++hull reaching the floor instead, the same number on either backend. At -8 it
++trained the export, `ft-nb6100`'s `model_6150` (the last 50 iterations on native
++MuJoCo), which puts a part on the floor in 22% of its steps (`docs/CRABCRAFT_POWER.md`,
++"The spin on its feet").
 +"""
 +
 +from __future__ import annotations
@@ -10123,8 +11060,10 @@ index 0000000..83a9e0b
 +from pathlib import Path
 +
 +from mjlab.envs import ManagerBasedRlEnvCfg
++from mjlab.managers.reward_manager import RewardTermCfg
 +
 +from ..power_spin import env_cfg as spin_env
++from . import mdp as feet_mdp
 +
 +#: Per step with any non-foot part on the ground over 1 N: four times
 +#: `jumper.power_spin`'s -5. At -5 `pw-spin-L` touched in 32% to 42% of steps;
@@ -10144,6 +11083,21 @@ index 0000000..83a9e0b
 +#: the stops").
 +TARGET_PAST_STOPS_WEIGHT = -5.0
 +
++#: Per second with any non-foot part's lowest point under
++#: `NONFOOT_ON_GROUND_HEIGHT` above the ground (`mdp/rewards.py`,
++#: `nonfoot_on_ground`): the charge on lying on the ground that `illegal_contact`,
++#: reading force, pays under MuJoCo Warp in a tenth of the steps a part is there
++#: (`mdp/clearance.py`). -8 is how the export, `ft-nb6100`'s `model_6150`, trained
++#: (its run and `ft-b`, which it went on from; the last 50 iterations on native
++#: MuJoCo). `ft-a` trained at -20 (4d3027b); 0 leaves the term out, how `sp-sa`'s
++#: `model_5800` trained (`docs/CRABCRAFT_POWER.md`, "The spin on its feet").
++NONFOOT_ON_GROUND_WEIGHT = -8.0
++
++#: Metres above the ground under which a non-foot part counts as on it. 0 is
++#: touching: for `model_5800` the share of steps with a part under 0 under Warp
++#: (42.5%) is native MuJoCo's share with one pushing over 1 N (44%).
++NONFOOT_ON_GROUND_HEIGHT = 0.0
++
 +
 +def env_cfg(asset: Path | None = None, play: bool = False) -> ManagerBasedRlEnvCfg:
 +    """In-place spin, kept to the feet.
@@ -10158,10 +11112,179 @@ index 0000000..83a9e0b
 +        from ..power_jumpspin.env_cfg import targets_within_stops
 +
 +        cfg = targets_within_stops(cfg, TARGET_MARGIN, weight=TARGET_PAST_STOPS_WEIGHT)
++    if NONFOOT_ON_GROUND_WEIGHT != 0.0:
++        cfg.rewards["nonfoot_on_ground"] = RewardTermCfg(
++            func=feet_mdp.rewards.nonfoot_on_ground, weight=NONFOOT_ON_GROUND_WEIGHT,
++            params={"height": NONFOOT_ON_GROUND_HEIGHT},
++        )
 +    return cfg
 +
 +
 +__all__ = ["env_cfg"]
+diff --git a/tasks/jumper/power_spin_feet/mdp/__init__.py b/tasks/jumper/power_spin_feet/mdp/__init__.py
+new file mode 100644
+index 0000000..5b42f71
+--- /dev/null
++++ b/tasks/jumper/power_spin_feet/mdp/__init__.py
+@@ -0,0 +1,7 @@
++"""MDP terms for jumper.power_spin_feet: (`clearance.py`) how high the non-foot
++parts ride above the ground, from their collision hulls, and (`rewards.py`) the
++charge on one of them lying on it."""
++
++from . import clearance, rewards
++
++__all__ = ["clearance", "rewards"]
+diff --git a/tasks/jumper/power_spin_feet/mdp/clearance.py b/tasks/jumper/power_spin_feet/mdp/clearance.py
+new file mode 100644
+index 0000000..6481a1a
+--- /dev/null
++++ b/tasks/jumper/power_spin_feet/mdp/clearance.py
+@@ -0,0 +1,104 @@
++"""How high the non-foot parts ride above the ground, from their collision hulls.
++
++## Why not the contact sensor
++
++`illegal_contact` reads `body_ground_contact`'s net force, over 1 N, and that
++figure depends on which backend computes it. MuJoCo Warp, which every run trains
++on, collides a mesh with the plane at up to four points; native MuJoCo, which
++`tools/eval_power.py`, the bundle's host and the browser simulate with, at one.
++A foot held up by four points is four times stiffer, so under Warp the foot
++carries the load and a calf resting on the floor next to it carries next to none.
++Measured on `sp-sa`'s `model_5800` (DR off, 4 environments, seed 1, 2 s to 6 s):
++a non-foot part lies on the ground (a contact at a negative distance) in 42.5% of
++steps under Warp and pushes on it over 1 N in 4.3%; under native MuJoCo it pushes
++over 1 N in 44% of steps, the left-rear calf with 11 N and the left claw's palm
++with 13 N, a fifth of all the ground's normal force. From one native state the
++two backends find the same penetrations to the micrometre; Warp gives the calf
++0 N and its foot 21.7, native gives the calf 9.0 N and the foot 10.4.
++
++So the charge on a part touching the ground was paid, under Warp, in about a
++tenth of the steps the part was on the ground, and what the game simulates leans
++on it.
++
++## What this measures instead
++
++The lowest point of each non-foot collision geom, in metres above the ground:
++the minimum over its convex hull's vertices -- what MuJoCo collides with the
++plane, a 64-direction hull of at most 64 vertices per geom (`common/constants.py`)
++-- placed by the geom's world pose. Pure geometry: both backends give the same
++number for the same state, so a charge on it is paid where the part is, whatever
++force the solver happens to put through it.
++"""
++
++from __future__ import annotations
++
++from typing import TYPE_CHECKING
++
++import numpy as np
++import torch
++
++from ...common.constants import FOOT_GEOMS
++
++if TYPE_CHECKING:
++    from mjlab.envs import ManagerBasedRlEnv
++
++
++def _hull_vertices(m, gid: int) -> np.ndarray:
++    """The convex hull vertices of mesh geom `gid`, in the geom's frame."""
++    mid = int(m.geom_dataid[gid])
++    adr, num = int(m.mesh_vertadr[mid]), int(m.mesh_vertnum[mid])
++    verts = np.asarray(m.mesh_vert[adr:adr + num], dtype=np.float64)
++    ga = int(m.mesh_graphadr[mid])
++    if ga < 0:
++        return verts
++    # mesh_graph: numvert, numface, vert_edgeadr[numvert], vert_globalid[numvert], ...
++    nv = int(m.mesh_graph[ga])
++    ids = np.asarray(m.mesh_graph[ga + 2 + nv:ga + 2 + 2 * nv], dtype=np.int64)
++    return verts[ids]
++
++
++class NonfootClearance:
++    """Per environment and non-foot collision geom, the height of its lowest point
++    above the ground plane at z = 0."""
++
++    def __init__(self, env: ManagerBasedRlEnv, entity: str = "robot"):
++        import mujoco
++
++        m = env.sim.mj_model
++        robot = env.scene[entity]
++        local, names = robot.find_geoms(r".*_meshcol", preserve_order=True)
++        global_ids = robot.indexing.geom_ids.cpu().numpy()
++        gids, keep = [], []
++        for i, name in zip(local, names):
++            gid = int(global_ids[i])
++            if name in FOOT_GEOMS or m.geom_contype[gid] == 0:
++                continue
++            if m.geom_type[gid] != mujoco.mjtGeom.mjGEOM_MESH:
++                raise ValueError(f"{name} is not a mesh geom")
++            gids.append(gid)
++            keep.append(name)
++        hulls = [_hull_vertices(m, g) for g in gids]
++        vmax = max(len(h) for h in hulls)
++        verts = np.zeros((len(gids), vmax, 3))
++        pad = np.ones((len(gids), vmax), dtype=bool)
++        for k, h in enumerate(hulls):
++            verts[k, :len(h)] = h
++            pad[k, :len(h)] = False
++        dev = env.device
++        self.names: tuple[str, ...] = tuple(keep)
++        self._gids = torch.tensor(gids, dtype=torch.long, device=dev)
++        self._verts = torch.tensor(verts, dtype=torch.float32, device=dev)
++        self._pad = torch.tensor(pad, device=dev)
++
++    def __call__(self, env: ManagerBasedRlEnv) -> torch.Tensor:
++        """(num_envs, num_geoms) heights in metres; negative is under the floor."""
++        data = env.sim.data
++        pos = data.geom_xpos[:, self._gids].float()
++        xmat = data.geom_xmat[:, self._gids].reshape(pos.shape[0], -1, 3, 3).float()
++        # Only the world z of each vertex is needed: p_z + R[2, :] . v
++        z = pos[..., 2:3] + torch.einsum("egk,gvk->egv", xmat[..., 2, :], self._verts)
++        z = z.masked_fill(self._pad, float("inf"))
++        return z.min(dim=-1).values - env.scene.env_origins[:, 2:3]
++
++
++__all__ = ["NonfootClearance"]
+diff --git a/tasks/jumper/power_spin_feet/mdp/rewards.py b/tasks/jumper/power_spin_feet/mdp/rewards.py
+new file mode 100644
+index 0000000..321de26
+--- /dev/null
++++ b/tasks/jumper/power_spin_feet/mdp/rewards.py
+@@ -0,0 +1,35 @@
++"""The charge on a non-foot part lying on the ground, by geometry.
++
++`illegal_contact` charges a non-foot part pushing on the ground over 1 N, which
++under MuJoCo Warp a calf on the floor rarely does (`clearance.py` has the
++measurements). `nonfoot_on_ground` charges the part being there: 1 in a step in
++which any non-foot collision geom's lowest point is under `height` above the
++ground, 0 otherwise. Binary for `illegal_contact`'s reason -- a calf down is as
++much a lean as the shell.
++"""
++
++from __future__ import annotations
++
++from typing import TYPE_CHECKING
++
++import torch
++
++from .clearance import NonfootClearance
++
++if TYPE_CHECKING:
++    from mjlab.envs import ManagerBasedRlEnv
++    from mjlab.managers.reward_manager import RewardTermCfg
++
++
++class nonfoot_on_ground:
++    """1 while any non-foot part's lowest point is under `height` metres above the
++    ground (0 is touching it, negative pressed into it), 0 otherwise."""
++
++    def __init__(self, cfg: RewardTermCfg, env: ManagerBasedRlEnv):
++        self._clearance = NonfootClearance(env)
++
++    def __call__(self, env: ManagerBasedRlEnv, height: float = 0.0) -> torch.Tensor:
++        return (self._clearance(env).min(dim=1).values < height).float()
++
++
++__all__ = ["nonfoot_on_ground"]
 diff --git a/tasks/jumper/power_spin_feet/rl_cfg.py b/tasks/jumper/power_spin_feet/rl_cfg.py
 new file mode 100644
 index 0000000..fde697f
@@ -14210,6 +15333,105 @@ index 0000000..52fca9b
 +    )
 +    got = calm_tilt(env, "jump", start_s=0.3, full_s=0.6)
 +    assert torch.allclose(got, torch.tensor([0.0, math.sin(tilt) ** 2]))
+diff --git a/tests/test_spin_feet_clearance.py b/tests/test_spin_feet_clearance.py
+new file mode 100644
+index 0000000..ea468b1
+--- /dev/null
++++ b/tests/test_spin_feet_clearance.py
+@@ -0,0 +1,93 @@
++"""The spin's charge on a non-foot part on the ground reads the part's height,
++not the force through it (`tasks/jumper/power_spin_feet/mdp/clearance.py`).
++
++What fails silently here is the geometry: a hull read from the wrong vertices,
++or placed with the wrong frame, still gives a number every step. So the height
++is held against MuJoCo's own signed distance between each geom and the floor
++(`mj_geomDistance`, which collides the same convex hulls), on a robot thrown
++about by random actions so that the parts reach the floor at every angle.
++"""
++
++from __future__ import annotations
++
++
++def test_the_charge_is_on_the_spin_when_weighted(monkeypatch) -> None:
++    """The weight is the export's (0 for `model_5800`, which trained without the
++    term); set, the term is wired with it and the force-based charge stays."""
++    import tasks
++    from tasks.jumper.power_spin_feet import env_cfg as feet_env
++    from tasks.jumper.power_spin_feet.mdp.rewards import nonfoot_on_ground
++
++    if feet_env.NONFOOT_ON_GROUND_WEIGHT == 0.0:
++        assert "nonfoot_on_ground" not in tasks.load_env_cfg("jumper.power_spin_feet").rewards
++    monkeypatch.setattr(feet_env, "NONFOOT_ON_GROUND_WEIGHT", -8.0)
++    cfg = tasks.load_env_cfg("jumper.power_spin_feet")
++    term = cfg.rewards["nonfoot_on_ground"]
++    assert term.func is nonfoot_on_ground
++    assert term.weight == -8.0
++    assert term.params == {"height": feet_env.NONFOOT_ON_GROUND_HEIGHT}
++    assert cfg.rewards["illegal_contact"].weight == feet_env.ILLEGAL_CONTACT_WEIGHT
++
++
++def test_the_height_is_mujocos_distance_to_the_floor() -> None:
++    from mjlab.sim import get_simulation_cls, set_simulation_cls
++    from mjrl.backend import native_sim, select
++    from mjrl.backend.resolve import resolve
++
++    # `use_backend` sets two module globals; put them back afterwards, as
++    # `test_power_handover.py` does.
++    saved_cls = get_simulation_cls()
++    saved_nthread = native_sim._DEFAULT_NTHREAD
++    n = 2
++    res = resolve(backend="native", device="cpu", num_envs=n)
++    select.use_backend(res)
++    try:
++        _against_geom_distance(n, res)
++    finally:
++        set_simulation_cls(saved_cls)
++        native_sim._DEFAULT_NTHREAD = saved_nthread
++
++
++def _against_geom_distance(n: int, res) -> None:
++    import mujoco
++    import numpy as np
++    import torch
++    from mjlab.envs import ManagerBasedRlEnv
++
++    import tasks
++    from tasks.jumper.common.constants import FOOT_GEOMS
++    from tasks.jumper.power_spin_feet.mdp.clearance import NonfootClearance
++
++    cfg = tasks.load_env_cfg("jumper.power_spin_feet")
++    for name in ("base_com", "encoder_bias", "foot_friction", "push_robot"):
++        cfg.events.pop(name, None)
++    cfg.scene.num_envs = n
++    cfg.sim.device = res.device
++    env = ManagerBasedRlEnv(cfg, device=res.device)
++    try:
++        env.reset()
++        clearance = NonfootClearance(env)
++        assert len(clearance.names) == 35
++        assert not set(clearance.names) & set(FOOT_GEOMS)
++        gen = torch.Generator().manual_seed(0)
++        worst, low = 0.0, np.inf
++        for k in range(120):
++            act = 3.0 * torch.randn(n, env.action_manager.total_action_dim, generator=gen)
++            env.step(act)
++            if k % 10:
++                continue
++            ours = clearance(env).cpu().numpy()
++            for e in range(n):
++                m, d = env.sim.env_mjdata(e)
++                mujoco.mj_kinematics(m, d)
++                floor = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "terrain")
++                for i, name in enumerate(clearance.names):
++                    gid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, f"robot/{name}")
++                    ref = mujoco.mj_geomDistance(m, d, gid, floor, 0.5, None)
++                    if ref < 0.5:
++                        worst = max(worst, abs(ref - float(ours[e, i])))
++                        low = min(low, ref)
++        assert worst < 1e-5, f"{worst} m from mj_geomDistance"
++        assert low < 0.01, "the random actions never brought a non-foot part near the floor"
++    finally:
++        env.close()
 diff --git a/tests/test_task_parity.py b/tests/test_task_parity.py
 index 89270b8..5659f00 100644
 --- a/tests/test_task_parity.py
@@ -16472,12 +17694,225 @@ index 0000000..97d79ba
 +
 +if __name__ == "__main__":
 +    main()
+diff --git a/tools/cem_takeoff.py b/tools/cem_takeoff.py
+new file mode 100644
+index 0000000..edb70d2
+--- /dev/null
++++ b/tools/cem_takeoff.py
+@@ -0,0 +1,207 @@
++"""Search an open-loop offset that, added to a 720 policy's targets through its takeoff, brings its
++heading at rest toward two turns with its air turn kept (cross-entropy method, native MuJoCo, CPU).
++
++    PYTHONPATH=. .venv/bin/python tools/cem_takeoff.py <model_N.pt> <out_dir> \
++        --joints J0J1 --knots 0,0.05,0.10,0.15,0.20 --end 0.26 [--reps 4 --hold 0.05 1.0 --pose 0.1]
++
++The offset, in raw action units, is piecewise linear in the time since the go through `--knots`,
++per gait joint (`--joints`: all 20, the six J0, or the J0 and J1), and zero from `--end` on.
++Each candidate runs in `--reps` environments (DR off unless `--dr on`, handed over after a hold
++drawn from `--hold`, up to `--pose` rad off HOME, the targets clamped at the stops) to `--run` s
++after the go. Its score, averaged over its environments less half their spread: minus the
++heading at `--rest-at` s after the go (eval_calm's heading) against `--target`, an integrated
++air turn under `--air-floor` charged 4 a degree, a lean past 38 degrees 3 a degree, a body still
++moving or more than 2 degrees off level at `--rest-at` charged, a fall -500. The elite's mean and
++spread give the next generation's; `<out_dir>/best.json` keeps the best candidate (`theta`), the
++last mean (`mu`), the knots and the joints, which `tools/distill_rest.py --takeoff-offset` and
++`tools/eval_takeoff_offset.py` read.
++
++Written for the 720's stuck landing (`docs/CRABCRAFT_POWER.md`, "The 720 sticks its landing").
++"""
++import argparse, json, math, sys
++from dataclasses import asdict
++from pathlib import Path
++import numpy as np, torch
++
++ap = argparse.ArgumentParser()
++ap.add_argument("ckpt"); ap.add_argument("out")
++ap.add_argument("--iters", type=int, default=20); ap.add_argument("--pop", type=int, default=64)
++ap.add_argument("--elite", type=int, default=8)
++ap.add_argument("--knots", default="0,0.06,0.12,0.18"); ap.add_argument("--end", type=float, default=0.24)
++ap.add_argument("--sigma", type=float, default=0.4); ap.add_argument("--hold", type=float, nargs="+", default=[0.3])
++ap.add_argument("--run", type=float, default=1.7); ap.add_argument("--rest-at", type=float, default=1.45)
++ap.add_argument("--air-floor", type=float, default=728.0); ap.add_argument("--target", type=float, default=720.0)
++ap.add_argument("--joints", default="all", help="all | J0 | J0J1")
++ap.add_argument("--seed", type=int, default=0)
++ap.add_argument("--init", default=None, help="a previous best.json to start the mean from")
++ap.add_argument("--init-key", default="mu")
++ap.add_argument("--reps", type=int, default=1, help="handovers per candidate (scores averaged)")
++ap.add_argument("--pose", type=float, default=0.0)
++ap.add_argument("--dr", default="off")
++args = ap.parse_args()
++
++import mjrl.backend.select as sel
++from mjrl.backend import resolve
++E = args.pop * args.reps
++sel.use_backend(resolve(backend="native", device="cpu", num_envs=E, training=False))
++from mjlab.envs import ManagerBasedRlEnv
++from mjlab.rl import RslRlVecEnvWrapper
++import tasks
++from tasks.jumper.common.constants import GAIT_JOINTS
++from tasks.jumper.power_jumpspin.env_cfg import handover_start, targets_within_stops
++# eval_calm.py beside this file, loaded by its path (tools/ is not a package).
++import importlib.util
++_spec = importlib.util.spec_from_file_location("eval_calm", Path(__file__).resolve().parent / "eval_calm.py")
++_eval_calm = importlib.util.module_from_spec(_spec)
++_spec.loader.exec_module(_eval_calm)
++heading_deg = _eval_calm.heading_deg
++
++task = "jumper.power_jumpspin720"
++cfg = tasks.load_env_cfg(task, play=True)
++if args.dr == "off":
++    for name in ("base_com", "encoder_bias", "foot_friction", "push_robot"):
++        cfg.events.pop(name, None)
++else:
++    tcfg = tasks.load_env_cfg(task)
++    cfg.events["push_robot"] = tcfg.events["push_robot"]
++    cfg.observations["actor"] = tcfg.observations["actor"]
++handover_start(cfg, play=True, hold_range=(args.hold[0], args.hold[-1]), pose_range=args.pose)
++cfg.terminations.pop("back_home", None)
++cfg.episode_length_s = args.hold[-1] + args.run + 0.2
++targets_within_stops(cfg, 0.0)
++cfg.scene.num_envs = E
++cfg.seed = 5
++agent_cfg = tasks.load_agent_cfg(task)
++env = ManagerBasedRlEnv(cfg=cfg, device="cpu")
++w = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
++runner = tasks.load_runner_cls(task)(w, asdict(agent_cfg), device="cpu")
++runner.load(args.ckpt, load_cfg={"actor": True}, strict=True, map_location="cpu")
++pol = runner.get_inference_policy(device="cpu")
++robot = env.scene["robot"]
++cmd = env.command_manager.get_term("jump")
++dt = env.step_dt
++knots = np.array([float(x) for x in args.knots.split(",")])
++K = len(knots)
++if args.joints == "all":
++    jmask = np.ones(20, bool)
++else:
++    keys = ["_J0"] if args.joints == "J0" else ["_J0", "_J1"]
++    jmask = np.array([any(k in j for k in keys) for j in GAIT_JOINTS])
++J = int(jmask.sum())
++D = K * J
++gid_names = list(robot.joint_names)
++gid = [gid_names.index(j) for j in GAIT_JOINTS]
++
++
++def profile(t):
++    """Weights over the knots at time t (linear interpolation, ramp to 0 at --end)."""
++    xs = np.r_[knots, args.end]
++    wv = np.zeros(K + 1)
++    if t < xs[0] or t >= xs[-1]:
++        return wv[:K]
++    i = np.searchsorted(xs, t, side="right") - 1
++    f = (t - xs[i]) / (xs[i + 1] - xs[i])
++    wv[i] = 1 - f; wv[i + 1] = f
++    return wv[:K]
++
++
++def rollout(theta):
++    with torch.inference_mode():
++        return _rollout(theta)
++
++
++def _rollout(theta):
++    """theta (E, K, J) -> per env metrics."""
++    obs, _ = w.reset()
++    go = cmd.go_step.numpy() * dt
++    yaw0 = heading_deg(robot.data.root_link_quat_w.numpy())
++    n = round((args.hold[-1] + args.run) / dt)
++    yaw = np.zeros((n, E)); fly = np.zeros((n, E)); landed = np.zeros((n, E)); turn = np.zeros((n, E))
++    tilt = np.zeros((n, E)); qd = np.zeros((n, E)); failed = np.zeros(E, bool)
++    with torch.inference_mode():
++        for k in range(n):
++            a = pol(obs)
++            tg = k * dt - go + dt  # the action applied at this step is the one from the state at (k)*dt
++            off = np.zeros((E, 20))
++            for e in range(E):
++                wv = profile(float(tg[e]))
++                if wv.any():
++                    off[e, jmask] = wv @ theta[e]
++            a = a + torch.as_tensor(off, dtype=a.dtype)
++            obs, _, d, _ = w.step(a)
++            failed |= d.numpy().astype(bool)
++            Dd = robot.data
++            yaw[k] = heading_deg(Dd.root_link_quat_w.numpy())
++            fly[k] = cmd.in_flight.float().numpy(); landed[k] = cmd.landed.float().numpy()
++            turn[k] = np.degrees(cmd.turn.numpy())
++            g = Dd.projected_gravity_b.numpy()
++            tilt[k] = np.degrees(np.arccos(np.clip(-g[:, 2], -1, 1)))
++            qd[k] = np.sqrt((Dd.joint_vel.numpy()[:, gid] ** 2).mean(1))
++    yaw = np.degrees(np.unwrap(np.radians(np.concatenate([yaw0[None], yaw], 0)), axis=0))[1:]
++    t = (np.arange(n) + 1) * dt
++    res = []
++    for e in range(E):
++        kg = int(round(go[e] / dt)) - 1
++        kr = min(n - 1, int(round((go[e] + args.rest_at) / dt)) - 1)
++        li = int(np.argmax(landed[:, e] > 0.5)) if (landed[:, e] > 0.5).any() else None
++        if li is None or failed[e]:
++            res.append({"ok": False}); continue
++        up = np.flatnonzero((fly[1:li + 1, e] > 0.5) & (fly[:li, e] < 0.5)) + 1
++        kt = int(up[-1]) if up.size else li
++        res.append({"ok": True, "rest": float(yaw[kr, e] - yaw[kg, e]), "pre": float(yaw[kt, e] - yaw[kg, e]),
++                    "air_h": float(yaw[li, e] - yaw[kt, e]), "air": float(turn[li, e] - turn[kt, e]),
++                    "post": float(yaw[kr, e] - yaw[li, e]), "tilt": float(tilt[kg:kr, e].max()),
++                    "speed_at_rest": float(qd[max(kr - 20, 0):kr + 1, e].mean()),
++                    "land": float(t[li] - go[e]), "tilt_rest": float(tilt[kr, e])})
++    return res
++
++
++def score(r):
++    if not r["ok"]:
++        return -500.0
++    s = -abs(r["rest"] - args.target)
++    s -= 4.0 * max(0.0, args.air_floor - r["air"])
++    s -= 3.0 * max(0.0, r["tilt"] - 38.0)
++    s -= 100.0 * max(0.0, r["speed_at_rest"] - 0.05)
++    s -= 5.0 * max(0.0, r["tilt_rest"] - 2.0)
++    return s
++
++
++out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
++rng = np.random.default_rng(args.seed)
++mu = np.zeros((K, J)); sig = np.full((K, J), args.sigma)
++if args.init:
++    b = json.load(open(args.init))
++    mu = np.array(b[args.init_key])
++best = None
++log = []
++P, R = args.pop, args.reps
++for it in range(args.iters):
++    th = mu[None] + sig[None] * rng.standard_normal((P, K, J))
++    th[0] = mu  # keep the mean as one candidate
++    rs_all = rollout(np.repeat(th, R, axis=0))
++    sc_all = np.array([score(r) for r in rs_all]).reshape(P, R)
++    sc = sc_all.mean(1) - 0.5 * sc_all.std(1)
++    # one representative per candidate: the mean of its handovers' metrics
++    rs = []
++    for c in range(P):
++        grp = [r for r in rs_all[c * R:(c + 1) * R] if r["ok"]]
++        if len(grp) < R:
++            rs.append({"ok": False, "n_ok": len(grp)}); continue
++        rs.append({"ok": True, **{k: float(np.mean([g[k] for g in grp])) for k in grp[0] if k != "ok"},
++                   "rest_sd": float(np.std([g["rest"] for g in grp])), "air_min": float(min(g["air"] for g in grp))})
++    order = np.argsort(-sc)
++    el = th[order[:args.elite]]
++    mu = el.mean(0); sig = 0.7 * sig + 0.3 * el.std(0) + 0.01
++    i0 = int(order[0])
++    if best is None or sc[i0] > best["score"]:
++        best = {"score": float(sc[i0]), "theta": th[i0].tolist(), "metrics": rs[i0], "iter": it}
++    m0 = rs[0]
++    line = {"iter": it, "best": round(float(sc[i0]), 2), "mean_cand": {k: round(v, 1) if isinstance(v, float) else v for k, v in m0.items()},
++            "best_cand": {k: round(v, 1) if isinstance(v, float) else v for k, v in rs[i0].items()},
++            "score_mean_cand": round(float(sc[0]), 2), "sig": round(float(sig.mean()), 3)}
++    log.append(line)
++    print(json.dumps(line), flush=True)
++    json.dump({**best, "knots": knots.tolist(), "end": args.end, "joints": args.joints,
++               "jmask": jmask.tolist(), "mu": mu.tolist()}, open(out / "best.json", "w"))
++json.dump(log, open(out / "log.json", "w"), indent=1)
 diff --git a/tools/distill_rest.py b/tools/distill_rest.py
 new file mode 100644
-index 0000000..2a1416a
+index 0000000..817e6e3
 --- /dev/null
 +++ b/tools/distill_rest.py
-@@ -0,0 +1,196 @@
+@@ -0,0 +1,240 @@
 +"""Teach a trained jump to come to rest near HOME by imitation (native MuJoCo, CPU).
 +
 +    PYTHONPATH=. .venv/bin/python tools/distill_rest.py --task backflip \
@@ -16503,6 +17938,14 @@ index 0000000..2a1416a
 +landing are the policy's own targets: they hold the jump where it was, weighted
 +`--jump-weight`. DAgger: round 0 runs the teacher; every later round runs the
 +student, labels what it visits with the teacher, and fits on everything so far.
++
++**The takeoff, instead** (`--takeoff-offset best.json`, the 720's stuck landing): the
++teacher is the policy's own target plus an open-loop offset in the time since the go --
++piecewise linear through the file's knots, per gait joint, zero from its `end` on --
++and the policy itself after that, the rest included (`--no-rest`, implied). The file is
++what `tools/cem_takeoff.py` writes (`knots`, `end`, `jmask`, and the offsets under
++`--offset-key`, its CEM's last mean `mu` by default); `docs/CRABCRAFT_POWER.md`, "The
++720 sticks its landing", has the search.
 +
 +The episodes are `tools/eval_calm.py`'s "dr on" (the training's randomisation,
 +observation noise and pushes), handed over from HOME after a hold drawn from
@@ -16546,7 +17989,14 @@ index 0000000..2a1416a
 +    ap.add_argument("--mirror", choices=("task", "on", "off"), default="task",
 +                    help="mirror the samples: as the task's training does (default), or not")
 +    ap.add_argument("--seed", type=int, default=11)
++    ap.add_argument("--no-rest", action="store_true",
++                    help="no ramp after the landing: the policy's own targets throughout")
++    ap.add_argument("--takeoff-offset", type=Path, default=None,
++                    help="a JSON of offsets added to the teacher's targets after the go")
++    ap.add_argument("--offset-key", default="mu")
 +    args = ap.parse_args()
++    if args.takeoff_offset is not None:
++        args.no_rest = True
 +
 +    import mjrl.backend.select as sel
 +    from mjrl.backend import resolve
@@ -16591,6 +18041,28 @@ index 0000000..2a1416a
 +    E = args.envs
 +    after_k, ramp_k = round(args.after / dt), max(1, round(args.ramp / dt))
 +
++    offset = None
++    if args.takeoff_offset is not None:
++        import json
++
++        spec = json.loads(args.takeoff_offset.read_text())
++        knots = torch.tensor(spec["knots"] + [spec["end"]], dtype=torch.float32)
++        jmask = torch.tensor(spec["jmask"], dtype=torch.bool)
++        theta = torch.zeros(len(knots), 20)
++        theta[:-1, jmask] = torch.tensor(spec[args.offset_key], dtype=torch.float32)
++
++        def offset(tg: torch.Tensor) -> torch.Tensor:
++            """(E,) seconds since the go -> (E, 20) raw-action offsets."""
++            i = torch.searchsorted(knots, tg.contiguous(), right=True) - 1
++            inside = (i >= 0) & (i < len(knots) - 1)
++            i = i.clamp(0, len(knots) - 2)
++            f = ((tg - knots[i]) / (knots[i + 1] - knots[i])).clamp(0.0, 1.0)[:, None]
++            out = theta[i] * (1 - f) + theta[i + 1] * f
++            return out * inside[:, None].float()
++
++        print(f"[distill] takeoff offset from {args.takeoff_offset} ({args.offset_key}), "
++              f"knots {spec['knots']} to {spec['end']} s", flush=True)
++
 +    data_obs: list[torch.Tensor] = []
 +    data_act: list[torch.Tensor] = []
 +    data_w: list[torch.Tensor] = []
@@ -16617,6 +18089,13 @@ index 0000000..2a1416a
 +                if args.clip is not None:
 +                    a_end = a_end.clamp(-args.clip, args.clip)
 +                a_rest = a0 + f * (a_end - a0)
++                if args.no_rest:
++                    late = torch.zeros_like(late)
++                if offset is not None:
++                    # The time since the go of the state this action is taken in, one
++                    # step on as the search counted it.
++                    tg = (env.episode_length_buf.float() - cmd.go_step + 1.0) * dt
++                    a_pol = a_pol + offset(tg)
 +                label = torch.where(late[:, None], a_rest, a_pol)
 +                w = torch.where(late, torch.ones(E), torch.full((E,), args.jump_weight))
 +                keep = acting
@@ -16676,10 +18155,10 @@ index 0000000..2a1416a
 +    main()
 diff --git a/tools/eval_calm.py b/tools/eval_calm.py
 new file mode 100644
-index 0000000..27fe087
+index 0000000..caf209a
 --- /dev/null
 +++ b/tools/eval_calm.py
-@@ -0,0 +1,364 @@
+@@ -0,0 +1,438 @@
 +"""How still a shipped jump stands after its landing (native MuJoCo, CPU).
 +
 +Run from the repository root, with the repository on PYTHONPATH:
@@ -16737,6 +18216,18 @@ index 0000000..27fe087
 +  `final_tilt_deg`, the body's tilt; `final_pitch_deg`, its pitch alone, nose up
 +  positive.
 +
++The heading, for the jump spin (a back flip passes through upside down, where it is
++not a direction the body faces): the direction the body faces, the
++yaw of its x axis projected on the floor, unwrapped over the run, counter-clockwise
++positive, in degrees from where it faced at the go. `heading_at_rest_deg` is that at
++the hand-back moment (`settled_after_go_s`), split into `heading_before_takeoff_deg`
++(the go to the own flight's takeoff), `heading_air_deg` (takeoff to touchdown, as the
++jump command marks them) and `heading_after_touchdown_deg` (touchdown to rest);
++`heading_end_deg` is at the end of the run, and `turn_at_rest_deg` and `turn_air_deg`
++the jump command's integrated world yaw rate from the go to the hand-back moment and
++from the takeoff to the touchdown, which differ from the heading where the body is
++tilted while it turns.
++
 +`--target-margin` decodes the joint targets as the bundle's controller does at
 +that `target_margin` (`none`: nothing clamped), as `tools/eval_power.py` does;
 +left out, the task's own config decides.
@@ -16793,9 +18284,42 @@ index 0000000..27fe087
 +    return np.sqrt((hi**2).mean(0)), f[np.argmax(spec, axis=0)]
 +
 +
++def heading_deg(quat_wxyz: np.ndarray) -> np.ndarray:
++    """The yaw of the body's x axis projected on the floor, degrees, from (w, x, y, z)
++    quaternions along the last axis."""
++    w, x, y, z = (quat_wxyz[..., i] for i in range(4))
++    return np.degrees(np.arctan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z)))
++
++
++def heading_split(yaw, flying, li, kg, rest, yaw_go=None, turn=None):
++    """The heading metrics of one environment (module docstring): `yaw` the unwrapped
++    heading per step (deg), `flying` the jump command's `in_flight` per step, `li` the
++    touchdown step, `kg` the go's step (-1: the reset, whose heading is `yaw_go`),
++    `rest` the hand-back step or None, `turn` the command's integrated turn (deg)."""
++    y0 = yaw_go if kg < 0 else yaw[kg]
++    up = np.flatnonzero(flying[1:li + 1] & ~flying[:li]) + 1
++    up = up[up > kg]
++    kt = int(up[-1]) if up.size else None
++    out = {"heading_end_deg": round(float(yaw[-1] - y0), 1),
++           "heading_touchdown_deg": round(float(yaw[li] - y0), 1),
++           "heading_before_takeoff_deg": None if kt is None else round(float(yaw[kt] - y0), 1),
++           "heading_air_deg": None if kt is None else round(float(yaw[li] - yaw[kt]), 1),
++           "heading_at_rest_deg": None, "heading_after_touchdown_deg": None,
++           "turn_at_rest_deg": None,
++           "turn_air_deg": None if (kt is None or turn is None) else round(float(turn[li] - turn[kt]), 1)}
++    if rest is not None:
++        out["heading_at_rest_deg"] = round(float(yaw[rest] - y0), 1)
++        out["heading_after_touchdown_deg"] = round(float(yaw[rest] - yaw[li]), 1)
++        if turn is not None:
++            t0 = 0.0 if kg < 0 else turn[kg]
++            out["turn_at_rest_deg"] = round(float(turn[rest] - t0), 1)
++    return out
++
++
 +def analyse(t, q, qd, tau, angv, grav, landed, go, home, dt, joints, after, hold_calm,
-+            act=None):
-+    """Per-environment metrics; see the module docstring."""
++            act=None, yaw=None, flying=None, yaw_go=None, turn=None):
++    """Per-environment metrics; see the module docstring. With `yaw` (n, E) and
++    `flying` (n, E), the heading's too (`heading_split`)."""
 +    E = q.shape[1]
 +    out = []
 +    k_hp = round(TREMOR_WINDOW_S / dt)
@@ -16840,11 +18364,13 @@ index 0000000..27fe087
 +        rate_sq = _moving_average((np.degrees(angv[:, e, :2]) ** 2).mean(1)[:, None], k_hold)[:, 0]
 +        half = k_hold // 2
 +        settled = None
++        rest_i = None
 +        for i in range(li, len(t) - k_hold + 1):
 +            c = i + half  # the centred average over [i, i + k_hold)
 +            if (still[i:i + k_hold].all() and speed_sq[c] < CALM_SPEED**2
 +                    and rate_sq[c] < CALM_RATE_DEG**2):
 +                settled = float(t[i] - go[e])
++                rest_i = i
 +                break
 +        off = np.abs(qe[fin].mean(0) - home)
 +        g_fin = grav[fin, e].mean(0)
@@ -16858,7 +18384,14 @@ index 0000000..27fe087
 +            if run >= 20:
 +                home_t = float(t[i] - go[e])
 +                break
++        heading = {}
++        if yaw is not None:
++            kg = int(round(float(go[e]) / dt)) - 1
++            heading = heading_split(yaw[:, e], flying[:, e] > 0.5, li, kg, rest_i,
++                                    None if yaw_go is None else yaw_go[e],
++                                    None if turn is None else turn[:, e])
 +        out.append({
++            **heading,
 +            "go_s": round(float(go[e]), 3),
 +            "landed_s": round(tl, 3),
 +            "landed_after_go_s": round(tl - float(go[e]), 3),
@@ -16911,6 +18444,14 @@ index 0000000..27fe087
 +    if v.size:
 +        s["final_pitch_deg"] = {"median": round(float(np.median(v)), 2),
 +                                "min": round(float(v.min()), 2), "max": round(float(v.max()), 2)}
++    for key in ("heading_at_rest_deg", "heading_before_takeoff_deg", "heading_air_deg",
++                "heading_after_touchdown_deg", "heading_end_deg", "turn_at_rest_deg",
++                "turn_air_deg"):
++        v = np.array([m[key] for m in got if m.get(key) is not None], dtype=float)
++        if v.size:
++            s[key] = {"mean": round(float(v.mean()), 1), "min": round(float(v.min()), 1),
++                      "max": round(float(v.max()), 1), "std": round(float(v.std()), 1),
++                      "n": int(v.size)}
 +    for key in ("settled_after_go_s", "home_after_go_s"):
 +        v = [m[key] for m in got]
 +        ok = np.array([x for x in v if x is not None], dtype=float)
@@ -17003,11 +18544,15 @@ index 0000000..27fe087
 +    angv = np.zeros((n, E, 3))
 +    grav = np.zeros((n, E, 3))
 +    landed = np.zeros((n, E))
++    yaw = np.zeros((n, E))
++    flying = np.zeros((n, E))
++    turn = np.zeros((n, E))
 +    failed = np.zeros(E, dtype=bool)
 +    home = robot.data.default_joint_pos.cpu().numpy()[0, gid]
 +
 +    obs, _ = wrapped.reset()
 +    go = cmd.go_step.cpu().numpy() * dt
++    yaw_go = heading_deg(robot.data.root_link_quat_w.cpu().numpy())
 +    with torch.inference_mode():
 +        for k in range(n):
 +            a = policy(obs)
@@ -17021,9 +18566,16 @@ index 0000000..27fe087
 +            angv[k] = d.root_link_ang_vel_b.cpu().numpy()
 +            grav[k] = d.projected_gravity_b.cpu().numpy()
 +            landed[k] = cmd.landed.float().cpu().numpy()
++            yaw[k] = heading_deg(d.root_link_quat_w.cpu().numpy())
++            flying[k] = cmd.in_flight.float().cpu().numpy()
++            turn[k] = np.degrees(cmd.turn.cpu().numpy())
 +    t = (np.arange(n) + 1) * dt
++    # Unwrapped from the reset's heading: no step turns half a turn.
++    yaw = np.degrees(np.unwrap(np.radians(np.concatenate([yaw_go[None], yaw], 0)), axis=0))
++    yaw_go, yaw = yaw[0], yaw[1:]
 +    per_env = analyse(t, q, qd, tau, angv, grav, landed, go, home, dt, list(GAIT_JOINTS),
-+                      args.after, args.hold_calm, act=act)
++                      args.after, args.hold_calm, act=act, yaw=yaw, flying=flying,
++                      yaw_go=yaw_go, turn=turn)
 +    for e in np.nonzero(failed)[0]:
 +        per_env[e] = {"landed_s": None, "ended_early": True}
 +    metrics = {"task": task, "checkpoint": str(args.checkpoint), "dr": args.dr,
@@ -17036,7 +18588,8 @@ index 0000000..27fe087
 +    args.out.mkdir(parents=True, exist_ok=True)
 +    tag = args.dr + ("_nopush" if args.dr == "on" and args.no_push else "")
 +    np.savez_compressed(args.out / f"{args.task}_{tag}.npz", t=t, q=q, qd=qd, tau=tau, act=act,
-+                        angv=angv, grav=grav, landed=landed, go=go, dt=dt,
++                        angv=angv, grav=grav, landed=landed, go=go, dt=dt, yaw=yaw,
++                        flying=flying, turn=turn,
 +                        joints=np.array(GAIT_JOINTS), metrics=np.array(json.dumps(metrics)))
 +    print("METRICS " + json.dumps(metrics))
 +    env.close()
@@ -17046,10 +18599,10 @@ index 0000000..27fe087
 +    main()
 diff --git a/tools/eval_power.py b/tools/eval_power.py
 new file mode 100644
-index 0000000..8f5983a
+index 0000000..f288c24
 --- /dev/null
 +++ b/tools/eval_power.py
-@@ -0,0 +1,441 @@
+@@ -0,0 +1,471 @@
 +"""Evaluate a jumper.power_* checkpoint in the task's own environment (native MuJoCo, CPU).
 +
 +Run from the repository root, with the repository on PYTHONPATH so that `tasks`
@@ -17137,7 +18690,8 @@ index 0000000..8f5983a
 +    return np.degrees(np.arccos(np.clip(-gravity_b[..., 2], -1.0, 1.0)))
 +
 +
-+def stress_contacts(cfg, foot_torsion: float | None, nonfoot_friction: float | None) -> None:
++def stress_contacts(cfg, foot_torsion: float | None, nonfoot_friction: float | None,
++                    floor_friction: float | None = None) -> None:
 +    """Rewrite the robot's collision config for a contact stress test.
 +
 +    The model's feet are condim 3 -- no torsional friction, so a planted foot pivots
@@ -17145,6 +18699,13 @@ index 0000000..8f5983a
 +    priority-0 plane comes out as condim 3 at the plane's friction 1.0. A spin that
 +    pivots on its feet and leans on its calves is helped by both; this measures by
 +    how much. The foot's sliding friction stays the model's 1.2.
++
++    `nonfoot_friction` gives every non-foot geom priority 1 and condim 3, which also
++    turns two legs touching each other -- condim 1 and frictionless as trained --
++    into a contact that grips at that friction. `floor_friction` lowers the floor's
++    friction and the non-foot geoms' with the priorities as trained, so that only a
++    part lying on the floor grips less (`docs/CRABCRAFT_POWER.md`, "The spin on its
++    feet", has what each costs the spin).
 +    """
 +    import dataclasses
 +
@@ -17159,6 +18720,19 @@ index 0000000..8f5983a
 +        condim[".*"] = 3
 +        priority[".*"] = 1
 +        friction[".*"] = (nonfoot_friction, 0.005, 0.0001)
++    if floor_friction is not None:
++        # The pair takes the larger friction of the two, so both come down; the feet
++        # keep their own (priority 1), and leg against leg stays condim 1.
++        friction[".*"] = (floor_friction, 0.005, 0.0001)
++        previous = cfg.scene.spec_fn
++
++        def floor(spec, previous=previous, mu=floor_friction):
++            if previous is not None:
++                previous(spec)
++            g = next(g for g in spec.geoms if g.name == "terrain")
++            g.friction = [mu, 0.005, 0.0001]
++
++        cfg.scene.spec_fn = floor
 +    robot.collisions = (dataclasses.replace(col, condim=condim, priority=priority,
 +                                            friction=friction),)
 +
@@ -17184,7 +18758,12 @@ index 0000000..8f5983a
 +                    "(MuJoCo's default is 0.005), so a planted foot no longer pivots for free")
 +    ap.add_argument("--nonfoot-friction", type=float, default=None, metavar="MU",
 +                    help="contact stress: every non-foot geom at this sliding friction against "
-+                    "the floor (condim 3, priority over the plane), instead of the plane's 1.0")
++                    "the floor (condim 3, priority over the plane), instead of the plane's 1.0; "
++                    "two legs touching then grip each other at it too, where they slid freely")
++    ap.add_argument("--floor-friction", type=float, default=None, metavar="MU",
++                    help="contact stress: the floor and every non-foot geom at this sliding "
++                    "friction, priorities as trained, so that only a non-foot part on the floor "
++                    "grips less and legs touching each other still slide freely (condim 1)")
 +    ap.add_argument("--hold", type=float, nargs="+", default=None, metavar="S",
 +                    help="jumps: the handover -- seconds standing at HOME before the policy "
 +                    "acts, one value or a range LO HI drawn per environment; 0 is mjlab's reset")
@@ -17225,8 +18804,11 @@ index 0000000..8f5983a
 +        # The training's actor group whole: the strided history carries its
 +        # frames' noise in its params, which play mode built without.
 +        cfg.observations["actor"] = train_cfg.observations["actor"]
-+    if args.foot_torsion is not None or args.nonfoot_friction is not None:
-+        stress_contacts(cfg, args.foot_torsion, args.nonfoot_friction)
++    if args.nonfoot_friction is not None and args.floor_friction is not None:
++        ap.error("--nonfoot-friction and --floor-friction are two different tests")
++    if (args.foot_torsion is not None or args.nonfoot_friction is not None
++            or args.floor_friction is not None):
++        stress_contacts(cfg, args.foot_torsion, args.nonfoot_friction, args.floor_friction)
 +    if args.hold is not None:
 +        if args.task in SPINS:
 +            ap.error("--hold is the jumps' handover; the spin has no go")
@@ -17388,7 +18970,8 @@ index 0000000..8f5983a
 +                if j in act_names}
 +    metrics: dict = {
 +        "task": task, "backend": f"{args.backend}:{args.device}", "dr": args.dr,
-+        "foot_torsion": args.foot_torsion, "nonfoot_friction": args.nonfoot_friction, "envs": E, "seed": args.seed,
++        "foot_torsion": args.foot_torsion, "nonfoot_friction": args.nonfoot_friction,
++        "floor_friction": args.floor_friction, "envs": E, "seed": args.seed,
 +        "checkpoint": str(args.checkpoint),
 +        "episode_s": cfg.episode_length_s,
 +        "ended_at_s": [None if math.isnan(x) else round(float(x), 3) for x in ended_at],
@@ -17825,6 +19408,117 @@ index 0000000..9ee0657
 +
 +if __name__ == "__main__":
 +    main()
+diff --git a/tools/eval_takeoff_offset.py b/tools/eval_takeoff_offset.py
+new file mode 100644
+index 0000000..64dfe14
+--- /dev/null
++++ b/tools/eval_takeoff_offset.py
+@@ -0,0 +1,105 @@
++"""A takeoff offset (`tools/cem_takeoff.py`'s best.json) added to a 720 policy, over many handovers,
++measured as `tools/eval_calm.py` measures (its heading included). Native MuJoCo, CPU.
++
++    PYTHONPATH=. .venv/bin/python tools/eval_takeoff_offset.py <model_N.pt> <best.json|none> <unused> \
++        --dr off --envs 16 --seed 5 [--key mu|theta]
++
++Handed over after 0.05 to 1.0 s at HOME, up to 0.1 rad off it, the targets clamped at the stops, run
++to 4 s; prints eval_calm's METRICS line (its summary and per-environment metrics).
++"""
++import argparse, json, sys
++from pathlib import Path
++from dataclasses import asdict
++import numpy as np, torch
++ap = argparse.ArgumentParser()
++ap.add_argument("ckpt"); ap.add_argument("best"); ap.add_argument("out")
++ap.add_argument("--dr", default="off"); ap.add_argument("--envs", type=int, default=16)
++ap.add_argument("--seed", type=int, default=5); ap.add_argument("--scale", type=float, default=1.0)
++ap.add_argument("--key", default="theta", help="theta (the best candidate) or mu (the CEM mean)")
++args = ap.parse_args()
++import mjrl.backend.select as sel
++from mjrl.backend import resolve
++E = args.envs
++sel.use_backend(resolve(backend="native", device="cpu", num_envs=E, training=False))
++from mjlab.envs import ManagerBasedRlEnv
++from mjlab.rl import RslRlVecEnvWrapper
++import tasks
++from tasks.jumper.common.constants import GAIT_JOINTS
++from tasks.jumper.power_jumpspin.env_cfg import handover_start, targets_within_stops
++# eval_calm.py beside this file, loaded by its path (tools/ is not a package).
++import importlib.util
++_spec = importlib.util.spec_from_file_location("eval_calm", Path(__file__).resolve().parent / "eval_calm.py")
++_eval_calm = importlib.util.module_from_spec(_spec)
++_spec.loader.exec_module(_eval_calm)
++analyse = _eval_calm.analyse
++heading_deg = _eval_calm.heading_deg
++summarise = _eval_calm.summarise
++task = "jumper.power_jumpspin720"
++cfg = tasks.load_env_cfg(task, play=True)
++train_cfg = tasks.load_env_cfg(task)
++if args.dr == "off":
++    for name in ("base_com", "encoder_bias", "foot_friction", "push_robot"):
++        cfg.events.pop(name, None)
++else:
++    cfg.events["push_robot"] = train_cfg.events["push_robot"]
++    cfg.observations["actor"] = train_cfg.observations["actor"]
++handover_start(cfg, play=True, hold_range=(0.05, 1.0), pose_range=0.1)
++cfg.terminations.pop("back_home", None)
++cfg.episode_length_s = 4.0
++targets_within_stops(cfg, 0.0)
++cfg.scene.num_envs = E; cfg.seed = args.seed
++agent_cfg = tasks.load_agent_cfg(task)
++env = ManagerBasedRlEnv(cfg=cfg, device="cpu")
++w = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
++runner = tasks.load_runner_cls(task)(w, asdict(agent_cfg), device="cpu")
++runner.load(args.ckpt, load_cfg={"actor": True}, strict=True, map_location="cpu")
++pol = runner.get_inference_policy(device="cpu")
++robot = env.scene["robot"]
++names = list(robot.joint_names); gid = [names.index(j) for j in GAIT_JOINTS]
++an = list(robot.actuator_names); aid = [an.index(j) for j in GAIT_JOINTS]
++cmd = env.command_manager.get_term("jump"); dt = env.step_dt
++if args.best != "none":
++    b = json.load(open(args.best))
++    knots = np.array(b["knots"]); end = b["end"]; jmask = np.array(b["jmask"]); theta = np.array(b[args.key]) * args.scale
++else:
++    knots = np.array([0.0]); end = 0.0; jmask = np.ones(20, bool); theta = np.zeros((1, 20))
++K = len(knots)
++def profile(t):
++    xs = np.r_[knots, end]; wv = np.zeros(K + 1)
++    if t < xs[0] or t >= xs[-1]: return wv[:K]
++    i = np.searchsorted(xs, t, side="right") - 1; f = (t - xs[i]) / (xs[i + 1] - xs[i])
++    wv[i] = 1 - f; wv[i + 1] = f; return wv[:K]
++n = round(4.0 / dt) - 1
++q = np.zeros((n, E, 20)); qd = np.zeros_like(q); tau = np.zeros_like(q); act = np.zeros_like(q)
++angv = np.zeros((n, E, 3)); grav = np.zeros((n, E, 3)); landed = np.zeros((n, E))
++yaw = np.zeros((n, E)); fly = np.zeros((n, E)); turn = np.zeros((n, E)); failed = np.zeros(E, bool)
++home = robot.data.default_joint_pos.numpy()[0, gid]
++with torch.inference_mode():
++    obs, _ = w.reset()
++    go = cmd.go_step.numpy() * dt
++    yaw0 = heading_deg(robot.data.root_link_quat_w.numpy())
++    for k in range(n):
++        a = pol(obs)
++        tg = k * dt - go + dt
++        off = np.zeros((E, 20))
++        for e in range(E):
++            wv = profile(float(tg[e]))
++            if wv.any(): off[e, jmask] = wv @ theta
++        a = a + torch.as_tensor(off, dtype=a.dtype)
++        obs, _, d, _ = w.step(a)
++        failed |= d.numpy().astype(bool)
++        D = robot.data
++        q[k] = D.joint_pos.numpy()[:, gid]; qd[k] = D.joint_vel.numpy()[:, gid]
++        tau[k] = D.actuator_force.numpy()[:, aid]; act[k] = a.numpy()
++        angv[k] = D.root_link_ang_vel_b.numpy(); grav[k] = D.projected_gravity_b.numpy()
++        landed[k] = cmd.landed.float().numpy(); yaw[k] = heading_deg(D.root_link_quat_w.numpy())
++        fly[k] = cmd.in_flight.float().numpy(); turn[k] = np.degrees(cmd.turn.numpy())
++t = (np.arange(n) + 1) * dt
++yaw = np.degrees(np.unwrap(np.radians(np.concatenate([yaw0[None], yaw], 0)), axis=0)); yaw0, yaw = yaw[0], yaw[1:]
++per = analyse(t, q, qd, tau, angv, grav, landed, go, home, dt, list(GAIT_JOINTS), 0.5, 0.3, act=act,
++              yaw=yaw, flying=fly, yaw_go=yaw0, turn=turn)
++for e in np.nonzero(failed)[0]:
++    per[e] = {"landed_s": None, "ended_early": True}
++tilt = np.degrees(np.arccos(np.clip(-grav[..., 2], -1, 1)))
++m = {"summary": summarise(per), "per_env": per, "ended_early": int(failed.sum()), "tilt_max": float(tilt.max())}
++print("METRICS " + json.dumps(m))
 diff --git a/tools/widen_actor_input.py b/tools/widen_actor_input.py
 new file mode 100644
 index 0000000..d1c0e92

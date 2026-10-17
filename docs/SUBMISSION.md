@@ -56,9 +56,11 @@ Apache-2.0 and runs as a static web page.
 - A breakdance from seven more new Jumper tasks, also in `jumper/`: four tracked moves,
   `jumper.break_toprock`, `break_sixstep`, `break_clawstand` and `break_oneclaw` (0 falls in 70
   rollouts, joint RMS over the move 0.65 to 2.68 deg with randomisation against 10.1 to 32.8 deg for
-  standing still), and three reward-driven power moves, `jumper.power_spin_feet` (2.29 turns/s on
-  its feet with randomisation), `power_jumpspin720` (716 and 719 deg in the air on average over two
-  seeds, upright 64 of 64 times with randomisation) and `power_backflip` (384 deg in the air, upright
+  standing still), and three reward-driven power moves, `jumper.power_spin_feet` (2.24 turns/s on
+  its feet with randomisation, a calf, a claw palm or the shell on the floor in 9 and 15% of its
+  steps over two seeds where the spin it replaced touched in 32 and 38%), `power_jumpspin720` (714
+  and 710 deg in the air on average over two seeds, upright 64 of 64 times with randomisation, at
+  rest 719 and 713 deg round from where it started) and `power_backflip` (384 deg in the air, upright
   32 of 32 times), both jumps taking off from the pose the controller hands a new mode and coming to
   rest level near the standing pose after the landing. Every mode keeps its joint targets within the
   joint stops: the spin and the 720 were trained with their targets clamped there, as the controller
@@ -81,14 +83,16 @@ Apache-2.0 and runs as a static web page.
   5 to 0 run the six skills live, Shift + 1 to 4 the four tracked breaking moves, Shift + 5 the
   spin, Shift + 6 the 720 and Shift + 7 the back flip. The two jumps have no end of their own, so the
   page presses their switch again once they are at rest. The bundle sets no `target_margin`, so the
-  controller clamps every mode's joint targets at the joint stops; through it the spin sends 2.58 rad
-  at most and the 720 3.67, none past a stop. The spin within the stops turns 2.29 to 2.30 times a
-  second through the controller (2.33 to 2.34 when it was let 1.7 rad past them) and leans on more of
-  its body: a calf, a claw palm or the shell touches the floor in 43% of its steps against 33 to 35%
-  before. The 720 turns 719 to 744 deg in the air through the controller in 24 trials, rests within
-  a degree of level and walks again 0.44 s after its switch; it leans 35 deg at most in the air there,
-  and 42.9 at the worst of 128 randomised flights, under the controller's 50-deg guard. Untested on a
-  physical Jumper. On load it replays `reference.json` (24 frames, observation diff 0, target diff
+  controller clamps every mode's joint targets at the joint stops; through it the spin sends 2.71 rad
+  at most and the 720 3.44, none past a stop. The spin keeps to its feet: through the controller it
+  turns 2.27 and 2.28 times a second from standing and walking with a calf, a claw palm or the shell
+  on the floor in 23% and 21% of the ticks, where the spin before it touched in 43% and 42%. The 720
+  lands facing where it started: through the controller it comes to rest 724 and 719 deg round from
+  standing and walking (705 to 734 in 24 trials), where the 720 before it rested 60 to 69 deg past,
+  turns 709 to 742 deg in the air, rests within 1.3 deg of level and walks again 0.43 s after its
+  switch; it leans 34 deg at most in the air there, and 43.3 at the worst of 64 randomised flights,
+  under the controller's 50-deg guard. On the browser's physics it rests 720.5 and 722.7 deg round
+  on average (694.9 to 748.4, 24 trials). Untested on a physical Jumper. On load it replays `reference.json` (24 frames, observation diff 0, target diff
   0), compares policy outputs with recorded actions
   (8.3e-7) and checks 71 bundle files by SHA-256.
 - The whole breakdance live, on the beat: P in Robot Mode has the robot perform toprock, six-step,
@@ -102,9 +106,10 @@ Apache-2.0 and runs as a static web page.
 - Headless check (`node tools/robot-sim-check.ts`): 21.65 m in 30 s of walking without a fall, max tilt
   1.88 deg, jump apex 0.228 m; each of the six skills and the five breaking modes entered on its key,
   played out (the spin held 4 s at 2.31 turns/s, then let go; the six-step turning 357.7 deg) and
-  handed back to walking; the 720 (728 and 745 deg in the air, the check asking for 700) and the back
-  flip (387 and 374 deg), from standing and from walking, take off, land upright (0.3 s after
-  touchdown both within 3 deg of level) and are handed back by the page; no mode in the bundle sets
+  handed back to walking; the 720 (724 and 709 deg in the air, the check asking for 700, and at rest
+  714 and 706 deg round from where it started, the check asking for 720 +- 25) and the back flip (385
+  and 383 deg), from standing and from walking, take off, land upright (0.3 s after touchdown both
+  within 3.5 deg of level) and are handed back by the page; no mode in the bundle sets
   `target_margin`, which the check would fail on; the live routine from five different starts
   completes every time, every move on its downbeat.
 - Same policy, any appearance: the player's geared crab is posed from the live simulation, its links
@@ -148,12 +153,12 @@ World of Crabcraft 把 Jumper 螃蟹机器人变成了一个完整的奇幻世�
 
 - 真实动作：全部 44 段动作都是训练好的 Jumper 策略在 MuJoCo 3.11 中闭环运行的录制，全部通过 bundle 自带的控制器扩展运行。31 段来自示例 bundle（8 个方向的行走、转身、快速步态、跳跃、2 种钳子模式、4 个手势、4 支舞蹈，`dance_crab` 保留完整的 238.6 秒）。
 - 我们的开源动作贡献：随本项目一同发布在 `jumper/` 目录中的 6 个新 Jumper 任务 `jumper.skill_swipe`、`skill_slam`、`skill_cast`、`skill_flinch`、`skill_powerdown`、`skill_sit`，对应机器人原本没有策略的 6 段战斗动作。每个任务的参考动作都在机器人模型上、在关节和平衡限制以内制作，用动作模仿强化学习在一张 H100 上训练 2000 到 3000 次 PPO 迭代，用 Jumper 的 `scripts/export.py` 导出，再用 `scripts/deploy.py` 与示例 bundle 的 11 个策略打包在一起。在任务自己的环境中从站立姿态出发：84 次运行（每个动作 10 次带训练时的域随机化，4 次不带）没有摔倒；动作区间内的关节 RMS 误差不带随机化为 0.26 到 1.54 度，带随机化为 0.42 到 1.68 度，原地不动则是 11.2 到 39.4 度。游戏动作和手势一样，通过这个 bundle 的控制器录制；游戏逻辑按动作自身的时刻触发（挥砍的命中、重砸实测的落地、施法的释放、断电倒地的落定）。
-- 霹雳舞来自另外 7 个新 Jumper 任务（同样在 `jumper/` 中）：4 个跟踪参考动作的任务 `jumper.break_toprock`、`break_sixstep`、`break_clawstand`、`break_oneclaw`（70 次运行没有摔倒，带随机化时动作区间内的关节 RMS 误差 0.65 到 2.68 度，原地不动为 10.1 到 32.8 度），以及 3 个靠奖励学出来的大招 `jumper.power_spin_feet`（只用脚旋转，带随机化每秒 2.29 圈）、`power_jumpspin720`（两个随机种子下空中平均转 716 和 719 度，带随机化 64 次全部站稳落地）和 `power_backflip`（空中转 384 度，32 次全部站稳），两个跳跃都从控制器切换模式时交给策略的姿态起跳，落地后在站立姿态附近水平站稳不动。所有模式的关节目标都不超出关节限位：旋转和 720 训练时关节目标就截断在限位处，和控制器的截断一致。全部是仿真结果，没有在实体 Jumper 上运行过。six-step 转了 360 度中的 357.7 度：它的策略能看到自己的朝向比参考动作落后了多少，这个量由控制器根据动作开始以来 IMU 的偏航角算出（实体 Jumper 的 AHRS 偏航角是否跟随陀螺仪还没有验证）。套路（按 B，以及结局的压轴）连续播放其中 6 个，并把每个动作的位移和转向交给螃蟹，下一个动作从上一个停下的地方开始。后空翻会整个翻过来（倾角 177 度），所以它的模式只在自己运行期间解除控制器 50 度的倾角保护；在实体机器人上，后空翻运行时摔倒不会被保护接住。
+- 霹雳舞来自另外 7 个新 Jumper 任务（同样在 `jumper/` 中）：4 个跟踪参考动作的任务 `jumper.break_toprock`、`break_sixstep`、`break_clawstand`、`break_oneclaw`（70 次运行没有摔倒，带随机化时动作区间内的关节 RMS 误差 0.65 到 2.68 度，原地不动为 10.1 到 32.8 度），以及 3 个靠奖励学出来的大招 `jumper.power_spin_feet`（只用脚旋转，带随机化每秒 2.24 圈，两个随机种子下小腿、钳掌或机壳触地的步数占 9% 和 15%，被它取代的旋转是 32% 和 38%）、`power_jumpspin720`（两个随机种子下空中平均转 714 和 710 度，带随机化 64 次全部站稳落地，站稳时相对动作开始时的朝向转过 719 和 713 度）和 `power_backflip`（空中转 384 度，32 次全部站稳），两个跳跃都从控制器切换模式时交给策略的姿态起跳，落地后在站立姿态附近水平站稳不动。所有模式的关节目标都不超出关节限位：旋转和 720 训练时关节目标就截断在限位处，和控制器的截断一致。全部是仿真结果，没有在实体 Jumper 上运行过。six-step 转了 360 度中的 357.7 度：它的策略能看到自己的朝向比参考动作落后了多少，这个量由控制器根据动作开始以来 IMU 的偏航角算出（实体 Jumper 的 AHRS 偏航角是否跟随陀螺仪还没有验证）。套路（按 B，以及结局的压轴）连续播放其中 6 个，并把每个动作的位移和转向交给螃蟹，下一个动作从上一个停下的地方开始。后空翻会整个翻过来（倾角 177 度），所以它的模式只在自己运行期间解除控制器 50 度的倾角保护；在实体机器人上，后空翻运行时摔倒不会被保护接住。
 - bundle 一致性（`tools/motion/check_bundle.py`）：控制器回放观测差 0，目标差 0（示例 bundle 和 crabcraft bundle）；ONNX 输出与录制动作最大差 9.5e-07（示例 bundle）和 0（crabcraft bundle）。
 - 真实身体：螃蟹模型由 Jumper 的 URDF 和网格生成；与 MuJoCo 的正向运动学对比 41 个刚体 x 13 个姿态，最大位置误差 0.000534 mm。6 个种族 x 4 种头饰、3 种职业武器、NPC 配件、3 种敌人和 11 种表情的 LED 面部。
 - 整套霹雳舞实时运行、踩在节拍上：在 Robot Mode 里按 P，机器人把 toprock、six-step、原地旋转、720、后空翻和单钳定格连成一整套，每个动作都是它的策略在 bundle 控制器下实时运行，配 107.14 bpm 的原创节拍。页面只按 bundle 自己的模式按键（每次都写进日志），按仿真时间安排，让每个策略都在它那一小节的强拍上开始，并等每个动作交回行走后再按下一个。无头运行 10 次全部完整跳完，没有 Safe Hold，最后站稳行走；大招在强拍前后 15 毫秒内开始，跟踪动作在 60 毫秒内；在 Chrome 中音乐与仿真的误差在 30 毫秒以内。和其余霹雳舞一样，只是仿真结果。
-- Robot Mode：官方 MuJoCo 3.11.0 WASM、onnxruntime-web 1.30.0、bundle 自带的 controller.wasm 和 24 个 ONNX 策略（25 种模式）在浏览器中实时运行，行走时实测控制频率 199 Hz；按 5 到 0 可以实时运行 6 个技能，Shift + 1 到 4 运行 4 个霹雳舞跟踪动作，Shift + 5 原地旋转，Shift + 6 是 720，Shift + 7 是后空翻。两个跳跃自己不会结束，站稳后由页面再按一次按键。bundle 没有设置任何 `target_margin`，控制器把每个模式的关节目标都截断在关节限位处；经控制器，旋转发送的目标最大 2.58 rad，720 最大 3.67 rad，没有一个超出限位。限位内的旋转经控制器每秒转 2.29 到 2.30 圈（允许超出限位 1.7 rad 时是 2.33 到 2.34 圈），更多地借助身体其他部位：小腿、钳掌或机壳触地的步数占 43%，以前是 33% 到 35%。720 经控制器 24 次在空中转 719 到 744 度，落地后水平站稳，按键后 0.44 秒恢复行走；空中最大倾斜 35 度，带随机化 128 次飞行中最大 42.9 度，低于控制器 50 度的倾角保护。没有在实体 Jumper 上试过。加载时回放 `reference.json`（24 帧，观测差 0，目标差 0），比较策略输出与录制动作（8.3e-7），并用 SHA-256 校验 71 个 bundle 文件。
-- 无头检查（`node tools/robot-sim-check.ts`）：行走 30 秒前进 21.65 m 不摔倒，最大倾角 1.88 度，跳跃最高 0.228 m；6 个技能和 5 个霹雳舞模式都能按键进入、播放完毕（旋转保持 4 秒，每秒 2.31 圈，然后松开；six-step 转 357.7 度）并交回行走；720（空中转 728 和 745 度，检查要求至少 700 度）和后空翻（387 和 374 度）从站立和行走中进入，都能起跳并站稳落地（落地 0.3 秒后两者倾角都在 3 度以内），并由页面交回行走；bundle 中没有任何模式设置 `target_margin`（检查遇到就失败）；整套实时霹雳舞从 5 种起点运行，每次都完整跳完，每个动作都踩在强拍上。
+- Robot Mode：官方 MuJoCo 3.11.0 WASM、onnxruntime-web 1.30.0、bundle 自带的 controller.wasm 和 24 个 ONNX 策略（25 种模式）在浏览器中实时运行，行走时实测控制频率 199 Hz；按 5 到 0 可以实时运行 6 个技能，Shift + 1 到 4 运行 4 个霹雳舞跟踪动作，Shift + 5 原地旋转，Shift + 6 是 720，Shift + 7 是后空翻。两个跳跃自己不会结束，站稳后由页面再按一次按键。bundle 没有设置任何 `target_margin`，控制器把每个模式的关节目标都截断在关节限位处；经控制器，旋转发送的目标最大 2.71 rad，720 最大 3.44 rad，没有一个超出限位。旋转只用脚：经控制器从站立和行走中每秒转 2.27 和 2.28 圈，小腿、钳掌或机壳触地的控制周期占 23% 和 21%，之前的旋转是 43% 和 42%。720 落地后面朝动作开始时的方向：经控制器从站立和行走中站稳时相对起始朝向转过 724 和 719 度（24 次在 705 到 734 度之间），之前的 720 要多转 60 到 69 度；空中转 709 到 742 度，落地后在 1.3 度以内水平站稳，按键后 0.43 秒恢复行走；空中最大倾斜 34 度，带随机化 64 次飞行中最大 43.3 度，低于控制器 50 度的倾角保护。在浏览器的物理仿真中，它站稳时平均转过 720.5 和 722.7 度（24 次在 694.9 到 748.4 度之间）。没有在实体 Jumper 上试过。加载时回放 `reference.json`（24 帧，观测差 0，目标差 0），比较策略输出与录制动作（8.3e-7），并用 SHA-256 校验 71 个 bundle 文件。
+- 无头检查（`node tools/robot-sim-check.ts`）：行走 30 秒前进 21.65 m 不摔倒，最大倾角 1.88 度，跳跃最高 0.228 m；6 个技能和 5 个霹雳舞模式都能按键进入、播放完毕（旋转保持 4 秒，每秒 2.31 圈，然后松开；six-step 转 357.7 度）并交回行走；720（空中转 724 和 709 度，检查要求至少 700 度；站稳时相对起始朝向转过 714 和 706 度，检查要求在 720 ± 25 度以内）和后空翻（385 和 383 度）从站立和行走中进入，都能起跳并站稳落地（落地 0.3 秒后两者倾角都在 3.5 度以内），并由页面交回行走；bundle 中没有任何模式设置 `target_margin`（检查遇到就失败）；整套实时霹雳舞从 5 种起点运行，每次都完整跳完，每个动作都踩在强拍上。
 - 同一个策略，任意外观：玩家装备好的螃蟹按实时仿真逐帧摆姿，各连杆与物理刚体的偏差在 0.0013 mm 以内。
 - 完整的游戏：4 个任务、3 个职业 x 4 个技能、Scrapling 和 Rustclaw Scavenger 两种敌人、三阶段 Boss 和以主角霹雳舞收尾的跳舞结局。自动试玩脚本（`tools/playtest.mjs`）用 Warrior、Mage、Priest 分别通关，控制台错误为 0。
 - 开放素材：Quaternius CC0 场景素材、CC0 音乐和音效、OFL 字体，以及为本项目生成的 2D 美术，所有文件都列在 `NOTICE.md` 中。

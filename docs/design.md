@@ -25,15 +25,18 @@ robot. The back flip's mode lifts the robot controller's 50-degree tilt guard wh
 a physical robot would need with care: nothing catches a fall during the flip. Every mode keeps its
 joint targets within the joint stops: the bundle sets no `target_margin`, and the spin and the 720,
 which once shipped with their targets let 1.7 rad past the stops, were trained again with them
-clamped there, as the controller clamps them. The spin pays for it by leaning on more of its body
-(a calf, a claw palm or the shell on the floor in 43% of its steps, against 33 to 35%); the 720
-still turns at least about 720 degrees in the air through the controller (719 to 744 in 24 trials).
-Both jumps come to rest after their landing within a degree of level near the standing pose. The six-step closes its turn, 357.7 of 360 degrees, on a heading error
+clamped there, as the controller clamps them. The spin keeps to its feet: a calf, a claw palm or
+the shell is on the floor in 21 to 23% of its ticks through the controller, where the spin before it
+touched in 42 to 43%, and it spins 2.27 to 2.28 turns a second. The 720 turns 709 to 742 degrees in
+the air through the controller (24 trials) and comes to rest facing where it started, 724 and 719
+degrees round from standing and walking, where the 720 before it rested 60 to 69 degrees past.
+Both jumps come to rest after their landing near the standing pose, the 720 within 1.3 degrees of
+level and the flip within a degree. The six-step closes its turn, 357.7 of 360 degrees, on a heading error
 the controller builds from the IMU's yaw since the move began (whether a physical robot's AHRS yaw
 follows its gyro is unchecked). The routine (`src/motion/breakdance.ts`) plays each move's window in
 turn and carries the move's travel and turn over to the crab, so the six-step's last 2 degrees and
-the 720's 786 degrees from its start to its landing leave the crab facing where the policy left the
-robot.
+the 720's 773 degrees from its start to its landing, settling back to 718, leave the crab facing
+where the policy left the robot.
 
 Tagline: **Six shells. One tide.**
 
@@ -200,8 +203,8 @@ spin on Shift + 5, the 720 on Shift + 6 and the back flip on Shift + 7, claw). A
 mode, its control rate from the contract (200 Hz for locomotion, jump, the spin and the two power
 jumps, 50 Hz for dances, gestures, skills, tracked breaking moves and claw) and the joint telemetry.
 The 720 and the back flip have no end of their own; the page presses their switch again 1.4 s and
-1.2 s after the handover, once they have landed and come to rest (by 1.14 s and 0.86 s at the latest
-through the bundle's controller), and logs that it did. A toggle
+1.2 s after the handover, once they have landed and come to rest (by 1.155 s and 0.94 s at the
+latest on the browser's physics), and logs that it did. A toggle
 shows the bare robot vs. the race appearance.
 
 ## Art direction
