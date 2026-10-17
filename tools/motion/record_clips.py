@@ -93,7 +93,7 @@ BREAKS = {
     "break_clawstand": ("Y", "break_clawstand", None),
     "break_oneclaw": ("L3", "break_oneclaw", None),
     # No recording and no clock: it spins until let go. 3.5 s is the spin-up and about eight turns
-    # (2.30 rev/s held through the bundle, whose controller clamps its targets at the stops).
+    # (2.27 to 2.28 rev/s held through the bundle, whose controller clamps its targets at the stops).
     "break_spin": ("LB", "power_spin", 3.5),
     # No recording and no clock either: each jumps once and stands. Let go after the landing has
     # settled, at Robot Mode's own times (src/robot/sim/core.ts, AUTO_LEAVE_S).

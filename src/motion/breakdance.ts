@@ -3,8 +3,9 @@
 // the routine plays each clip's window in turn at the policy's own pace, crossfading from the
 // robot standing at the end of one move to the robot standing at the start of the next, and
 // carries each move's travel and turn over to the crab (MotionPlayOptions.carryRoot), so the
-// six-step that ends 2 degrees short of a full turn and the 720, which has turned 786 degrees by
-// its landing, leave the crab facing where the policy left the robot, and the next move starts there.
+// six-step that ends 2 degrees short of a full turn and the 720, which has turned 773 degrees by
+// its landing and comes to rest 718 degrees round, 2 short of facing where it started, leave the
+// crab facing where the policy left the robot, and the next move starts there.
 import { BREAK_CLIPS } from './breakClips';
 import type { MotionId } from './types';
 

@@ -54,8 +54,8 @@
    "frameCount": 192,
    "duration": 3.84,
    "loop": false,
-   "speed": 0.01543,
-   "bytes": 13418
+   "speed": 0.02148,
+   "bytes": 13444
   },
   {
    "id": "break_oneclaw",
@@ -87,8 +87,8 @@
    "frameCount": 322,
    "duration": 6.44,
    "loop": false,
-   "speed": 0.0172,
-   "bytes": 21825
+   "speed": 0.03697,
+   "bytes": 21878
   },
   {
    "id": "break_toprock",
