@@ -6,8 +6,8 @@
 // (src/robot/sim/routine.ts) several times from different starts, and prints what happened (exit 1
 // when a mode in the bundle lets its joint targets past the joint stops, a move fails to enter,
 // finish or hand back, the six-step does not turn its full turn, a jump does not take off and land
-// upright, or a routine run does not play every move on its downbeat and end walking upright without
-// a Safe Hold).
+// upright, the 720 does not come to rest facing where it started, two turns round, or a routine run
+// does not play every move on its downbeat and end walking upright without a Safe Hold).
 //
 //   node tools/robot-sim-check.ts [--quick] [--routine N] [--routine-only]
 // --routine N: routine runs (default 5); --routine-only: skip everything before the routine.
@@ -420,14 +420,25 @@ for (const [mode, code, clip] of BREAKS) {
 // handed back to the walking policy by the host's own press of its switch (core.ts AUTO_LEAVE_S).
 // The turn in the air is the body rate integrated over that flight: about the vertical for the
 // 720, nose-up about the body's pitch axis for the flip. The 720 ships trained with its targets
-// clamped at the joint stops, as the controller clamps every other mode's, and resting level after
-// its landing (jumper.power_jumpspin720, rs-720u): on this core it turns 721 to 753 degrees in the
-// air in 24 trials from standing and walking, and 728 and 745 in this check; through the bundle's
-// controller in Jumper's own host, 719 to 744 in 24. Its floor, 700, is 21 degrees under the least
-// this core has turned in those 24 starts and 20 under two full turns, which the game says it makes
-// (src/game/ending.ts): a 720 under 700 no longer turns about two turns. The export before this
-// one, which rested 10 degrees nose-up, turned 680 and 686 in this check and would fail it. The
-// flip's floor stays 330.
+// clamped at the joint stops, as the controller clamps every other mode's, resting level after its
+// landing and facing where it started (jumper.power_jumpspin720, st-720i): on this core it turns
+// 707 to 749 degrees in the air in 24 trials from standing and walking, and 724.4 and 708.9 in this
+// check; through the bundle's controller in Jumper's own host, 709 to 742 in 24. Its floor, 700, is
+// 7 degrees under the least this core has turned in those 24 starts and 20 under two full turns,
+// which the game says it makes (src/game/ending.ts): a 720 under 700 no longer turns about two
+// turns. The export two before this one, which rested 10 degrees nose-up, turned 680 and 686 in
+// this check and would fail it. The flip's floor stays 330.
+//
+// The 720 must also stand facing where it started, two turns round: its heading (the body's x axis
+// on the floor, unwrapped) when the host presses its switch, 1.4 s after the handover, counted from
+// the heading at the handover, within REST_TURN_TOL of 720 degrees. By then it has been at rest
+// for at least 0.24 s (core.ts AUTO_LEAVE_S), so that is where it came to rest. On this core it
+// rests 713.8 and 706.1 degrees round in this check, and 694.9 to 748.4 in those 24 starts (720.5
+// from standing and 722.7 walking on average; 21 of the 24 within the band, the walking starts
+// spreading wider than the standing ones, 708.6 to 731.6); in Jumper's host 704.8 to 733.9. The
+// export before this one, rs-720u, came to rest 780 and 788 degrees round in Jumper's host, facing
+// 60 to 68 degrees past where it started, and 782.2 and 796.7 in this check, which it fails.
+const REST_TURN_TOL = 25;
 const JUMPS: [string, string, 'yaw' | 'pitch', number][] = [
   ['power_jumpspin', 'Digit6', 'yaw', 700], ['power_backflip', 'Digit7', 'pitch', 330],
 ];
@@ -453,6 +464,10 @@ for (const [mode, code, axis, minTurn] of JUMPS) for (const start of ['standing'
   let tiltMax = 0;
   let safe = false;
   let tBack: number | null = null;
+  // The heading from the handover, unwrapped, and where it stood when the host pressed the switch.
+  let yawPrev: number | null = null;
+  let heading = 0;
+  let restHeading: number | null = null;
   const t0 = sim.simTime;
   while (sim.simTime < t0 + 8) {
     await sim.tick();
@@ -472,6 +487,10 @@ for (const [mode, code, axis, minTurn] of JUMPS) for (const start of ['standing'
       // body rate about the world vertical: the third row of R times the body-frame rate
       const yawRate = 2 * (x * zq - w * y) * v[3] + 2 * (y * zq + w * x) * v[4] + (1 - 2 * (x * x + y * y)) * v[5];
       const rate = axis === 'yaw' ? yawRate : -v[4];
+      const yaw = Math.atan2(2 * (x * y + w * zq), 1 - 2 * (y * y + zq * zq)) * 57.2958;
+      if (yawPrev !== null) heading += yaw - yawPrev - 360 * Math.round((yaw - yawPrev) / 360);
+      yawPrev = yaw;
+      if (restHeading === null && sim.autoLeft.length > autoBefore) restHeading = heading;
       if (!flight && air && !flying) {
         flying = true;
         flight = { t0: sim.simTime - tHand, t1: null, turn: 0, zMax: q[2] };
@@ -506,10 +525,15 @@ for (const [mode, code, axis, minTurn] of JUMPS) for (const start of ['standing'
     riseM: flight ? +(flight.zMax - z0).toFixed(3) : 0, airTurnDeg: +turn.toFixed(1),
     tiltMaxDeg: +tiltMax.toFixed(1), tilt0p3sAfterTouchdownDeg: tiltAfter === null ? null : +tiltAfter.toFixed(1),
     hostPressedAfterS: auto[0] ? +(auto[0].at - (tHand ?? 0)).toFixed(3) : null,
+    ...(axis === 'yaw' ? { restHeadingDeg: restHeading === null ? null : +restHeading.toFixed(1) } : {}),
     walkingAgainAfterHandoverS: tBack === null || tHand === null ? null : +(tBack - tHand).toFixed(3),
   };
   console.log(`${key.padEnd(26)} ${JSON.stringify(jumps[key])}`);
   if (!entered || !tookOff || !landed || !back || turn < minTurn) skillsFailed++;
+  if (axis === 'yaw' && (restHeading === null || Math.abs(restHeading - 720) > REST_TURN_TOL)) {
+    console.log(`${key} came to rest ${restHeading === null ? 'nowhere it was measured' : `${restHeading.toFixed(1)} degrees round`}, not within ${REST_TURN_TOL} of 720`);
+    skillsFailed++;
+  }
   await run(1, 'settle');
 }
 
@@ -521,7 +545,7 @@ console.log('log', sim.log.map((l) => `${l.from}->${l.to}`).join(' '));
 const routineFailed = routineRuns > 0 ? await checkRoutine(routineRuns) : 0;
 sim.dispose();
 if (skillsFailed) {
-  console.error(`${skillsFailed} skill(s) or breakdance move(s) did not enter, finish and hand back to locomotion (or a jump did not take off, turn and land upright)`);
+  console.error(`${skillsFailed} skill(s) or breakdance move(s) did not enter, finish and hand back to locomotion (or a jump did not take off, turn and land upright, or the 720 did not come to rest two turns round)`);
 }
 if (routineFailed) console.error(`${routineFailed} routine run(s) were not clean`);
 if (stopsFailed) console.error(`${stopsFailed} mode(s) let their joint targets past the joint stops (target_margin)`);
