@@ -1693,10 +1693,10 @@ index 0000000..eed59af
 +
 diff --git a/docs/CRABCRAFT_POWER.md b/docs/CRABCRAFT_POWER.md
 new file mode 100644
-index 0000000..8e3265e
+index 0000000..81181f4
 --- /dev/null
 +++ b/docs/CRABCRAFT_POWER.md
-@@ -0,0 +1,2950 @@
+@@ -0,0 +1,2953 @@
 +# Crabcraft power moves: a spin, a jump spin and a back flip
 +
 +"World of Crabcraft" wants a routine that could win a breaking battle. The footwork,
@@ -1727,7 +1727,7 @@ index 0000000..8e3265e
 +still afterwards: `cm-720-g` for the 720 and `lg-flip` for the flip ("Settling after the
 +landing"); the flip's since from `lg-flip-dx`, which comes to rest near `HOME`, level, rather
 +than where it caught its landing ("Resting near HOME"). The 720 needed its targets let 1.7 rad
-+past the stops too, and now ships from `sf-720c`, trained on from `cm-720-g` with its targets
++past the stops too, and then shipped from `sf-720c`, trained on from `cm-720-g` with its targets
 +clamped at the stops as the controller clamps every other mode's ("Within the stops"), and since
 +from `rs-720u`, which comes to rest near `HOME`, level, and leans less in the air ("The 720 at
 +rest"). The spin was the last mode with a margin, and then shipped from `sp-sa`, trained on from
@@ -2070,9 +2070,12 @@ index 0000000..8e3265e
 +are exported from `cm-720-g`'s `model_7250` and `lg-flip`'s `model_5900`, trained on with the
 +settling those tasks now have; the table above is what they were trained on from. Since
 +"Within the stops", `jumper.power_jumpspin720` is exported from `sf-720c`'s `model_11048`, trained
-+on from `model_7250` with its targets clamped at the stops, and since "The 720 at rest" from
-+`rs-720u`'s `model_14800`. Since "The spin within the stops", `jumper.power_spin_feet` is exported
-+from `sp-sa`'s `model_5800`, trained on from `model_2998` with its targets clamped at the stops.
++on from `model_7250` with its targets clamped at the stops, since "The 720 at rest" from
++`rs-720u`'s `model_14800`, and since "The 720 sticks its landing" from `st-720i`'s `model_18500`,
++trained on to come to rest two turns round. Since "The spin within the stops",
++`jumper.power_spin_feet` was exported from `sp-sa`'s `model_5800`, trained on from `model_2998`
++with its targets clamped at the stops, and since "The spin on its feet" it is exported from
++`ft-nb6100`'s `model_6150`, trained on from that with a non-foot part's hull on the floor charged.
 +
 +What shipped before the handover start was `pw-jspin720`'s `model_3997` (job 249232) and
 +`pw-flip-T`'s `model_2498` (248991); the rest of this section is about those exports.
