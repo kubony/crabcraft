@@ -61,20 +61,24 @@ exclusive = true
 # most): toprock 4.6, six-step 0.0, and the two freezes 34.4 -- held for 1.68 s
 # with 15.6 degrees to spare, and the policies hold them at 34.3 to 34.8. The
 # spin has no clip; measured through this controller (docs/CRABCRAFT_POWER.md,
-# "The bundle within the stops", 24 trials from standing and walking, its
-# targets clamped at the stops): 7.2 to 9.2 degrees at most. The export before
-# it, on its own policy (native MuJoCo, no randomisation): 9.0.
+# "The spin on its feet", and the same to the last digit in "The bundle that
+# keeps its feet and sticks the 720", 24 trials from standing and walking, its
+# targets clamped at the stops): 6.5 to 10.3 degrees at most, riding higher on
+# its legs than the export before it (7.2 to 9.2 here, "The bundle within the
+# stops").
 #
 # The 720 jump spin, measured through this controller (docs/CRABCRAFT_POWER.md,
-# "The 720 at rest", 24 trials from standing and walking, its targets clamped at
-# the stops like every other mode's, and the same again in "The bundle within
-# the stops"): 30.8 to 35.0 degrees at most, in the air,
-# where it leans as it turns. In its own environment, with the training's
-# randomisation, 42.4 at the most of 64 flights (two seeds). It now charges that
-# lean past 30 degrees (`tilt_past`); the export before it peaked at 35.8 to 42.7
-# through this controller and at 49.3 in its own environment ("Within the
-# stops"), and the one before that, its targets let 1.7 rad past the stops, at
-# 31.7 to 40.8 here ("The final bundle").
+# "The 720 sticks its landing", 24 trials from standing and walking that did
+# not choose it, its targets clamped at the stops like every other mode's, and
+# the same to the last digit in "The bundle that keeps its feet and sticks the
+# 720"): 28.4 to 34.1 degrees at most, in the air, where it leans as it turns.
+# In its own environment, with the training's randomisation, 43.3 at the most
+# of 64 flights (two seeds). It charges that lean past 30 degrees
+# (`tilt_past`), as the export before it did, which peaked at 30.8 to 35.0 here
+# and 42.4 in its own environment ("The 720 at rest"); the one before that at
+# 35.8 to 42.7 through this controller and at 49.3 in its own environment
+# ("Within the stops"), and the one before that, its targets let 1.7 rad past
+# the stops, at 31.7 to 40.8 here ("The final bundle").
 #
 # The back flip (`jumper.power_backflip`) does not fit under this number and is
 # not meant to: it passes 177 degrees in the air. Under this rule it went to

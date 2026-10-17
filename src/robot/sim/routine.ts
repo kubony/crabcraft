@@ -35,8 +35,8 @@ export interface RoutineMove {
  *   move        press to policy   policy to walking again          bars to the next downbeat
  *   toprock     0.70-0.83 s       6.24 s (its recording)           4
  *   six-step    0.70-0.83 s       5.32 s (its recording)           3
- *   spin        0.58-0.69 s       6 beats held, then 0.93-0.99 s   3
- *   720         0.58-0.69 s       1.40 s + 0.855 s                 2
+ *   spin        0.58-0.69 s       6 beats held, then 1.00-1.03 s   3
+ *   720         0.58-0.69 s       1.40 s + 0.51 s                  2
  *   back flip   0.58-0.69 s       1.20 s + 0.575 s                 2
  *   one-claw    0.70-0.83 s       6.52 s (its recording)           (the end)
  *

@@ -28,13 +28,13 @@ const TICK_US = 5000;
  * presses that switch for the person, with the bundle's own keyboard binding (the modifier and the
  * key, held 40 ms), at the moment the game's clips of the two moves let go
  * (tools/motion/record_clips.py BREAKS). On this simulation core, 12 trials each from standing and
- * from walking, the 720 lands 0.70 to 0.725 s after the handover and is at rest from 0.995 to
- * 1.06 s, within a degree of level near HOME; the back flip lands at 0.455 to 0.485 s and is at rest
- * from 0.815 to 0.94 s, also within a degree of level near HOME (the hand-back moment of the Jumper
- * checkout's tools/eval_calm.py: joint speeds under 0.2 rad/s RMS, roll and pitch under 5 deg/s,
- * tilt under 10 degrees, for 0.3 s). So the 720 is still for at least 0.34 s and the flip for at
- * least 0.26 s when its switch is pressed. The spin is not here: it is a held move, ended when the
- * person wants.
+ * from walking, the 720 lands 0.74 to 0.76 s after the handover and is at rest from 1.075 to
+ * 1.155 s, within 1.6 degrees of level near HOME and facing where it started, two turns round
+ * (694.9 to 748.4 degrees); the back flip lands at 0.455 to 0.485 s and is at rest from 0.815 to
+ * 0.94 s, within a degree of level near HOME (the hand-back moment of the Jumper checkout's
+ * tools/eval_calm.py: joint speeds under 0.2 rad/s RMS, roll and pitch under 5 deg/s, tilt under 10
+ * degrees, for 0.3 s). So the 720 is still for at least 0.24 s and the flip for at least 0.26 s when
+ * its switch is pressed. The spin is not here: it is a held move, ended when the person wants.
  */
 export const AUTO_LEAVE_S: Readonly<Record<string, number>> = { power_jumpspin: 1.4, power_backflip: 1.2 };
 /** Ticks the host's own press of a switch is held for (40 ms). */
